@@ -1,12 +1,40 @@
-import React, { useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { HeaderContext } from '../contexts/HeaderContext';
 
 const HomeScreen = () => {
   const [activeSegment, setActiveSegment] = useState('agenda');
   const isDarkMode = useColorScheme() === 'dark';
+  const { setShowLargeTitle } = useContext(HeaderContext);
+  const lastLargeTitleState = useRef(true);
+
+  useEffect(() => {
+    setShowLargeTitle(true);
+    lastLargeTitleState.current = true;
+
+    return () => {
+      setShowLargeTitle(true);
+    };
+  }, [setShowLargeTitle]);
+
+  const handleScroll = useCallback((event) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const shouldShowLargeTitle = offsetY <= 10;
+
+    if (lastLargeTitleState.current !== shouldShowLargeTitle) {
+      lastLargeTitleState.current = shouldShowLargeTitle;
+      setShowLargeTitle(shouldShowLargeTitle);
+    }
+  }, [setShowLargeTitle]);
+
   return (
-    <ScrollView style={[styles.container, isDarkMode && styles.containerDark]}>
+    <ScrollView
+      style={[styles.container, isDarkMode && styles.containerDark]}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+      contentInsetAdjustmentBehavior="automatic"
+    >
       <View style={styles.content}>
         {/* Segment Control */}
         <View style={[styles.segmentContainer, isDarkMode && styles.segmentContainerDark]}>
