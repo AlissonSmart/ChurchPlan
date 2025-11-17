@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useColorScheme } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import TabScreenWrapper from '../components/TabScreenWrapper';
 
-const NotificationsScreen = () => {
+const NotificationsScreen = ({ navigation, route }) => {
+  const isDarkMode = useColorScheme() === 'dark';
   const notifications = [
     {
       id: 1,
@@ -31,12 +33,13 @@ const NotificationsScreen = () => {
   ];
 
   return (
-    <ScrollView style={styles.container}>
+    <TabScreenWrapper activeTab="CheckIn" navigation={navigation}>
+      <ScrollView style={[styles.container, isDarkMode && styles.containerDark]}>
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.titleContainer}>
-            <FontAwesome name="bell" size={28} color="#050505" />
-            <Text style={styles.title}>Notificações</Text>
+            <FontAwesome name="bell" size={28} color={isDarkMode ? '#FFFFFF' : '#050505'} />
+            <Text style={[styles.title, isDarkMode && styles.titleDark]}>Notificações</Text>
           </View>
         </View>
 
@@ -46,19 +49,21 @@ const NotificationsScreen = () => {
             style={[
               styles.card,
               notification.unread && styles.cardUnread,
+              isDarkMode && styles.cardDark,
+              notification.unread && isDarkMode && styles.cardUnreadDark,
             ]}
           >
-            <View style={styles.iconContainer}>
+            <View style={[styles.iconContainer, isDarkMode && styles.iconContainerDark]}>
               <FontAwesome name={notification.icon} size={24} color="#1877F2" />
             </View>
             <View style={styles.notificationContent}>
-              <Text style={styles.notificationTitle}>
+              <Text style={[styles.notificationTitle, isDarkMode && styles.notificationTitleDark]}>
                 {notification.title}
               </Text>
-              <Text style={styles.notificationMessage}>
+              <Text style={[styles.notificationMessage, isDarkMode && styles.notificationMessageDark]}>
                 {notification.message}
               </Text>
-              <Text style={styles.notificationTime}>
+              <Text style={[styles.notificationTime, isDarkMode && styles.notificationTimeDark]}>
                 {notification.time}
               </Text>
             </View>
@@ -67,6 +72,7 @@ const NotificationsScreen = () => {
         ))}
       </View>
     </ScrollView>
+    </TabScreenWrapper>
   );
 };
 
@@ -74,6 +80,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F2F5',
+  },
+  containerDark: {
+    backgroundColor: '#1C1C1E',
   },
   content: {
     padding: 16,
@@ -91,6 +100,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#050505',
   },
+  titleDark: {
+    color: '#FFFFFF',
+  },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
@@ -104,8 +116,14 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  cardDark: {
+    backgroundColor: '#2C2C2E',
+  },
   cardUnread: {
     backgroundColor: '#E7F3FF',
+  },
+  cardUnreadDark: {
+    backgroundColor: '#0A3060',
   },
   iconContainer: {
     width: 48,
@@ -116,6 +134,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
+  iconContainerDark: {
+    backgroundColor: '#3A3A3C',
+  },
   notificationContent: {
     flex: 1,
   },
@@ -125,15 +146,24 @@ const styles = StyleSheet.create({
     color: '#050505',
     marginBottom: 4,
   },
+  notificationTitleDark: {
+    color: '#FFFFFF',
+  },
   notificationMessage: {
     fontSize: 14,
     color: '#65676B',
     marginBottom: 4,
     lineHeight: 20,
   },
+  notificationMessageDark: {
+    color: '#A0A0A5',
+  },
   notificationTime: {
     fontSize: 13,
     color: '#8A8D91',
+  },
+  notificationTimeDark: {
+    color: '#6E6E73',
   },
   unreadDot: {
     width: 12,

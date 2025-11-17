@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useColorScheme } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import TabScreenWrapper from '../components/TabScreenWrapper';
 
-const GroupsScreen = () => {
+const GroupsScreen = ({ navigation, route }) => {
+  const isDarkMode = useColorScheme() === 'dark';
   const groups = [
     { id: 1, name: 'Jovens', members: 45, icon: 'music' },
     { id: 2, name: 'Louvor', members: 12, icon: 'music' },
@@ -11,29 +13,31 @@ const GroupsScreen = () => {
   ];
 
   return (
-    <ScrollView style={styles.container}>
+    <TabScreenWrapper activeTab="Equipes" navigation={navigation}>
+      <ScrollView style={[styles.container, isDarkMode && styles.containerDark]}>
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.titleContainer}>
-            <FontAwesome name="users" size={28} color="#050505" />
-            <Text style={styles.title}>Grupos</Text>
+            <FontAwesome name="users" size={28} color={isDarkMode ? '#FFFFFF' : '#050505'} />
+            <Text style={[styles.title, isDarkMode && styles.titleDark]}>Grupos</Text>
           </View>
-          <Text style={styles.subtitle}>Conecte-se com sua comunidade</Text>
+          <Text style={[styles.subtitle, isDarkMode && styles.subtitleDark]}>Conecte-se com sua comunidade</Text>
         </View>
 
         {groups.map((group) => (
-          <View key={group.id} style={styles.card}>
+          <View key={group.id} style={[styles.card, isDarkMode && styles.cardDark]}>
             <View style={styles.groupIcon}>
               <FontAwesome name={group.icon} size={28} color="#1877F2" />
             </View>
             <View style={styles.groupInfo}>
-              <Text style={styles.groupName}>{group.name}</Text>
-              <Text style={styles.groupMembers}>{group.members} membros</Text>
+              <Text style={[styles.groupName, isDarkMode && styles.groupNameDark]}>{group.name}</Text>
+              <Text style={[styles.groupMembers, isDarkMode && styles.groupMembersDark]}>{group.members} membros</Text>
             </View>
           </View>
         ))}
       </View>
     </ScrollView>
+    </TabScreenWrapper>
   );
 };
 
@@ -41,6 +45,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F2F5',
+  },
+  containerDark: {
+    backgroundColor: '#1C1C1E',
   },
   content: {
     padding: 16,
@@ -59,9 +66,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#050505',
   },
+  titleDark: {
+    color: '#FFFFFF',
+  },
   subtitle: {
     fontSize: 16,
     color: '#65676B',
+  },
+  subtitleDark: {
+    color: '#A0A0A5',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -75,6 +88,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  cardDark: {
+    backgroundColor: '#2C2C2E',
   },
   groupIcon: {
     width: 56,
@@ -94,9 +110,15 @@ const styles = StyleSheet.create({
     color: '#050505',
     marginBottom: 4,
   },
+  groupNameDark: {
+    color: '#FFFFFF',
+  },
   groupMembers: {
     fontSize: 14,
     color: '#65676B',
+  },
+  groupMembersDark: {
+    color: '#A0A0A5',
   },
 });
 

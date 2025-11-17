@@ -2,8 +2,9 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from 'rea
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { HeaderContext } from '../contexts/HeaderContext';
+import TabScreenWrapper from '../components/TabScreenWrapper';
 
-const HomeScreen = () => {
+const HomeScreen = ({ navigation, route }) => {
   const [activeSegment, setActiveSegment] = useState('agenda');
   const isDarkMode = useColorScheme() === 'dark';
   const { setShowLargeTitle } = useContext(HeaderContext);
@@ -29,12 +30,13 @@ const HomeScreen = () => {
   }, [setShowLargeTitle]);
 
   return (
-    <ScrollView
-      style={[styles.container, isDarkMode && styles.containerDark]}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
-      contentInsetAdjustmentBehavior="automatic"
-    >
+    <TabScreenWrapper activeTab="Agenda" navigation={navigation}>
+      <ScrollView
+        style={[styles.container, isDarkMode && styles.containerDark]}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        contentInsetAdjustmentBehavior="automatic"
+      >
       <View style={styles.content}>
         {/* Segment Control */}
         <View style={[styles.segmentContainer, isDarkMode && styles.segmentContainerDark]}>
@@ -172,6 +174,7 @@ const HomeScreen = () => {
         ))}
       </View>
     </ScrollView>
+    </TabScreenWrapper>
   );
 };
 

@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, useColorScheme } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
 const TopBar = ({ activeTab, onTabChange }) => {
   const isDarkMode = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
 
   const tabs = [
     { id: 'Agenda', icon: 'calendar', label: 'Agenda' },
@@ -17,7 +19,11 @@ const TopBar = ({ activeTab, onTabChange }) => {
   const activeTabData = tabs.find(tab => tab.id === activeTab) || tabs[0];
   
   return (
-    <View style={[styles.container, isDarkMode && styles.containerDark]}>
+    <View style={[
+      styles.container, 
+      isDarkMode && styles.containerDark,
+      { paddingTop: insets.top }
+    ]}>
       <View style={styles.titleContainer}>
         <Text style={[styles.title, isDarkMode && styles.titleDark]}>{activeTabData.label}</Text>
       </View>
@@ -49,6 +55,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E4E6EB',
     backgroundColor: 'rgba(255,255,255,0.92)',
     zIndex: 1000,
+    paddingTop: 0,
     ...Platform.select({
       web: {
         position: 'fixed',
@@ -71,7 +78,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: 'bold',
     color: '#000000',
-    marginVertical: 4,
+    marginVertical: 8,
   },
   titleDark: {
     color: '#FFFFFF',

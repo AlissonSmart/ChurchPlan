@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, useColorScheme } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const BottomTabs = ({ activeTab, onTabChange }) => {
   const isDarkMode = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   const tabs = [
     { id: 'Agenda', icon: 'calendar', label: 'Agenda' },
     { id: 'Planejar', icon: 'tasks', label: 'Planejar' },
@@ -13,7 +15,11 @@ const BottomTabs = ({ activeTab, onTabChange }) => {
   ];
 
   return (
-    <View style={[styles.container, isDarkMode && styles.containerDark]}>
+    <View style={[
+      styles.container, 
+      isDarkMode && styles.containerDark,
+      { paddingBottom: insets.bottom }
+    ]}>
       {tabs.map((tab) => (
         <TouchableOpacity
           key={tab.id}
@@ -54,12 +60,12 @@ const BottomTabs = ({ activeTab, onTabChange }) => {
 
 const styles = StyleSheet.create({
   container: {
-    height: 56,
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: '#E4E6EB',
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0, // Adiciona padding para dispositivos iOS com notch
+    paddingTop: 8,
+    // A altura base é 56, mas o paddingBottom vai ser adicionado pelo insets.bottom
     ...Platform.select({
       web: {
         position: 'fixed',

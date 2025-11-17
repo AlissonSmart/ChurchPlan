@@ -1,11 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, useColorScheme } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import BackHeader from '../components/BackHeader';
 
 const ProfileScreen = ({ navigation }) => {
   const isDarkMode = useColorScheme() === 'dark';
-  const insets = useSafeAreaInsets();
 
   const handleGoBack = () => {
     navigation.goBack();
@@ -35,16 +34,9 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <View style={[
       styles.container, 
-      isDarkMode && styles.containerDark,
-      { paddingTop: insets.top }
+      isDarkMode && styles.containerDark
     ]}>
-      <View style={[styles.header, isDarkMode && styles.headerDark]}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-          <FontAwesome name="chevron-left" size={18} color={isDarkMode ? '#FFFFFF' : '#000000'} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, isDarkMode && styles.headerTitleDark]}>Configurações</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <BackHeader title="Configurações" onBack={handleGoBack} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Profile Card */}
@@ -130,35 +122,6 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: '#000000',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
-  },
-  headerDark: {
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  headerTitleDark: {
-    color: '#FFFFFF',
-  },
-  headerRight: {
-    width: 40,
   },
   scrollView: {
     flex: 1,

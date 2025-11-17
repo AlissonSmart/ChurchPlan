@@ -155,13 +155,7 @@ function MainTabs() {
             tabBarActiveTintColor: '#1877F2',
             tabBarInactiveTintColor: isDarkMode ? '#A0A0A5' : '#65676B',
             tabBarStyle: {
-              ...styles.tabBar,
-              height: Platform.OS === 'ios' && !Platform.isPad && !Platform.isTV ? 85 : Platform.OS === 'android' ? 65 : 60,
-              paddingBottom: Platform.OS === 'ios' && !Platform.isPad && !Platform.isTV ? 30 : Platform.OS === 'android' ? 10 : 5,
-              backgroundColor: Platform.OS === 'ios'
-                ? 'transparent'
-                : (isDarkMode ? 'rgba(28, 28, 30, 0.4)' : 'rgba(255, 255, 255, 0.4)'),
-              borderTopColor: isDarkMode ? 'rgba(56, 56, 58, 0.3)' : 'rgba(228, 230, 235, 0.3)',
+              display: 'none'
             },
             tabBarBackground: () => (
               Platform.OS === 'ios' ? (
@@ -176,10 +170,7 @@ function MainTabs() {
                 />
               )
             ),
-            headerShown: true,
-            header: ({ navigation, route, options }) => {
-              return <Header title={route.name} route={route.name} navigation={navigation} />;
-            },
+            headerShown: false,
           })}
         >
           <Tab.Screen 

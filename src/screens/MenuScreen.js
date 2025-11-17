@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, useColorScheme } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import TabScreenWrapper from '../components/TabScreenWrapper';
 
-const MenuScreen = () => {
+const MenuScreen = ({ navigation, route }) => {
+  const isDarkMode = useColorScheme() === 'dark';
   const menuItems = [
     { id: 1, icon: 'cog', title: 'Configurações', subtitle: 'Personalize seu app' },
     { id: 2, icon: 'user', title: 'Perfil', subtitle: 'Edite suas informações' },
@@ -13,41 +15,43 @@ const MenuScreen = () => {
   ];
 
   return (
-    <ScrollView style={styles.container}>
+    <TabScreenWrapper activeTab="Midia" navigation={navigation}>
+      <ScrollView style={[styles.container, isDarkMode && styles.containerDark]}>
       <View style={styles.content}>
-        <View style={styles.profileSection}>
+        <View style={[styles.profileSection, isDarkMode && styles.profileSectionDark]}>
           <View style={styles.profileCircle}>
             <Text style={styles.profileText}>U</Text>
           </View>
-          <Text style={styles.profileName}>Usuário</Text>
-          <Text style={styles.profileEmail}>usuario@churchplan.com</Text>
+          <Text style={[styles.profileName, isDarkMode && styles.profileNameDark]}>Usuário</Text>
+          <Text style={[styles.profileEmail, isDarkMode && styles.profileEmailDark]}>usuario@churchplan.com</Text>
         </View>
 
-        <View style={styles.menuSection}>
+        <View style={[styles.menuSection, isDarkMode && styles.menuSectionDark]}>
           {menuItems.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.menuItem}>
-              <View style={styles.menuIconContainer}>
+            <TouchableOpacity key={item.id} style={[styles.menuItem, isDarkMode && styles.menuItemDark]}>
+              <View style={[styles.menuIconContainer, isDarkMode && styles.menuIconContainerDark]}>
                 <FontAwesome name={item.icon} size={20} color="#1877F2" />
               </View>
               <View style={styles.menuTextContainer}>
-                <Text style={styles.menuTitle}>{item.title}</Text>
-                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                <Text style={[styles.menuTitle, isDarkMode && styles.menuTitleDark]}>{item.title}</Text>
+                <Text style={[styles.menuSubtitle, isDarkMode && styles.menuSubtitleDark]}>{item.subtitle}</Text>
               </View>
-              <FontAwesome name="chevron-right" size={20} color="#8A8D91" />
+              <FontAwesome name="chevron-right" size={20} color={isDarkMode ? '#6E6E73' : '#8A8D91'} />
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, isDarkMode && styles.footerDark]}>
           <Image
-            source={require('../images/lg-church-plan-dark.png')}
+            source={isDarkMode ? require('../images/lg-church-plan-light.png') : require('../images/lg-church-plan-dark.png')}
             style={styles.footerLogo}
             resizeMode="contain"
           />
-          <Text style={styles.footerText}>Versão 0.0.1</Text>
+          <Text style={[styles.footerText, isDarkMode && styles.footerTextDark]}>Versão 0.0.1</Text>
         </View>
       </View>
     </ScrollView>
+    </TabScreenWrapper>
   );
 };
 
@@ -55,6 +59,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F2F5',
+  },
+  containerDark: {
+    backgroundColor: '#1C1C1E',
   },
   content: {
     padding: 16,
@@ -70,6 +77,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  profileSectionDark: {
+    backgroundColor: '#2C2C2E',
   },
   profileCircle: {
     width: 80,
@@ -91,9 +101,15 @@ const styles = StyleSheet.create({
     color: '#050505',
     marginBottom: 4,
   },
+  profileNameDark: {
+    color: '#FFFFFF',
+  },
   profileEmail: {
     fontSize: 14,
     color: '#65676B',
+  },
+  profileEmailDark: {
+    color: '#A0A0A5',
   },
   menuSection: {
     backgroundColor: '#FFFFFF',
@@ -105,12 +121,18 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  menuSectionDark: {
+    backgroundColor: '#2C2C2E',
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E4E6EB',
+  },
+  menuItemDark: {
+    borderBottomColor: '#38383A',
   },
   menuIconContainer: {
     width: 40,
@@ -121,6 +143,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
+  menuIconContainerDark: {
+    backgroundColor: '#3A3A3C',
+  },
   menuTextContainer: {
     flex: 1,
   },
@@ -130,13 +155,22 @@ const styles = StyleSheet.create({
     color: '#050505',
     marginBottom: 2,
   },
+  menuTitleDark: {
+    color: '#FFFFFF',
+  },
   menuSubtitle: {
     fontSize: 13,
     color: '#65676B',
   },
+  menuSubtitleDark: {
+    color: '#A0A0A5',
+  },
   footer: {
     alignItems: 'center',
     paddingVertical: 24,
+  },
+  footerDark: {
+    // Sem estilos adicionais necessários
   },
   footerLogo: {
     width: 180,
@@ -146,6 +180,9 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 13,
     color: '#8A8D91',
+  },
+  footerTextDark: {
+    color: '#6E6E73',
   },
 });
 
