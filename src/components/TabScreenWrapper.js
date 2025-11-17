@@ -20,7 +20,11 @@ const TabScreenWrapper = ({ children, activeTab, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <TopBar activeTab={activeTab} onTabChange={handleTabChange} />
+      <TopBar 
+        activeTab={activeTab} 
+        onTabChange={handleTabChange} 
+        navigation={navigation} 
+      />
       <View style={styles.content}>
         {children}
       </View>

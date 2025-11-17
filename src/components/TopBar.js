@@ -2,10 +2,15 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import Avatar from './Avatar';
 
-const TopBar = ({ activeTab, onTabChange }) => {
+const TopBar = ({ activeTab, onTabChange, navigation }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const insets = useSafeAreaInsets();
+  
+  const handleProfilePress = () => {
+    navigation.navigate('Profile');
+  };
 
   const tabs = [
     { id: 'Agenda', icon: 'calendar', label: 'Agenda' },
@@ -28,17 +33,22 @@ const TopBar = ({ activeTab, onTabChange }) => {
         <Text style={[styles.title, isDarkMode && styles.titleDark]}>{activeTabData.label}</Text>
       </View>
       <View style={styles.rightSection}>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity 
+          style={styles.iconButton}
+          onPress={handleProfilePress}
+          accessibilityLabel="Notificações"
+          accessibilityHint="Navega para a tela de configurações"
+        >
           <View style={styles.notificationBadge}>
             <Text style={styles.badgeText}>3</Text>
           </View>
           <FontAwesome name="bell" size={22} color="#1877F2" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.profileButton}>
-          <View style={styles.profileCircle}>
-            <Text style={styles.profileText}>A</Text>
-          </View>
-        </TouchableOpacity>
+        <Avatar 
+          initial="A" 
+          onPress={handleProfilePress} 
+          size={36} 
+        />
       </View>
     </View>
   );
@@ -87,26 +97,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(28,28,30,0.92)',
     borderBottomColor: '#38383A',
   },
-  centerSection: {
-    flex: 2,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  tabButton: {
-    paddingHorizontal: 40,
-    height: 56,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
-  },
-  tabButtonActive: {
-    borderBottomColor: '#1877F2',
-  },
-  tabIcon: {
-    fontSize: 24,
-  },
   rightSection: {
     flex: 1,
     flexDirection: 'row',
@@ -142,25 +132,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: 'bold',
-    fontFamily: 'Inter',
-  },
-  profileButton: {
-    width: 40,
-    height: 40,
-  },
-  profileCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1877F2',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-    fontFamily: 'Inter',
   },
 });
 

@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, useColorScheme, Alert } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import BackHeader from '../components/BackHeader';
+import { useAuth } from '../contexts/AuthContext';
 
 const ProfileScreen = ({ navigation }) => {
   const isDarkMode = useColorScheme() === 'dark';
+  const { signOut, user } = useAuth();
 
   const handleGoBack = () => {
     navigation.goBack();
@@ -107,7 +109,19 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         {/* Logout */}
-        <TouchableOpacity style={[styles.logoutButton, isDarkMode && styles.logoutButtonDark]}>
+        <TouchableOpacity 
+          style={[styles.logoutButton, isDarkMode && styles.logoutButtonDark]}
+          onPress={async () => {
+            try {
+              await signOut();
+              // Não é necessário navegar manualmente, pois o RootNavigator já fará isso
+              // quando o estado do usuário mudar para null
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível sair. Tente novamente.');
+              console.error('Erro ao fazer logout:', error);
+            }
+          }}
+        >
           <Text style={styles.logoutText}>Sair</Text>
         </TouchableOpacity>
       </ScrollView>
