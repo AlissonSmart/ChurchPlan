@@ -26,9 +26,10 @@ const Tab = createBottomTabNavigator();
 // Componente de cabeçalho personalizado para cada tela
 function Header({ title, route }: { title: string, route: string }) {
   const insets = useSafeAreaInsets();
+  const isDarkMode = useColorScheme() === 'dark';
   
   return (
-    <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+    <View style={[styles.headerContainer, { paddingTop: insets.top }, isDarkMode && styles.headerContainerDark]}>
       {Platform.OS === 'ios' && (
         <BlurView
           style={StyleSheet.absoluteFill}
@@ -37,9 +38,9 @@ function Header({ title, route }: { title: string, route: string }) {
           reducedTransparencyFallbackColor="white"
         />
       )}
-      <View style={styles.header}>
+      <View style={[styles.header, isDarkMode && styles.headerDark]}>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>{title}</Text>
+          <Text style={[styles.headerTitle, isDarkMode && styles.headerTitleDark]}>{title}</Text>
         </View>
         
         <View style={styles.headerRight}>
@@ -164,6 +165,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(228, 230, 235, 0.5)',
   },
+  headerContainerDark: {
+    borderBottomColor: '#38383A',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -171,6 +175,9 @@ const styles = StyleSheet.create({
     backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(255, 255, 255, 0.9)',
     paddingVertical: 8,
     paddingHorizontal: 16,
+  },
+  headerDark: {
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(28, 28, 30, 0.9)',
   },
   headerTitleContainer: {
     flex: 1,
@@ -181,6 +188,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000000',
     marginVertical: 4,
+  },
+  headerTitleDark: {
+    color: '#FFFFFF',
   },
   headerRight: {
     flexDirection: 'row',

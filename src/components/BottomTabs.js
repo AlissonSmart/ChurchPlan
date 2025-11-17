@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, useColorScheme } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const BottomTabs = ({ activeTab, onTabChange }) => {
+  const isDarkMode = useColorScheme() === 'dark';
   const tabs = [
     { id: 'Agenda', icon: 'calendar', label: 'Agenda' },
     { id: 'Planejar', icon: 'tasks', label: 'Planejar' },
@@ -12,7 +13,7 @@ const BottomTabs = ({ activeTab, onTabChange }) => {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDarkMode && styles.containerDark]}>
       {tabs.map((tab) => (
         <TouchableOpacity
           key={tab.id}
@@ -28,7 +29,7 @@ const BottomTabs = ({ activeTab, onTabChange }) => {
             <Icon
               name={tab.icon}
               size={24}
-              color={activeTab === tab.id ? '#1877F2' : '#65676B'}
+              color={activeTab === tab.id ? '#1877F2' : isDarkMode ? '#A0A0A5' : '#65676B'}
               style={[
                 styles.icon,
                 activeTab === tab.id && styles.iconActive,
@@ -37,8 +38,10 @@ const BottomTabs = ({ activeTab, onTabChange }) => {
           </View>
           <Text
             style={[
-              styles.label,
-              activeTab === tab.id && styles.labelActive,
+              styles.tabLabel,
+              activeTab === tab.id && styles.activeTabLabel,
+              isDarkMode && styles.tabLabelDark,
+              activeTab === tab.id && isDarkMode && styles.activeTabLabelDark,
             ]}
           >
             {tab.label}
@@ -109,11 +112,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'Inter',
   },
-  label: {
-    fontSize: 11,
+  tabLabel: {
+    fontSize: 12,
+    marginTop: 4,
     color: '#65676B',
-    marginTop: 2,
-    fontFamily: 'Inter',
+  },
+  tabLabelDark: {
+    color: '#A0A0A5',
+  },
+  activeTabLabel: {
+    color: '#1877F2',
+  },
+  activeTabLabelDark: {
+    color: '#1877F2',
+  },
+  containerDark: {
+    backgroundColor: '#1C1C1E',
+    borderTopColor: '#38383A',
   },
   labelActive: {
     color: '#1877F2',

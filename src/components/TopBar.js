@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, useColorScheme } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
 const TopBar = ({ activeTab, onTabChange }) => {
+  const isDarkMode = useColorScheme() === 'dark';
 
   const tabs = [
     { id: 'Agenda', icon: 'calendar', label: 'Agenda' },
@@ -16,9 +17,9 @@ const TopBar = ({ activeTab, onTabChange }) => {
   const activeTabData = tabs.find(tab => tab.id === activeTab) || tabs[0];
   
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDarkMode && styles.containerDark]}>
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>{activeTabData.label}</Text>
+        <Text style={[styles.title, isDarkMode && styles.titleDark]}>{activeTabData.label}</Text>
       </View>
       <View style={styles.rightSection}>
         <TouchableOpacity style={styles.iconButton}>
@@ -71,6 +72,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000000',
     marginVertical: 4,
+  },
+  titleDark: {
+    color: '#FFFFFF',
+  },
+  containerDark: {
+    backgroundColor: 'rgba(28,28,30,0.92)',
+    borderBottomColor: '#38383A',
   },
   centerSection: {
     flex: 2,
