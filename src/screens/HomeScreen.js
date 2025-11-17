@@ -1,40 +1,75 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const HomeScreen = () => {
+  const [activeSegment, setActiveSegment] = useState('agenda');
+  const isDarkMode = useColorScheme() === 'dark';
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, isDarkMode && styles.containerDark]}>
       <View style={styles.content}>
-        <View style={styles.card}>
-          {(() => {
-            try {
-              return (
-                <Image
-                  source={require('../images/lg-church-plan-icon.png')}
-                  style={styles.cardImage}
-                  resizeMode="contain"
-                />
-              );
-            } catch (error) {
-              console.error("Erro ao carregar imagem do ícone:", error);
-              return (
-                <View style={[styles.cardImage, { backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' }]}>
-                  <Text style={{ color: '#555' }}>Logo</Text>
+        {/* Segment Control */}
+        <View style={[styles.segmentContainer, isDarkMode && styles.segmentContainerDark]}>
+          <TouchableOpacity 
+            style={[styles.segmentButton, activeSegment === 'agenda' && styles.segmentActive, isDarkMode && styles.segmentButtonDark, activeSegment === 'agenda' && isDarkMode && styles.segmentActiveDark]}
+            onPress={() => setActiveSegment('agenda')}
+          >
+            <Text style={[styles.segmentText, activeSegment === 'agenda' && styles.segmentTextActive, isDarkMode && styles.segmentTextDark, activeSegment === 'agenda' && isDarkMode && styles.segmentTextActiveDark]}>Agenda</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.segmentButton, activeSegment === 'bloqueios' && styles.segmentActive, isDarkMode && styles.segmentButtonDark, activeSegment === 'bloqueios' && isDarkMode && styles.segmentActiveDark]}
+            onPress={() => setActiveSegment('bloqueios')}
+          >
+            <Text style={[styles.segmentText, activeSegment === 'bloqueios' && styles.segmentTextActive, isDarkMode && styles.segmentTextDark, activeSegment === 'bloqueios' && isDarkMode && styles.segmentTextActiveDark]}>Bloqueios</Text>
+          </TouchableOpacity>
+        </View>
+        {activeSegment === 'agenda' ? (
+          <>
+            {/* Agenda (4 eventos de exemplo) */}
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>Sua Agenda</Text>
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Bloqueios */}
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>Seus Bloqueios</Text>
+            </View>
+            <View style={[styles.eventCard, isDarkMode && styles.eventCardDark]}>
+              <View style={styles.eventHeader}>
+                <View style={[styles.eventIconCircle, { backgroundColor: '#FFEBEB' }]}>
+                  <Icon name="ban" size={18} color="#E24C4C" />
                 </View>
-              );
-            }
-          })()}
-          <Text style={styles.title}>Bem-vindo ao ChurchPlan</Text>
-          <Text style={styles.description}>
-            Organize e planeje as atividades da sua igreja de forma simples e eficiente.
-          </Text>
-        </View>
-
-        {/* Agenda (4 eventos de exemplo) */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Sua Agenda</Text>
-        </View>
+                <Text style={[styles.eventTitle, isDarkMode && styles.eventTitleDark]}>Domingo - Indisponível</Text>
+              </View>
+              <View style={styles.eventMetaRow}>
+                <Icon name="calendar" size={14} color="#E24C4C" style={{ marginRight: 6 }} />
+                <Text style={[styles.eventMetaText, { color: '#E24C4C' }, isDarkMode && styles.eventMetaTextDark]}>10/09/2024 - Dia todo</Text>
+              </View>
+              <View style={styles.eventMetaRow}>
+                <Icon name="sticky-note" size={14} color="#E24C4C" style={{ marginRight: 6 }} />
+                <Text style={[styles.eventMetaText, { color: '#E24C4C' }, isDarkMode && styles.eventMetaTextDark]}>Viagem familiar</Text>
+              </View>
+            </View>
+            <View style={[styles.eventCard, isDarkMode && styles.eventCardDark]}>
+              <View style={styles.eventHeader}>
+                <View style={[styles.eventIconCircle, { backgroundColor: '#FFEBEB' }]}>
+                  <Icon name="ban" size={18} color="#E24C4C" />
+                </View>
+                <Text style={[styles.eventTitle, isDarkMode && styles.eventTitleDark]}>Quarta - Indisponível</Text>
+              </View>
+              <View style={styles.eventMetaRow}>
+                <Icon name="calendar" size={14} color="#E24C4C" style={{ marginRight: 6 }} />
+                <Text style={[styles.eventMetaText, { color: '#E24C4C' }, isDarkMode && styles.eventMetaTextDark]}>20/09/2024 - Noite</Text>
+              </View>
+              <View style={styles.eventMetaRow}>
+                <Icon name="sticky-note" size={14} color="#E24C4C" style={{ marginRight: 6 }} />
+                <Text style={[styles.eventMetaText, { color: '#E24C4C' }, isDarkMode && styles.eventMetaTextDark]}>Compromisso de trabalho</Text>
+              </View>
+            </View>
+          </>
+        )}
 
         {[
           {
@@ -73,13 +108,13 @@ const HomeScreen = () => {
             status: 'Pendente',
             statusType: 'warning',
           },
-        ].map((ev) => (
-          <View key={ev.id} style={styles.eventCard}>
+        ].map((ev) => activeSegment === 'agenda' && (
+          <View key={ev.id} style={[styles.eventCard, isDarkMode && styles.eventCardDark]}>
             <View style={styles.eventHeader}>
               <View style={styles.eventIconCircle}>
                 <Icon name="music" size={18} color="#22A06B" />
               </View>
-              <Text style={styles.eventTitle}>{ev.title}</Text>
+              <Text style={[styles.eventTitle, isDarkMode && styles.eventTitleDark]}>{ev.title}</Text>
               <View style={[styles.statusPill, ev.statusType === 'success' ? styles.statusSuccess : styles.statusWarning]}>
                 <Icon name={ev.statusType === 'success' ? 'check' : 'exclamation'} size={12} color="#FFFFFF" style={{ marginRight: 6 }} />
                 <Text style={styles.statusText}>{ev.status}</Text>
@@ -88,11 +123,11 @@ const HomeScreen = () => {
 
             <View style={styles.eventMetaRow}>
               <Icon name="calendar" size={14} color="#1877F2" style={{ marginRight: 6 }} />
-              <Text style={styles.eventMetaText}>{ev.date} às {ev.time}</Text>
+              <Text style={[styles.eventMetaText, isDarkMode && styles.eventMetaTextDark]}>{ev.date} às {ev.time}</Text>
             </View>
             <View style={styles.eventMetaRow}>
               <Icon name="user" size={14} color="#22A06B" style={{ marginRight: 6 }} />
-              <Text style={styles.eventMetaText}>{ev.role}</Text>
+              <Text style={[styles.eventMetaText, isDarkMode && styles.eventMetaTextDark]}>{ev.role}</Text>
             </View>
 
             <View style={styles.buttonRow}>
@@ -117,6 +152,49 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F2F5',
   },
+  containerDark: {
+    backgroundColor: '#1C1C1E',
+  },
+  segmentContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#E4E6EB',
+    borderRadius: 8,
+    marginBottom: 16,
+    padding: 2,
+  },
+  segmentContainerDark: {
+    backgroundColor: '#38383A',
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  segmentButtonDark: {
+    backgroundColor: 'transparent',
+  },
+  segmentActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  segmentActiveDark: {
+    backgroundColor: '#2C2C2E',
+  },
+  segmentText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#65676B',
+  },
+  segmentTextDark: {
+    color: '#A0A0A5',
+  },
+  segmentTextActive: {
+    color: '#1877F2',
+    fontWeight: '700',
+  },
+  segmentTextActiveDark: {
+    color: '#1877F2',
+  },
   content: {
     flex: 1,
     paddingHorizontal: 16,
@@ -132,6 +210,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
     elevation: 2,
+  },
+  cardDark: {
+    backgroundColor: '#2C2C2E',
   },
   cardImage: {
     width: 80,
@@ -156,12 +237,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontFamily: 'Inter',
   },
+  titleDark: {
+    color: '#FFFFFF',
+  },
   description: {
     fontSize: 16,
     color: '#65676B',
     textAlign: 'center',
     lineHeight: 22,
     fontFamily: 'Inter',
+  },
+  descriptionDark: {
+    color: '#A0A0A5',
   },
   cardTitle: {
     fontSize: 18,
@@ -202,6 +289,9 @@ const styles = StyleSheet.create({
     color: '#0F1B2A',
     fontFamily: 'Inter',
   },
+  sectionTitleDark: {
+    color: '#FFFFFF',
+  },
   eventCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -209,6 +299,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
     elevation: 2,
+  },
+  eventCardDark: {
+    backgroundColor: '#2C2C2E',
   },
   eventHeader: {
     flexDirection: 'row',
@@ -231,6 +324,9 @@ const styles = StyleSheet.create({
     color: '#1C1E21',
     fontFamily: 'Inter',
   },
+  eventTitleDark: {
+    color: '#FFFFFF',
+  },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -250,6 +346,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1877F2',
     fontFamily: 'Inter',
+  },
+  eventMetaTextDark: {
+    opacity: 0.9,
   },
   buttonRow: {
     flexDirection: 'row',
