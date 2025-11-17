@@ -110,6 +110,11 @@ const TeamsScreen = ({ navigation }) => {
                      userRole.toLowerCase().includes('admin') ? 
                      theme.colors.primary : theme.colors.secondary;
     
+    // Função para lidar com o clique no ícone de edição
+    const handleEditPress = () => {
+      Alert.alert('Editar', `Editar usuário ${item.name}`);
+    };
+    
     return (
       <TouchableOpacity 
         style={[styles.userItem, { backgroundColor: colors.card }]}
@@ -120,22 +125,29 @@ const TeamsScreen = ({ navigation }) => {
         </View>
         <View style={styles.userInfo}>
           <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
-          <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{item.email}</Text>
+          <Text style={[styles.userEmail, { color: colors.textSecondary }]}>
+            {item.email}
+          </Text>
+          <View style={styles.roleContainer}>
+            {userRole && (
+              <Text style={[
+                styles.roleText, 
+                { 
+                  backgroundColor: roleColor,
+                  color: '#FFFFFF'
+                }
+              ]}>
+                {userRole}
+              </Text>
+            )}
+          </View>
           {item.church_name && (
             <Text style={[styles.churchName, { color: colors.textSecondary }]}>{item.church_name}</Text>
           )}
         </View>
-        <View style={styles.userRole}>
-          <Text style={[
-            styles.roleText, 
-            { 
-              backgroundColor: roleColor,
-              color: '#FFFFFF'
-            }
-          ]}>
-            {userRole}
-          </Text>
-        </View>
+        <TouchableOpacity onPress={handleEditPress} style={styles.editButton}>
+          <FontAwesome name="pencil" size={18} color={theme.colors.primary} />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -299,26 +311,31 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.md,
     fontWeight: '500',
   },
+  editButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   userEmail: {
     fontSize: theme.typography.fontSize.sm,
-    marginTop: 2,
   },
-  churchName: {
-    fontSize: theme.typography.fontSize.xs,
-    marginTop: 2,
-    fontStyle: 'italic',
-  },
-  userRole: {
-    marginLeft: theme.spacing.sm,
+  roleContainer: {
+    marginTop: 4,
   },
   roleText: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: '500',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 2,
     borderRadius: theme.sizes.borderRadius.sm,
     overflow: 'hidden',
+    alignSelf: 'flex-start',
     textTransform: 'uppercase',
+  },
+  churchName: {
+    fontSize: theme.typography.fontSize.xs,
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   loadingContainer: {
     flex: 1,
