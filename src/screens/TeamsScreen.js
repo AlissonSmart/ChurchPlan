@@ -201,8 +201,12 @@ const TeamsScreen = ({ navigation }) => {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
+              <FontAwesome name="users" size={50} color={colors.textSecondary} style={styles.emptyIcon} />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 Nenhuma pessoa encontrada
+              </Text>
+              <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                Os usuários cadastrados no sistema aparecerão aqui
               </Text>
             </View>
           }
@@ -324,9 +328,23 @@ const styles = StyleSheet.create({
   emptyContainer: {
     padding: theme.spacing.xl,
     alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    marginTop: 50,
+  },
+  emptyIcon: {
+    marginBottom: theme.spacing.md,
+    opacity: 0.6,
   },
   emptyText: {
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: '600',
+    marginBottom: theme.spacing.sm,
+  },
+  emptySubText: {
     fontSize: theme.typography.fontSize.md,
+    textAlign: 'center',
+    opacity: 0.7,
   },
 });
 

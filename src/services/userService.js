@@ -1,27 +1,5 @@
 import supabase from './supabase';
 
-// Dados de exemplo para garantir que a interface funcione
-const MOCK_USERS = [
-  { 
-    id: '1', 
-    name: 'Alisson Martins', 
-    email: 'alisson@example.com', 
-    role: 'admin',
-    church_name: 'Igreja Central',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  { 
-    id: '2', 
-    name: 'Maria Silva', 
-    email: 'maria@example.com', 
-    role: 'líder',
-    church_name: 'Igreja Central',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-];
-
 /**
  * Serviço para gerenciar usuários no Supabase
  */
@@ -33,12 +11,8 @@ const userService = {
   getAllUsers: async () => {
     console.log('Iniciando getAllUsers');
     
-    // Retornar imediatamente os dados de exemplo para garantir que a interface funcione
-    return MOCK_USERS;
-    
-    /* Código comentado para depuração futura
     try {
-      // Tentar buscar dados reais do Supabase
+      // Buscar dados reais do Supabase
       console.log('Consultando tabela profiles...');
       const { data, error } = await supabase
         .from('profiles')
@@ -46,22 +20,21 @@ const userService = {
 
       if (error) {
         console.error('Erro ao buscar usuários:', error);
-        return MOCK_USERS;
+        throw error;
       }
 
       console.log(`Encontrados ${data?.length || 0} usuários:`, data);
       
-      // Se não houver dados reais, retornar os dados de exemplo
+      // Retornar array vazio se não houver dados
       if (!data || data.length === 0) {
-        return MOCK_USERS;
+        return [];
       }
 
       return data;
     } catch (error) {
       console.error('Erro inesperado ao buscar usuários:', error);
-      return MOCK_USERS;
+      throw error;
     }
-    */
   },
 
   /**
@@ -70,16 +43,6 @@ const userService = {
    * @returns {Promise<Object>} Dados do usuário
    */
   getUserById: async (userId) => {
-    // Buscar nos dados de exemplo
-    const mockUser = MOCK_USERS.find(user => user.id === userId);
-    if (mockUser) {
-      return mockUser;
-    }
-    
-    // Se não encontrar, retornar o primeiro usuário de exemplo
-    return MOCK_USERS[0];
-    
-    /* Código comentado para depuração futura
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -89,15 +52,18 @@ const userService = {
 
       if (error) {
         console.error('Erro ao buscar usuário:', error);
-        return MOCK_USERS.find(user => user.id === userId) || MOCK_USERS[0];
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Usuário não encontrado');
       }
 
       return data;
     } catch (error) {
       console.error('Erro inesperado ao buscar usuário:', error);
-      return MOCK_USERS.find(user => user.id === userId) || MOCK_USERS[0];
+      throw error;
     }
-    */
   },
 
   /**
@@ -106,14 +72,8 @@ const userService = {
    * @returns {Promise<Array>} Lista de usuários filtrados
    */
   searchUsersByName: async (searchTerm) => {
-    // Filtrar dados de exemplo pelo termo de busca
-    return MOCK_USERS.filter(user => 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-    /* Código comentado para depuração futura
     try {
-      // Tentar buscar dados reais do Supabase
+      // Buscar dados reais do Supabase
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -121,26 +81,19 @@ const userService = {
 
       if (error) {
         console.error('Erro ao buscar usuários:', error);
-        return MOCK_USERS.filter(user => 
-          user.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        throw error;
       }
 
-      // Se não houver dados reais, retornar os dados de exemplo filtrados
+      // Se não houver dados, retornar array vazio
       if (!data || data.length === 0) {
-        return MOCK_USERS.filter(user => 
-          user.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        return [];
       }
 
       return data;
     } catch (error) {
       console.error('Erro inesperado ao buscar usuários:', error);
-      return MOCK_USERS.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      throw error;
     }
-    */
   },
 
   /**
