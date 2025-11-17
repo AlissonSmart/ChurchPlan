@@ -6,11 +6,11 @@ const TopBar = ({ activeTab, onTabChange }) => {
   const [searchText, setSearchText] = useState('');
 
   const tabs = [
-    { id: 'home', icon: 'home', label: 'Início' },
-    { id: 'videos', icon: 'play', label: 'Vídeos' },
-    { id: 'groups', icon: 'users', label: 'Grupos' },
-    { id: 'notifications', icon: 'bell', label: 'Notificações' },
-    { id: 'menu', icon: 'bars', label: 'Menu' },
+    { id: 'Agenda', icon: 'calendar', label: 'Agenda' },
+    { id: 'Planejar', icon: 'tasks', label: 'Planejar' },
+    { id: 'Equipes', icon: 'users', label: 'Equipes' },
+    { id: 'CheckIn', icon: 'map-marker', label: 'Check-in' },
+    { id: 'Midia', icon: 'play-circle', label: 'Mídia' },
   ];
 
   return (

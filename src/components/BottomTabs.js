@@ -4,11 +4,11 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 const BottomTabs = ({ activeTab, onTabChange }) => {
   const tabs = [
-    { id: 'home', icon: 'home', label: 'Início' },
-    { id: 'videos', icon: 'play', label: 'Vídeos' },
-    { id: 'groups', icon: 'users', label: 'Grupos' },
-    { id: 'notifications', icon: 'bell', label: 'Notificações', badge: 3 },
-    { id: 'menu', icon: 'bars', label: 'Menu' },
+    { id: 'Agenda', icon: 'calendar', label: 'Agenda' },
+    { id: 'Planejar', icon: 'tasks', label: 'Planejar' },
+    { id: 'Equipes', icon: 'users', label: 'Equipes' },
+    { id: 'CheckIn', icon: 'map-marker', label: 'Check-in' },
+    { id: 'Midia', icon: 'play-circle', label: 'Mídia' },
   ];
 
   return (

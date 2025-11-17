@@ -82,20 +82,20 @@ function App() {
               let iconName: string;
               
               switch (route.name) {
-                case 'Home':
-                  iconName = 'home';
+                case 'Agenda':
+                  iconName = 'calendar';
                   break;
-                case 'Videos':
-                  iconName = 'play';
+                case 'Planejar':
+                  iconName = 'tasks';
                   break;
-                case 'Groups':
+                case 'Equipes':
                   iconName = 'users';
                   break;
-                case 'Notifications':
-                  iconName = 'bell';
+                case 'CheckIn':
+                  iconName = 'map-marker';
                   break;
-                case 'Menu':
-                  iconName = 'bars';
+                case 'Midia':
+                  iconName = 'play-circle';
                   break;
                 default:
                   iconName = 'question';
@@ -127,32 +127,29 @@ function App() {
           })}
         >
           <Tab.Screen 
-            name="Home" 
+            name="Agenda" 
             component={HomeScreen} 
-            options={{ title: 'Início' }}
+            options={{ title: 'Agenda' }}
           />
           <Tab.Screen 
-            name="Videos" 
+            name="Planejar" 
             component={VideosScreen} 
-            options={{ title: 'Vídeos' }}
+            options={{ title: 'Planejar' }}
           />
           <Tab.Screen 
-            name="Groups" 
+            name="Equipes" 
             component={GroupsScreen} 
-            options={{ title: 'Grupos' }}
+            options={{ title: 'Equipes' }}
           />
           <Tab.Screen 
-            name="Notifications" 
+            name="CheckIn" 
             component={NotificationsScreen} 
-            options={{ 
-              title: 'Notificações',
-              tabBarBadge: 3 
-            }}
+            options={{ title: 'Check-in' }}
           />
           <Tab.Screen 
-            name="Menu" 
+            name="Midia" 
             component={MenuScreen} 
-            options={{ title: 'Menu' }}
+            options={{ title: 'Mídia' }}
           />
         </Tab.Navigator>
       </NavigationContainer>
