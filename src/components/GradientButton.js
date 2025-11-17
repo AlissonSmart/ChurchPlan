@@ -7,6 +7,7 @@ import {
   View 
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import GradientText from './GradientText';
 import theme from '../styles/theme';
 
@@ -24,6 +25,7 @@ const GradientButton = ({
   colors = [theme.colors.gradient.start, theme.colors.gradient.end],
   start = { x: 0, y: 0 },
   end = { x: 1, y: 0 },
+  icon,
   ...props 
 }) => {
   return (
@@ -46,7 +48,12 @@ const GradientButton = ({
         {loading ? (
           <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
-          <Text style={[styles.text, textStyle]}>{title}</Text>
+          <View style={styles.buttonContent}>
+            {icon && (
+              <FontAwesome name={icon} size={18} color="#FFFFFF" style={styles.buttonIcon} />
+            )}
+            <Text style={[styles.text, textStyle]}>{title}</Text>
+          </View>
         )}
       </LinearGradient>
     </TouchableOpacity>
@@ -64,6 +71,7 @@ export const OutlineGradientButton = ({
   colors = [theme.colors.gradient.start, theme.colors.gradient.end],
   start = { x: 0, y: 0 },
   end = { x: 1, y: 0 },
+  icon,
   ...props 
 }) => {
   const useColorScheme = require('react-native').useColorScheme;
@@ -89,11 +97,21 @@ export const OutlineGradientButton = ({
         {loading ? (
           <ActivityIndicator color={theme.colors.gradient.end} size="small" />
         ) : (
-          <Text 
-            style={[styles.outlineText, { color: theme.colors.gradient.end }, textStyle]}
-          >
-            {title}
-          </Text>
+          <View style={styles.buttonContent}>
+            {icon && (
+              <FontAwesome 
+                name={icon} 
+                size={18} 
+                color={theme.colors.gradient.end} 
+                style={styles.buttonIcon} 
+              />
+            )}
+            <Text 
+              style={[styles.outlineText, { color: theme.colors.gradient.end }, textStyle]}
+            >
+              {title}
+            </Text>
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -116,6 +134,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: theme.spacing.sm,
   },
   outlineButton: {
     height: theme.sizes.buttonHeight,

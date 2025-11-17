@@ -13,8 +13,8 @@ const theme = {
     primary: '#1877F2',
     secondary: '#0ECFB5',
     gradient: {
-      start: '#0ECFB5',
-      end: '#2AB1FC',
+      start: '#1ac8aa',
+      end: '#29a6f8',
     },
     
     // Cores de interface - Light Mode

@@ -7,7 +7,7 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 // Telas
 import HomeScreen from '../screens/HomeScreen';
 import VideosScreen from '../screens/VideosScreen';
-import GroupsScreen from '../screens/GroupsScreen';
+import TeamsScreen from '../screens/TeamsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import MenuScreen from '../screens/MenuScreen';
 
@@ -51,7 +51,7 @@ const MainTabsNavigator = () => {
         tabBarActiveTintColor: '#1877F2',
         tabBarInactiveTintColor: isDarkMode ? '#A0A0A5' : '#65676B',
         tabBarStyle: {
-          display: 'none'
+          display: 'none', // Oculta a barra de navegação inferior do React Navigation
         },
         tabBarBackground: () => (
           Platform.OS === 'ios' ? (
@@ -81,7 +81,7 @@ const MainTabsNavigator = () => {
       />
       <Tab.Screen 
         name="Equipes" 
-        component={GroupsScreen} 
+        component={TeamsScreen} 
         options={{ title: 'Equipes' }}
       />
       <Tab.Screen 
