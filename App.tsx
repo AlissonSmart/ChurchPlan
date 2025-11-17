@@ -10,6 +10,7 @@ import { StatusBar, StyleSheet, useColorScheme, Platform, View, Text, TouchableO
 import { BlurView } from '@react-native-community/blur';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
@@ -19,13 +20,15 @@ import VideosScreen from './src/screens/VideosScreen';
 import GroupsScreen from './src/screens/GroupsScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import MenuScreen from './src/screens/MenuScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 import { HeaderContext } from './src/contexts/HeaderContext';
 
-// Criando o navegador de tabs
+// Criando os navegadores
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
 // Componente de cabeçalho personalizado para cada tela
-function Header({ title, route }: { title: string, route: string }) {
+function Header({ title, route, navigation }: { title: string, route: string, navigation: any }) {
   const insets = useSafeAreaInsets();
   const isDarkMode = useColorScheme() === 'dark';
   const { showLargeTitle } = useContext(HeaderContext);
@@ -92,7 +95,10 @@ function Header({ title, route }: { title: string, route: string }) {
               </View>
               <FontAwesome name="bell" size={22} color="#1877F2" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.profileButton}>
+            <TouchableOpacity 
+              style={styles.profileButton}
+              onPress={() => navigation.navigate('Profile')}
+            >
               <View style={[styles.profileCircle, isDarkMode && styles.profileCircleDark]}>
                 <Text style={styles.profileText}>A</Text>
               </View>
@@ -116,21 +122,10 @@ function Header({ title, route }: { title: string, route: string }) {
   );
 }
 
-function App() {
+function MainTabs() {
   const isDarkMode = useColorScheme() === 'dark';
-  const [showLargeTitle, setShowLargeTitle] = useState(true);
-
-  const headerContextValue = useMemo(() => ({
-    showLargeTitle,
-    setShowLargeTitle,
-  }), [showLargeTitle]);
-  
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <HeaderContext.Provider value={headerContextValue}>
-        <NavigationContainer>
-          <Tab.Navigator
+    <Tab.Navigator
           screenOptions={({ route }) => ({
             tabBarIcon: ({ focused, color, size }) => {
               let iconName: string;
@@ -183,7 +178,7 @@ function App() {
             ),
             headerShown: true,
             header: ({ navigation, route, options }) => {
-              return <Header title={route.name} route={route.name} />;
+              return <Header title={route.name} route={route.name} navigation={navigation} />;
             },
           })}
         >
@@ -213,6 +208,27 @@ function App() {
             options={{ title: 'Mídia' }}
           />
           </Tab.Navigator>
+  );
+}
+
+function App() {
+  const isDarkMode = useColorScheme() === 'dark';
+  const [showLargeTitle, setShowLargeTitle] = useState(true);
+
+  const headerContextValue = useMemo(() => ({
+    showLargeTitle,
+    setShowLargeTitle,
+  }), [showLargeTitle]);
+  
+  return (
+    <SafeAreaProvider>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <HeaderContext.Provider value={headerContextValue}>
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+          </Stack.Navigator>
         </NavigationContainer>
       </HeaderContext.Provider>
     </SafeAreaProvider>
