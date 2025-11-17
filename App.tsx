@@ -26,7 +26,6 @@ const Tab = createBottomTabNavigator();
 // Componente de cabeçalho personalizado para cada tela
 function Header({ title, route }: { title: string, route: string }) {
   const insets = useSafeAreaInsets();
-  const isHome = route === 'Home';
   
   return (
     <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
@@ -39,31 +38,23 @@ function Header({ title, route }: { title: string, route: string }) {
         />
       )}
       <View style={styles.header}>
-      <View style={styles.headerLeft}>
-        <Image
-          source={require('./src/images/lg-church-plan-icon.png')}
-          style={styles.headerLogo}
-          resizeMode="contain"
-        />
-      </View>
-      
-      <View style={styles.headerCenter}>
-        {!isHome && <Text style={styles.headerTitle}>{title}</Text>}
-      </View>
-      
-      <View style={styles.headerRight}>
-        <TouchableOpacity style={styles.headerButton}>
-          <View style={styles.notificationBadge}>
-            <Text style={styles.badgeText}>3</Text>
-          </View>
-          <FontAwesome name="bell" size={22} color="#1877F2" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.profileButton}>
-          <View style={styles.profileCircle}>
-            <Text style={styles.profileText}>A</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>{title}</Text>
+        </View>
+        
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.headerButton}>
+            <View style={styles.notificationBadge}>
+              <Text style={styles.badgeText}>3</Text>
+            </View>
+            <FontAwesome name="bell" size={22} color="#1877F2" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.profileButton}>
+            <View style={styles.profileCircle}>
+              <Text style={styles.profileText}>A</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -181,22 +172,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerLogo: {
-    height: 40,
-    width: 40,
-  },
-  headerCenter: {
+  headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1877F2',
+    fontSize: 34,
+    fontWeight: 'bold',
+    color: '#000000',
+    marginVertical: 4,
   },
   headerRight: {
     flexDirection: 'row',

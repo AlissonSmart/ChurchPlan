@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, TextInput, StyleSheet, Platform } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
 const TopBar = ({ activeTab, onTabChange }) => {
-  const [searchText, setSearchText] = useState('');
 
   const tabs = [
     { id: 'Agenda', icon: 'calendar', label: 'Agenda' },
@@ -13,57 +12,24 @@ const TopBar = ({ activeTab, onTabChange }) => {
     { id: 'Midia', icon: 'play-circle', label: 'Mídia' },
   ];
 
+  // Encontrar a tab ativa para mostrar o título correto
+  const activeTabData = tabs.find(tab => tab.id === activeTab) || tabs[0];
+  
   return (
     <View style={styles.container}>
-      <View style={styles.leftSection}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../images/lg-church-plan-icon.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-        <View style={styles.searchContainer}>
-          <FontAwesome name="search" size={16} color="#65676B" style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Pesquisar no ChurchPlan"
-            placeholderTextColor="#65676B"
-            value={searchText}
-            onChangeText={setSearchText}
-          />
-        </View>
+      <View style={styles.titleContainer}>
+        <Text style={styles.title}>{activeTabData.label}</Text>
       </View>
-
-      <View style={styles.centerSection}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.id}
-            style={[styles.tabButton, activeTab === tab.id && styles.tabButtonActive]}
-            onPress={() => onTabChange(tab.id)}
-          >
-            <FontAwesome
-              name={tab.icon}
-              size={24}
-              color={activeTab === tab.id ? '#1877F2' : '#65676B'}
-            />
-          </TouchableOpacity>
-        ))}
-      </View>
-
       <View style={styles.rightSection}>
-        <TouchableOpacity style={styles.iconButton}>
-          <FontAwesome name="th" size={20} color="#65676B" />
-        </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton}>
           <View style={styles.notificationBadge}>
             <Text style={styles.badgeText}>3</Text>
           </View>
-          <FontAwesome name="bell" size={20} color="#65676B" />
+          <FontAwesome name="bell" size={22} color="#1877F2" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.profileButton}>
           <View style={styles.profileCircle}>
-            <Text style={styles.profileText}>U</Text>
+            <Text style={styles.profileText}>A</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -73,10 +39,11 @@ const TopBar = ({ activeTab, onTabChange }) => {
 
 const styles = StyleSheet.create({
   container: {
-    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E4E6EB',
     backgroundColor: 'rgba(255,255,255,0.92)',
@@ -95,38 +62,15 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  leftSection: {
+  titleContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    justifyContent: 'flex-start',
   },
-  logoContainer: {
-    borderRadius: 8,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(240,242,245,0.7)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    height: 40,
-    flex: 1,
-    maxWidth: 240,
-  },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#050505',
-    outlineStyle: 'none',
+  title: {
+    fontSize: 34,
+    fontWeight: 'bold',
+    color: '#000000',
+    marginVertical: 4,
   },
   centerSection: {
     flex: 2,
