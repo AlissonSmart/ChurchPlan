@@ -11,7 +11,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
-    persistSession: true,
+    persistSession: true, // Garante que a sessão seja persistente
     detectSessionInUrl: false,
     flowType: 'pkce', // Usar PKCE para autenticação mais segura em apps móveis
   },

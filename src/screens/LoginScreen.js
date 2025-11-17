@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import KeyboardAvoidingWrapper from '../components/KeyboardAvoidingWrapper';
 import AuthInput from '../components/AuthInput';
 import GradientButton, { OutlineGradientButton } from '../components/GradientButton';
 import theme from '../styles/theme';
+import storage from '../utils/storage';
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +35,23 @@ const LoginScreen = ({ navigation }) => {
   
   // Cores dinâmicas baseadas no tema e no modo (claro/escuro)
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
+
+  // Carregar o último email usado quando a tela for montada
+  useEffect(() => {
+    const loadLastEmail = async () => {
+      try {
+        const savedEmail = await storage.getLastEmail();
+        if (savedEmail) {
+          setEmail(savedEmail);
+          console.log('Email carregado com sucesso:', savedEmail);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar email:', error);
+      }
+    };
+
+    loadLastEmail();
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -78,14 +96,11 @@ const LoginScreen = ({ navigation }) => {
         >
           <Image
             source={isDarkMode ? 
-              require('../images/lg-church-plan-light.png') : 
+              require('../images/lg-church-plan-clear.png') : 
               require('../images/lg-church-plan-dark.png')}
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.tagline, { color: colors.textSecondary }]}>
-            Planeje e organize sua igreja
-          </Text>
         </Animated.View>
 
         <View style={styles.formContainer}>
@@ -153,11 +168,6 @@ const styles = StyleSheet.create({
   logo: {
     width: width * 0.6,
     height: 80,
-  },
-  tagline: {
-    fontSize: theme.typography.fontSize.md,
-    marginTop: theme.spacing.sm,
-    fontWeight: '500',
   },
   formContainer: {
     width: '100%',

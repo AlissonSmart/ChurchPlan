@@ -1,4 +1,5 @@
 import supabase from './supabase';
+import storage from '../utils/storage';
 
 /**
  * Serviço de autenticação para gerenciar login, registro e sessão do usuário
@@ -108,6 +109,17 @@ const authService = {
    */
   signOut: async () => {
     try {
+      // Salvar o email do usuário atual antes de fazer logout
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data && data.user && data.user.email) {
+          await storage.saveLastEmail(data.user.email);
+          console.log('Email salvo com sucesso:', data.user.email);
+        }
+      } catch (storageError) {
+        console.error('Erro ao salvar email:', storageError);
+      }
+      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       return true;
