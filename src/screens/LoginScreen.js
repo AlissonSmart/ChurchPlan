@@ -46,6 +46,8 @@ const LoginScreen = ({ navigation }) => {
       await signIn(email, password);
       // Navegação será tratada pelo AuthNavigator
     } catch (error) {
+      // Mantém o email, apenas limpa a senha em caso de erro
+      setPassword('');
       Alert.alert(
         'Erro ao fazer login',
         error.message || 'Verifique suas credenciais e tente novamente'
@@ -159,7 +161,9 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '100%',
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
+    flex: 1,
+    justifyContent: 'center',
   },
   forgotPassword: {
     alignSelf: 'flex-end',
@@ -172,7 +176,7 @@ const styles = StyleSheet.create({
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: theme.spacing.lg,
+    marginVertical: theme.spacing.md,
   },
   dividerLine: {
     flex: 1,

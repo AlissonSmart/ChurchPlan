@@ -132,10 +132,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: theme.sizes.inputHeight,
-    borderRadius: theme.sizes.borderRadius.md,
+    borderRadius: theme.sizes.borderRadius.round,
     borderWidth: 1,
     marginBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
   },
   input: {
     flex: 1,

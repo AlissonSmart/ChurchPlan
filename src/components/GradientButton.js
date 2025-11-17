@@ -7,6 +7,7 @@ import {
   View 
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import GradientText from './GradientText';
 import theme from '../styles/theme';
 
 /**
@@ -52,7 +53,7 @@ const GradientButton = ({
   );
 };
 
-// Versão do botão com borda gradiente e fundo transparente
+// Versão do botão com borda uniforme e fundo transparente
 export const OutlineGradientButton = ({ 
   title, 
   onPress, 
@@ -65,6 +66,10 @@ export const OutlineGradientButton = ({
   end = { x: 1, y: 0 },
   ...props 
 }) => {
+  const useColorScheme = require('react-native').useColorScheme;
+  const isDarkMode = useColorScheme() === 'dark';
+  const backgroundColor = isDarkMode ? theme.colors.dark.background : theme.colors.light.background;
+  
   return (
     <TouchableOpacity
       style={[styles.outlineButton, style]}
@@ -73,23 +78,24 @@ export const OutlineGradientButton = ({
       activeOpacity={0.8}
       {...props}
     >
-      <LinearGradient
-        colors={colors}
-        start={start}
-        end={end}
-        style={styles.outlineGradient}
-      >
-        <View style={[
-          styles.outlineInner,
-          { opacity: disabled ? 0.7 : 1 }
-        ]}>
-          {loading ? (
-            <ActivityIndicator color={theme.colors.gradient.end} size="small" />
-          ) : (
-            <Text style={[styles.outlineText, textStyle]}>{title}</Text>
-          )}
-        </View>
-      </LinearGradient>
+      <View style={[
+        styles.outlineView,
+        { 
+          opacity: disabled ? 0.7 : 1,
+          backgroundColor: backgroundColor,
+          borderColor: theme.colors.gradient.end,
+        }
+      ]}>
+        {loading ? (
+          <ActivityIndicator color={theme.colors.gradient.end} size="small" />
+        ) : (
+          <Text 
+            style={[styles.outlineText, { color: theme.colors.gradient.end }, textStyle]}
+          >
+            {title}
+          </Text>
+        )}
+      </View>
     </TouchableOpacity>
   );
 };
@@ -97,7 +103,7 @@ export const OutlineGradientButton = ({
 const styles = StyleSheet.create({
   button: {
     height: theme.sizes.buttonHeight,
-    borderRadius: theme.sizes.borderRadius.md,
+    borderRadius: theme.sizes.borderRadius.round,
     overflow: 'hidden',
     marginVertical: theme.spacing.sm,
   },
@@ -113,27 +119,21 @@ const styles = StyleSheet.create({
   },
   outlineButton: {
     height: theme.sizes.buttonHeight,
-    borderRadius: theme.sizes.borderRadius.md,
+    borderRadius: theme.sizes.borderRadius.round,
     overflow: 'hidden',
     marginVertical: theme.spacing.sm,
   },
-  outlineGradient: {
+  outlineView: {
     flex: 1,
-    padding: 2,
-    borderRadius: theme.sizes.borderRadius.md,
-  },
-  outlineInner: {
-    flex: 1,
-    backgroundColor: 'white',
-    borderRadius: theme.sizes.borderRadius.md - 2,
+    borderWidth: 1,
+    borderRadius: theme.sizes.borderRadius.round,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
   },
   outlineText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
-    // Cor gradiente não pode ser aplicada diretamente ao texto
-    // Usamos uma cor intermediária
     color: theme.colors.gradient.end,
   },
 });
