@@ -41,6 +41,14 @@ const authService = {
           user: mockUser
         };
         
+        // Salvar o email do usuário ao fazer login
+        try {
+          await storage.saveLastEmail(email);
+          console.log('Email salvo com sucesso no login (modo teste):', email);
+        } catch (storageError) {
+          console.error('Erro ao salvar email no login (modo teste):', storageError);
+        }
+        
         return { user: mockUser, session: mockSession };
       }
       
@@ -65,10 +73,25 @@ const authService = {
           });
           
           if (signInData && signInData.user) {
+            // Salvar o email do usuário ao fazer login
+            try {
+              await storage.saveLastEmail(email);
+              console.log('Email salvo com sucesso no login:', email);
+            } catch (storageError) {
+              console.error('Erro ao salvar email no login:', storageError);
+            }
             return { user: signInData.user, session: signInData.session };
           }
         }
         throw error;
+      }
+      
+      // Salvar o email do usuário ao fazer login
+      try {
+        await storage.saveLastEmail(email);
+        console.log('Email salvo com sucesso no login:', email);
+      } catch (storageError) {
+        console.error('Erro ao salvar email no login:', storageError);
       }
       
       return { user: data.user, session: data.session };
@@ -113,8 +136,14 @@ const authService = {
       try {
         const { data } = await supabase.auth.getUser();
         if (data && data.user && data.user.email) {
+          // Garantir que o email seja salvo corretamente
           await storage.saveLastEmail(data.user.email);
+          // Verificar se o email foi salvo corretamente
+          const savedEmail = await storage.getLastEmail();
           console.log('Email salvo com sucesso:', data.user.email);
+          console.log('Email verificado após salvar:', savedEmail);
+        } else {
+          console.warn('Nenhum usuário encontrado para salvar o email');
         }
       } catch (storageError) {
         console.error('Erro ao salvar email:', storageError);

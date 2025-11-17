@@ -15,6 +15,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     detectSessionInUrl: false,
     flowType: 'pkce', // Usar PKCE para autenticação mais segura em apps móveis
   },
+  localStorage: AsyncStorage, // Adiciona o AsyncStorage como localStorage
 });
 
 export default supabase;

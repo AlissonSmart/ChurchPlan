@@ -36,22 +36,34 @@ const LoginScreen = ({ navigation }) => {
   // Cores dinâmicas baseadas no tema e no modo (claro/escuro)
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
 
-  // Carregar o último email usado quando a tela for montada
+  // Carregar o último email usado quando a tela for montada ou quando ela receber foco
   useEffect(() => {
     const loadLastEmail = async () => {
       try {
         const savedEmail = await storage.getLastEmail();
         if (savedEmail) {
           setEmail(savedEmail);
-          console.log('Email carregado com sucesso:', savedEmail);
+          console.log('Email carregado com sucesso na tela de login:', savedEmail);
+        } else {
+          console.log('Nenhum email salvo encontrado');
         }
       } catch (error) {
         console.error('Erro ao carregar email:', error);
       }
     };
 
+    // Carregar o email quando a tela for montada
     loadLastEmail();
-  }, []);
+
+    // Adicionar um listener para quando a tela receber foco
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('Tela de login recebeu foco, recarregando email...');
+      loadLastEmail();
+    });
+
+    // Limpar o listener quando a tela for desmontada
+    return () => unsubscribe();
+  }, [navigation]);
 
   const handleLogin = async () => {
     if (!email || !password) {

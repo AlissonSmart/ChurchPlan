@@ -16,7 +16,19 @@ const storage = {
    */
   saveLastEmail: async (email) => {
     try {
+      if (!email) {
+        console.warn('Tentativa de salvar email vazio');
+        return;
+      }
+      
       await AsyncStorage.setItem(STORAGE_KEYS.LAST_EMAIL, email);
+      console.log(`Email '${email}' salvo com sucesso no AsyncStorage`);
+      
+      // Verificar se o email foi salvo corretamente
+      const savedEmail = await AsyncStorage.getItem(STORAGE_KEYS.LAST_EMAIL);
+      if (savedEmail !== email) {
+        console.warn(`Verificação de email falhou: salvo='${savedEmail}', esperado='${email}'`);
+      }
     } catch (error) {
       console.error('Erro ao salvar email:', error);
     }
@@ -28,7 +40,9 @@ const storage = {
    */
   getLastEmail: async () => {
     try {
-      return await AsyncStorage.getItem(STORAGE_KEYS.LAST_EMAIL);
+      const email = await AsyncStorage.getItem(STORAGE_KEYS.LAST_EMAIL);
+      console.log(`Email recuperado do AsyncStorage: '${email}'`);
+      return email;
     } catch (error) {
       console.error('Erro ao recuperar email:', error);
       return null;
