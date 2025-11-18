@@ -204,7 +204,7 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
         toValue: 0,
         duration: 300,
         useNativeDriver: true,
-        easing: Easing.bezier(0.36, 0, 0.66, -0.56), // Easing.out(Easing.back(1.5))
+        easing: Easing.bezier(0.16, 1, 0.3, 1), // Curva suave para descer
       }),
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -222,14 +222,12 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
       style={styles.modal}
       backdropOpacity={0.3}
       onBackdropPress={animatedClose}
-      onBackButtonPress={animatedClose}
-      onSwipeComplete={animatedClose}
-      swipeDirection={['down']}
-      swipeThreshold={20} // Reduzido para tornar o gesto mais sensível
+      onBackButtonPress={() => {}} // Impedir fechamento pelo botão de retorno
+      swipeDirection={null} // Desativar fechamento por gesto
       useNativeDriver={true}
       statusBarTranslucent
       avoidKeyboard={true}
-      propagateSwipe={true}
+      propagateSwipe={true} // Permite rolagem dentro do modal
     >
       <Animated.View style={[styles.modalContainer, animatedStyles.container, { backgroundColor: colors.card }]}>
         {/* Indicador de arraste */}
