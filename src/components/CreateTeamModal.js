@@ -9,6 +9,7 @@ import {
   useColorScheme,
   Dimensions,
   Animated,
+  Easing,
   Keyboard,
   StatusBar,
   Platform,
@@ -61,8 +62,9 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 400,
           useNativeDriver: true,
+          easing: Easing.bezier(0.16, 1, 0.3, 1), // Easing.out(Easing.ease) - curva suave
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -183,15 +185,15 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
   // Transformar a animação em estilos
   const animatedStyles = {
     container: {
-      opacity: fadeAnim,
       transform: [
         {
           translateY: slideAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: [300, 0],
+            outputRange: [height, -20], // -20 faz o modal subir um pouco mais na tela
           }),
         },
       ],
+      opacity: fadeAnim,
     },
   };
 
@@ -200,8 +202,9 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 250,
+        duration: 300,
         useNativeDriver: true,
+        easing: Easing.bezier(0.36, 0, 0.66, -0.56), // Easing.out(Easing.back(1.5))
       }),
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -222,7 +225,7 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
       onBackButtonPress={animatedClose}
       onSwipeComplete={animatedClose}
       swipeDirection={['down']}
-      swipeThreshold={30}
+      swipeThreshold={20} // Reduzido para tornar o gesto mais sensível
       useNativeDriver={true}
       statusBarTranslucent
       avoidKeyboard={true}
@@ -349,9 +352,9 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     maxHeight: '90%',
-    minHeight: '50%',
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+    minHeight: '70%', // Aumentado para ocupar mais espaço na tela
+    borderTopLeftRadius: 20, // Raio aumentado para um visual mais moderno
+    borderTopRightRadius: 20,
     overflow: 'hidden',
     backgroundColor: '#F2F2F7', // iOS background color
   },
@@ -361,10 +364,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   dragHandle: {
-    width: 36,
+    width: 40,
     height: 5,
     borderRadius: 2.5,
     backgroundColor: '#C7C7CC', // iOS light gray for drag handle
+    opacity: 0.8,
+    marginVertical: 2,
   },
   modalHeader: {
     flexDirection: 'row',

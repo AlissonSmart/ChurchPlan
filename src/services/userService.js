@@ -1,4 +1,5 @@
 import supabase from './supabase';
+import profileService from './profileService';
 
 /**
  * Serviço para gerenciar usuários no Supabase
@@ -12,25 +13,10 @@ const userService = {
     console.log('Iniciando getAllUsers');
     
     try {
-      // Buscar dados reais do Supabase
-      console.log('Consultando tabela profiles...');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*');
-
-      if (error) {
-        console.error('Erro ao buscar usuários:', error);
-        throw error;
-      }
-
-      console.log(`Encontrados ${data?.length || 0} usuários:`, data);
-      
-      // Retornar array vazio se não houver dados
-      if (!data || data.length === 0) {
-        return [];
-      }
-
-      return data;
+      // Usar o profileService para obter todos os perfis
+      const profiles = await profileService.getAllProfiles();
+      console.log(`Encontrados ${profiles.length} usuários`);
+      return profiles;
     } catch (error) {
       console.error('Erro inesperado ao buscar usuários:', error);
       throw error;
@@ -44,24 +30,10 @@ const userService = {
    */
   getUserById: async (userId) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Erro ao buscar usuário:', error);
-        throw error;
-      }
-
-      if (!data) {
-        throw new Error('Usuário não encontrado');
-      }
-
-      return data;
+      // Usar o profileService para obter o perfil do usuário
+      return await profileService.getProfile(userId);
     } catch (error) {
-      console.error('Erro inesperado ao buscar usuário:', error);
+      console.error('Erro inesperado ao buscar usuário por ID:', error);
       throw error;
     }
   },
@@ -73,25 +45,10 @@ const userService = {
    */
   searchUsersByName: async (searchTerm) => {
     try {
-      // Buscar dados reais do Supabase
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .ilike('name', `%${searchTerm}%`);
-
-      if (error) {
-        console.error('Erro ao buscar usuários:', error);
-        throw error;
-      }
-
-      // Se não houver dados, retornar array vazio
-      if (!data || data.length === 0) {
-        return [];
-      }
-
-      return data;
+      // Usar o profileService para buscar perfis por nome
+      return await profileService.searchProfiles(searchTerm);
     } catch (error) {
-      console.error('Erro inesperado ao buscar usuários:', error);
+      console.error('Erro inesperado ao buscar usuários por nome:', error);
       throw error;
     }
   },
@@ -103,17 +60,8 @@ const userService = {
    */
   createUser: async (userData) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert([userData])
-        .select();
-
-      if (error) {
-        console.error('Erro ao criar usuário:', error);
-        throw error;
-      }
-
-      return data[0];
+      // Usar o profileService para criar um novo usuário e perfil
+      return await profileService.createUser(userData);
     } catch (error) {
       console.error('Erro inesperado ao criar usuário:', error);
       throw error;
@@ -128,18 +76,11 @@ const userService = {
    */
   updateUser: async (userId, userData) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(userData)
-        .eq('id', userId)
-        .select();
-
-      if (error) {
-        console.error('Erro ao atualizar usuário:', error);
-        throw error;
-      }
-
-      return data[0];
+      // Adicionar o ID do usuário aos dados do perfil
+      const profileData = { ...userData, id: userId };
+      
+      // Usar o profileService para atualizar o perfil
+      return await profileService.saveProfile(profileData);
     } catch (error) {
       console.error('Erro inesperado ao atualizar usuário:', error);
       throw error;

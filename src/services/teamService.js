@@ -192,24 +192,23 @@ const teamService = {
         console.log('Pulando adição de líder - ID de usuário inválido ou equipe não criada');
       }
 
-        // 3. Adicionar funções à equipe
-        if (teamData.roles && teamData.roles.length > 0) {
-          console.log('Adicionando funções à equipe:', teamData.roles);
-          
-          const roleData = teamData.roles.map(role => ({
-            team_id: team.id,
-            name: role
-          }));
+      // 3. Adicionar funções à equipe
+      if (teamData.roles && teamData.roles.length > 0) {
+        console.log('Adicionando funções à equipe:', teamData.roles);
+        
+        const roleData = teamData.roles.map(role => ({
+          team_id: team.id,
+          name: role
+        }));
 
-          const { error: rolesError } = await supabase
-            .from('team_roles')
-            .insert(roleData);
+        const { error: rolesError } = await supabase
+          .from('team_roles')
+          .insert(roleData);
 
-          if (rolesError) {
-            console.error('Erro ao adicionar funções:', rolesError);
-          } else {
-            console.log('Funções adicionadas com sucesso');
-          }
+        if (rolesError) {
+          console.error('Erro ao adicionar funções:', rolesError);
+        } else {
+          console.log('Funções adicionadas com sucesso');
         }
       }
 
@@ -222,6 +221,30 @@ const teamService = {
     } catch (error) {
       console.error('ERRO FATAL AO CRIAR EQUIPE:', error);
       throw error;
+    }
+  },
+
+  /**
+   * Obtém as funções de uma equipe
+   * @param {string} teamId - ID da equipe
+   * @returns {Promise<Array>} Lista de funções da equipe
+   */
+  getTeamRoles: async (teamId) => {
+    try {
+      const { data, error } = await supabase
+        .from('team_roles')
+        .select('*')
+        .eq('team_id', teamId);
+
+      if (error) {
+        console.error('Erro ao buscar funções da equipe:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erro inesperado ao buscar funções da equipe:', error);
+      return [];
     }
   },
 

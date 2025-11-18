@@ -14,10 +14,12 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import GradientButton from '../components/GradientButton';
 import { OutlineGradientButton } from '../components/GradientButton';
 import CreateTeamModal from '../components/CreateTeamModal';
+import CreatePersonModal from '../components/CreatePersonModal';
 import SegmentedControl from '../components/SegmentedControl';
 import TeamItem from '../components/TeamItem';
 import userService from '../services/userService';
 import teamService from '../services/teamService';
+import profileService from '../services/profileService';
 import theme from '../styles/theme';
 import TabScreenWrapper from '../components/TabScreenWrapper';
 import { HeaderContext } from '../contexts/HeaderContext';
@@ -38,6 +40,7 @@ const TeamsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [isCreateTeamModalVisible, setIsCreateTeamModalVisible] = useState(false);
+  const [isCreatePersonModalVisible, setIsCreatePersonModalVisible] = useState(false);
   
   // Contextos
   const { setShowLargeTitle } = useContext(HeaderContext);
@@ -247,7 +250,65 @@ const TeamsScreen = ({ navigation }) => {
   };
 
   const handleAddPerson = () => {
-    Alert.alert('Adicionar Pessoa', 'Funcionalidade de adicionar pessoa será implementada.');
+    // Verificar se o usuário está autenticado antes de abrir o modal
+    if (!user) {
+      Alert.alert(
+        'Erro de Autenticação', 
+        'Você precisa estar autenticado para adicionar uma pessoa. Por favor, faça login novamente.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    // Se estiver autenticado, abrir o modal
+    setIsCreatePersonModalVisible(true);
+  };
+  
+  const handleSavePerson = async (personData) => {
+    try {
+      // Verificar novamente se o usuário está autenticado antes de salvar
+      if (!user) {
+        Alert.alert(
+          'Erro de Autenticação', 
+          'Você precisa estar autenticado para adicionar uma pessoa. Por favor, faça login novamente.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      setLoading(true);
+      console.log('Adicionando nova pessoa:', personData);
+      
+      // Salvar a pessoa no banco de dados usando o profileService
+      const newPerson = await profileService.createUser(personData);
+      
+      Alert.alert(
+        'Sucesso', 
+        `Pessoa ${personData.name} adicionada com sucesso!`,
+        [{ text: 'OK' }]
+      );
+      
+      // Fechar o modal após salvar com sucesso
+      setIsCreatePersonModalVisible(false);
+      
+      // Recarregar a lista de usuários
+      loadUsers();
+    } catch (error) {
+      console.error('Erro ao adicionar pessoa:', error);
+      
+      // Mensagem de erro mais específica
+      let errorMessage = 'Não foi possível adicionar a pessoa. Tente novamente.';
+      
+      if (error.message && error.message.includes('autenticado')) {
+        errorMessage = 'Erro de autenticação. Por favor, faça login novamente.';
+      } else if (error.message && error.message.includes('email')) {
+        errorMessage = 'Este email já está sendo usado por outro usuário.';
+      }
+      
+      Alert.alert('Erro', errorMessage, [{ text: 'OK' }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Renderizar item de usuário
@@ -335,6 +396,13 @@ const TeamsScreen = ({ navigation }) => {
           visible={isCreateTeamModalVisible}
           onClose={() => setIsCreateTeamModalVisible(false)}
           onSave={handleSaveTeam}
+        />
+        
+        {/* Modal para adicionar nova pessoa */}
+        <CreatePersonModal
+          visible={isCreatePersonModalVisible}
+          onClose={() => setIsCreatePersonModalVisible(false)}
+          onSave={handleSavePerson}
         />
 
         {/* Controle de segmentos */}
