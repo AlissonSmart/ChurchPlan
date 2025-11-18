@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF', // Azul no estilo iOS
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 10,
+    borderRadius: theme.sizes.borderRadius.round, // Cantos 100% arredondados
     marginBottom: 2,
     marginLeft: 4,
   },
