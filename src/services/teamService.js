@@ -136,15 +136,15 @@ const teamService = {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         
         if (userError || !userData || !userData.user) {
-          console.log('Usuário não autenticado, usando ID de teste');
-          userId = 'test-user-id'; // Usar ID de teste como fallback
+          console.log('Usuário não autenticado, não adicionaremos um líder');
+          userId = null; // Não usar ID de teste, pois causa erro de tipo
         } else {
           userId = userData.user.id;
           console.log('Usando ID do usuário autenticado:', userId);
         }
       } catch (authError) {
-        console.log('Erro ao obter usuário, usando ID de teste:', authError);
-        userId = 'test-user-id'; // Usar ID de teste como fallback
+        console.log('Erro ao obter usuário:', authError);
+        userId = null; // Não usar ID de teste, pois causa erro de tipo
       }
       
       console.log('Criando equipe com usuário ID:', userId);
@@ -166,23 +166,31 @@ const teamService = {
 
       console.log('EQUIPE CRIADA COM SUCESSO:', team);
 
-      // 2. Adicionar o usuário como líder
-      if (team && team.id) {
+      // 2. Adicionar o usuário como líder (apenas se tivermos um ID válido)
+      if (team && team.id && userId) {
         console.log('Adicionando usuário como líder da equipe');
         
-        const { error: memberError } = await supabase
-          .from('team_members')
-          .insert([{
-            team_id: team.id,
-            user_id: userId,
-            role: 'líder'
-          }]);
-          
-        if (memberError) {
+        try {
+          const { error: memberError } = await supabase
+            .from('team_members')
+            .insert([{
+              team_id: team.id,
+              user_id: userId,
+              role: 'líder'
+            }]);
+            
+          if (memberError) {
+            console.error('Erro ao adicionar usuário como líder:', memberError);
+          } else {
+            console.log('Usuário adicionado como líder com sucesso');
+          }
+        } catch (memberError) {
           console.error('Erro ao adicionar usuário como líder:', memberError);
-        } else {
-          console.log('Usuário adicionado como líder com sucesso');
+          // Continuar mesmo se falhar ao adicionar o líder
         }
+      } else {
+        console.log('Pulando adição de líder - ID de usuário inválido ou equipe não criada');
+      }
 
         // 3. Adicionar funções à equipe
         if (teamData.roles && teamData.roles.length > 0) {

@@ -76,11 +76,24 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
     }
   }, [visible]);
 
+  // Estado para controlar se o botão de adicionar função está desabilitado
+  const [isAddingRole, setIsAddingRole] = useState(false);
+  
   // Adicionar um novo campo de função
   const addRoleField = () => {
+    // Evitar cliques múltiplos
+    if (isAddingRole) return;
+    
+    setIsAddingRole(true);
     console.log('Adicionando novo campo de função');
+    
     // Usar a forma funcional do setState para garantir que estamos trabalhando com o estado mais recente
     setRoles(currentRoles => [...currentRoles, '']);
+    
+    // Resetar o estado após um tempo
+    setTimeout(() => {
+      setIsAddingRole(false);
+    }, 300);
   };
 
   // Atualizar o valor de uma função específica
@@ -266,6 +279,10 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
               value={teamName}
               onChangeText={setTeamName}
               autoCapitalize="words"
+              keyboardType="default"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              enablesReturnKeyAutomatically={true}
             />
           </View>
 
@@ -283,6 +300,10 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
                   value={role}
                   onChangeText={(text) => updateRole(text, index)}
                   autoCapitalize="words"
+                  keyboardType="default"
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                  enablesReturnKeyAutomatically={true}
                 />
                 <TouchableOpacity 
                   style={styles.removeButton}
@@ -302,14 +323,15 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
 
             {/* Botão para adicionar mais funções */}
             <TouchableOpacity 
-              style={[styles.addButton, { borderColor: theme.colors.primary }]}
+              style={[styles.addButton, { borderColor: theme.colors.primary }, isAddingRole && styles.disabledButton]}
               onPress={addRoleField}
               activeOpacity={0.7} // Reduz a opacidade ao tocar, dando feedback visual
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Aumenta a área de toque
+              disabled={isAddingRole} // Desabilitar o botão enquanto estiver adicionando
             >
-              <FontAwesome name="plus" size={16} color={theme.colors.primary} />
-              <Text style={[styles.addButtonText, { color: theme.colors.primary }]}>
-                Adicionar Função
+              <FontAwesome name="plus" size={16} color={isAddingRole ? '#999999' : theme.colors.primary} />
+              <Text style={[styles.addButtonText, { color: isAddingRole ? '#999999' : theme.colors.primary }]}>
+                {isAddingRole ? 'Adicionando...' : 'Adicionar Função'}
               </Text>
             </TouchableOpacity>
           </View>
