@@ -17,6 +17,7 @@ import CreateTeamModal from '../components/CreateTeamModal';
 import CreatePersonModal from '../components/CreatePersonModal';
 import SegmentedControl from '../components/SegmentedControl';
 import TeamItem from '../components/TeamItem';
+import SkeletonLoader from '../components/SkeletonLoader';
 import userService from '../services/userService';
 import teamService from '../services/teamService';
 import profileService from '../services/profileService';
@@ -445,9 +446,11 @@ const TeamsScreen = ({ navigation }) => {
         </View>
 
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={activeSegment === 'people' ? '#007AFF' : '#1ac8aa'} />
-          </View>
+          <SkeletonLoader 
+            type={activeSegment === 'people' ? 'user' : 'team'}
+            count={6}
+            style={styles.skeletonContainer}
+          />
         ) : activeSegment === 'people' ? (
           // Lista de pessoas
           <FlatList
@@ -618,6 +621,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  skeletonContainer: {
+    flex: 1,
+    paddingHorizontal: 0,
+    paddingTop: theme.spacing.sm,
   },
   emptyContainer: {
     padding: theme.spacing.xl,

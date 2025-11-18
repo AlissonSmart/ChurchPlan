@@ -5,7 +5,6 @@ import supabase from '../services/supabase';
 // Criando o contexto de autenticação
 export const AuthContext = createContext({
   user: null,
-  loading: true,
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
@@ -22,7 +21,6 @@ export const useAuth = () => useContext(AuthContext);
  */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   // Efeito para verificar e renovar a sessão do usuário ao iniciar
   useEffect(() => {
@@ -40,8 +38,6 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Erro ao verificar/renovar sessão do usuário:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -85,35 +81,28 @@ export const AuthProvider = ({ children }) => {
 
   // Função para login
   const signIn = async (email, password) => {
-    setLoading(true);
     try {
       const { user } = await authService.signIn(email, password);
       setUser(user);
       return user;
     } catch (error) {
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
   // Função para registro
   const signUp = async (email, password, userData) => {
-    setLoading(true);
     try {
       const { user } = await authService.signUp(email, password, userData);
       setUser(user);
       return user;
     } catch (error) {
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
   // Função para logout
   const signOut = async () => {
-    setLoading(true);
     try {
       const result = await authService.signOut();
       if (result) {
@@ -125,8 +114,6 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -142,7 +129,6 @@ export const AuthProvider = ({ children }) => {
   // Valor do contexto
   const value = {
     user,
-    loading,
     signIn,
     signUp,
     signOut,
