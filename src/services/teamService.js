@@ -10,6 +10,7 @@ const teamService = {
    */
   getAllTeams: async () => {
     try {
+      console.log('Buscando todas as equipes do banco de dados');
       const { data, error } = await supabase
         .from('teams')
         .select(`
@@ -30,9 +31,10 @@ const teamService = {
         roles_count: team.team_roles[0]?.count || 0
       })) || [];
 
+      console.log('Equipes encontradas:', processedData.length);
       return processedData;
     } catch (error) {
-      console.error('Erro inesperado ao buscar equipes:', error);
+      console.error('Erro ao buscar equipes:', error);
       throw error;
     }
   },
@@ -44,18 +46,7 @@ const teamService = {
    */
   searchTeamsByName: async (searchTerm) => {
     try {
-      // Se estamos no modo de teste, retornar dados simulados
-      if (searchTerm === 'test-mode') {
-        return [{
-          id: 'test-team-1',
-          name: 'Equipe de Teste',
-          members_count: 3,
-          roles_count: 2,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }];
-      }
-      
+      console.log('Buscando equipes por nome no banco de dados:', searchTerm);
       const { data, error } = await supabase
         .from('teams')
         .select(`
@@ -66,7 +57,7 @@ const teamService = {
         .ilike('name', `%${searchTerm}%`);
 
       if (error) {
-        console.error('Erro ao buscar equipes:', error);
+        console.error('Erro ao buscar equipes por nome:', error);
         throw error;
       }
 
@@ -77,9 +68,10 @@ const teamService = {
         roles_count: team.team_roles[0]?.count || 0
       })) || [];
 
+      console.log('Equipes encontradas na busca:', processedData.length);
       return processedData;
     } catch (error) {
-      console.error('Erro inesperado ao buscar equipes:', error);
+      console.error('Erro ao buscar equipes por nome:', error);
       throw error;
     }
   },
@@ -134,91 +126,54 @@ const teamService = {
    */
   createTeam: async (teamData) => {
     try {
-      // Verificar se estamos usando o usuário de teste
-      let userId = 'test-user-id'; // ID padrão para o usuário de teste
-      let isTestMode = false;
+      console.log('Iniciando criação de equipe no banco de dados:', teamData.name);
+      
+      // Obter o ID do usuário atual
+      let userId;
       
       try {
-        // Tentar obter a sessão do Supabase
-        const { data: sessionData } = await supabase.auth.getSession();
+        // Tentar obter o usuário autenticado
+        const { data: userData, error: userError } = await supabase.auth.getUser();
         
-        // Se temos uma sessão válida, usar o ID do usuário real
-        if (sessionData && sessionData.session) {
-          const { data: userData } = await supabase.auth.getUser();
-          if (userData && userData.user) {
-            userId = userData.user.id;
-            console.log('Usando usuário autenticado:', userId);
-          }
+        if (userError || !userData || !userData.user) {
+          console.log('Usuário não autenticado, usando ID de teste');
+          userId = 'test-user-id'; // Usar ID de teste como fallback
         } else {
-          // Se não há sessão, assumimos que estamos no modo de teste
-          console.log('Nenhuma sessão encontrada, usando modo de teste');
-          isTestMode = true;
+          userId = userData.user.id;
+          console.log('Usando ID do usuário autenticado:', userId);
         }
       } catch (authError) {
-        console.log('Erro ao verificar autenticação, usando modo de teste:', authError);
-        isTestMode = true;
+        console.log('Erro ao obter usuário, usando ID de teste:', authError);
+        userId = 'test-user-id'; // Usar ID de teste como fallback
       }
       
-      console.log('Criando equipe com usuário ID:', userId, 'Modo de teste:', isTestMode);
+      console.log('Criando equipe com usuário ID:', userId);
       
-      // Se estamos no modo de teste, usar uma abordagem simplificada
-      if (isTestMode) {
-        console.log('Usando abordagem simplificada para modo de teste');
-        
-        // Criar um ID único para a equipe
-        const teamId = 'test-team-' + Date.now();
-        
-        // Criar um objeto de equipe simulado
-        const mockTeam = {
-          id: teamId,
-          name: teamData.name,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        
-        console.log('Equipe simulada criada:', mockTeam);
-        
-        // Simular um pequeno atraso para parecer que está processando
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        return mockTeam;
+      // INSERÇÃO DIRETA - Abordagem mais simples e direta
+      console.log('Inserindo equipe diretamente na tabela teams');
+      
+      // 1. Inserir a equipe
+      const { data: team, error: teamError } = await supabase
+        .from('teams')
+        .insert([{ name: teamData.name }])
+        .select()
+        .single();
+
+      if (teamError) {
+        console.error('ERRO AO CRIAR EQUIPE:', teamError);
+        throw new Error(`Erro ao criar equipe: ${teamError.message}`);
       }
-      
-      // Abordagem normal para usuários autenticados
-      try {
-        // Tentar usar a função RPC primeiro
-        const { data: team, error: teamError } = await supabase
-          .rpc('create_team_with_roles', { 
-            team_name: teamData.name,
-            roles_array: teamData.roles && teamData.roles.length > 0 ? teamData.roles : []
-          });
 
-        if (!teamError && team) {
-          console.log('Equipe criada via RPC com sucesso');
-          return team;
-        }
+      console.log('EQUIPE CRIADA COM SUCESSO:', team);
+
+      // 2. Adicionar o usuário como líder
+      if (team && team.id) {
+        console.log('Adicionando usuário como líder da equipe');
         
-        console.log('Função RPC falhou, usando método alternativo');
-        
-        // Método alternativo: inserção direta
-        const { data: directTeam, error: directError } = await supabase
-          .from('teams')
-          .insert([{ name: teamData.name }])
-          .select()
-          .single();
-
-        if (directError) {
-          console.error('Erro ao criar equipe (método direto):', directError);
-          throw directError;
-        }
-
-        console.log('Equipe criada com sucesso:', directTeam);
-
-        // Adicionar o usuário como líder da equipe
         const { error: memberError } = await supabase
           .from('team_members')
           .insert([{
-            team_id: directTeam.id,
+            team_id: team.id,
             user_id: userId,
             role: 'líder'
           }]);
@@ -229,10 +184,12 @@ const teamService = {
           console.log('Usuário adicionado como líder com sucesso');
         }
 
-        // Adicionar funções à equipe
+        // 3. Adicionar funções à equipe
         if (teamData.roles && teamData.roles.length > 0) {
+          console.log('Adicionando funções à equipe:', teamData.roles);
+          
           const roleData = teamData.roles.map(role => ({
-            team_id: directTeam.id,
+            team_id: team.id,
             name: role
           }));
 
@@ -246,14 +203,16 @@ const teamService = {
             console.log('Funções adicionadas com sucesso');
           }
         }
-
-        return directTeam;
-      } catch (error) {
-        console.error('Erro ao criar equipe:', error);
-        throw error;
       }
+
+      // Retornar a equipe criada com contagens
+      return {
+        ...team,
+        members_count: 1, // Acabamos de adicionar o líder
+        roles_count: teamData.roles ? teamData.roles.length : 0
+      };
     } catch (error) {
-      console.error('Erro inesperado ao criar equipe:', error);
+      console.error('ERRO FATAL AO CRIAR EQUIPE:', error);
       throw error;
     }
   },

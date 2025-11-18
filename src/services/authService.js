@@ -13,11 +13,38 @@ const authService = {
    */
   signIn: async (email, password) => {
     try {
-      // MODO DE TESTE: Permitir login com credenciais específicas para teste
+      // MODO DE TESTE: Tentar login real primeiro, com fallback para credenciais de teste
       if (email === 'eualissonmartins@gmail.com' && password === '123456') {
-        console.log('Modo de teste: Usando credenciais fixas');
+        console.log('Modo de teste: Tentando login real primeiro');
         
-        // Criar um usuário fictício para testes
+        try {
+          // Tentar login real primeiro
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          
+          if (!error && data && data.user) {
+            console.log('Login real bem-sucedido no modo de teste');
+            
+            // Salvar o email do usuário ao fazer login
+            try {
+              await storage.saveLastEmail(email);
+              console.log('Email salvo com sucesso no login:', email);
+            } catch (storageError) {
+              console.error('Erro ao salvar email no login:', storageError);
+            }
+            
+            return { user: data.user, session: data.session };
+          }
+          
+          // Se falhar, usar o modo de teste com usuário simulado
+          console.log('Login real falhou, usando credenciais fixas');
+        } catch (loginError) {
+          console.log('Erro ao tentar login real:', loginError);
+        }
+        
+        // Criar um usuário fictício para testes como fallback
         const mockUser = {
           id: 'test-user-id',
           email: 'eualissonmartins@gmail.com',
@@ -40,6 +67,18 @@ const authService = {
           expires_at: Math.floor(Date.now() / 1000) + 3600,
           user: mockUser
         };
+        
+        // Configurar a sessão no Supabase para o modo de teste
+        try {
+          // Tentar definir a sessão manualmente
+          await supabase.auth.setSession({
+            access_token: mockSession.access_token,
+            refresh_token: mockSession.refresh_token
+          });
+          console.log('Sessão de teste configurada no Supabase');
+        } catch (sessionError) {
+          console.log('Erro ao configurar sessão de teste:', sessionError);
+        }
         
         // Salvar o email do usuário ao fazer login
         try {
