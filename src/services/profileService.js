@@ -175,72 +175,63 @@ const profileService = {
   },
   
   /**
-   * Cria um novo usuário e perfil
+   * Cria um novo perfil (sem autenticação no Supabase Auth)
    * @param {Object} userData - Dados do usuário
-   * @returns {Promise<Object>} Usuário criado
+   * @returns {Promise<Object>} Perfil criado
    */
   createUser: async (userData) => {
     try {
-      console.log('Criando novo usuário:', userData);
-      
-      // Criar usuário na autenticação
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: userData.email,
-        password: Math.random().toString(36).slice(-8), // Senha aleatória temporária
-        email_confirm: true, // Confirmar email automaticamente
-        user_metadata: {
-          name: userData.name,
-          is_admin: userData.is_admin || false
-        }
-      });
-      
-      if (authError) {
-        console.error('Erro ao criar usuário na autenticação:', authError);
-        throw authError;
+      console.log('Criando novo usuário (apenas perfil):', userData);
+
+      if (!userData.id) {
+        throw new Error('ID do usuário de autenticação não fornecido. Crie primeiro o usuário no Auth (backend) e passe o ID para createUser.');
       }
-      
-      // Criar perfil para o usuário
+
       const profileToCreate = {
-        id: authData.user.id,
+        id: userData.id,
         name: userData.name,
         email: userData.email,
         phone: userData.phone || null,
         is_admin: userData.is_admin || false,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
-      
+
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert([profileToCreate])
         .select()
         .single();
-        
+
       if (profileError) {
         console.error('Erro ao criar perfil:', profileError);
         throw profileError;
       }
-      
+
+      console.log('Perfil criado com sucesso:', profileData);
+
       // Processar associações de equipes
       if (userData.teams && userData.teams.length > 0) {
         const teamMembers = userData.teams.map(team => ({
           team_id: team.teamId,
-          user_id: authData.user.id,
-          role: team.role
+          user_id: profileData.id,
+          role: team.role,
         }));
-        
+
         const { error: teamError } = await supabase
           .from('team_members')
           .insert(teamMembers);
-          
+
         if (teamError) {
           console.error('Erro ao associar usuário às equipes:', teamError);
+        } else {
+          console.log('Associações de equipe criadas com sucesso');
         }
       }
-      
+
       return {
-        user: authData.user,
-        profile: profileData
+        user: null,
+        profile: profileData,
       };
     } catch (error) {
       console.error('Erro ao criar usuário:', error);

@@ -6,6 +6,53 @@ import storage from '../utils/storage';
  */
 const authService = {
   /**
+   * Cria um novo usuário no Supabase Auth
+   * @param {Object} userData - Dados do usuário (email, nome, etc)
+   * @returns {Promise<Object>} - Objeto com o usuário criado
+   */
+  createAuthUser: async (userData) => {
+    try {
+      console.log('Criando usuário no Auth (método simplificado):', userData);
+      
+      // Verificar se a senha foi fornecida
+      if (!userData.password) {
+        throw new Error('Senha não fornecida para criar usuário');
+      }
+      
+      console.log('Usando senha fornecida pelo usuário');
+      
+      // Usar o método signUp diretamente com configuração mínima
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password, // Usar a senha fornecida pelo usuário
+        options: {
+          // Sem usar configurações avançadas que possam depender de WebCrypto
+          emailRedirectTo: undefined,
+          data: {
+            name: userData.name,
+            is_admin: userData.is_admin || false
+          }
+        }
+      });
+      
+      if (error) {
+        console.error('Erro ao criar usuário no Auth:', error);
+        throw error;
+      }
+      
+      if (!data || !data.user) {
+        console.error('Resposta inválida ao criar usuário:', data);
+        throw new Error('Resposta inválida ao criar usuário');
+      }
+      
+      console.log('Usuário criado com sucesso no Auth:', data.user.id);
+      return data;
+    } catch (error) {
+      console.error('Erro ao criar usuário no Auth:', error);
+      throw error;
+    }
+  },
+  /**
    * Realiza login com email e senha
    * @param {string} email - Email do usuário
    * @param {string} password - Senha do usuário
@@ -157,19 +204,32 @@ const authService = {
    */
   signUp: async (email, password, userData = {}) => {
     try {
+      console.log('Registrando novo usuário com email:', email);
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: userData,
-          expiresIn: 30 * 24 * 60 * 60, // 30 dias em segundos
-        },
+          // Configuração mínima para evitar problemas com WebCrypto
+          emailRedirectTo: undefined,
+          data: userData
+        }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao registrar usuário:', error);
+        throw error;
+      }
+      
+      if (!data || !data.user) {
+        console.error('Resposta inválida ao registrar usuário:', data);
+        throw new Error('Resposta inválida ao registrar usuário');
+      }
+      
+      console.log('Usuário registrado com sucesso:', data.user.id);
       return { user: data.user, session: data.session };
     } catch (error) {
-      console.error('Erro ao registrar usuário:', error.message);
+      console.error('Erro ao registrar usuário:', error);
       throw error;
     }
   },

@@ -23,6 +23,7 @@ import SkeletonLoader from '../components/SkeletonLoader';
 import userService from '../services/userService';
 import teamService from '../services/teamService';
 import profileService from '../services/profileService';
+import authService from '../services/authService';
 import theme from '../styles/theme';
 import TabScreenWrapper from '../components/TabScreenWrapper';
 import { HeaderContext } from '../contexts/HeaderContext';
@@ -258,8 +259,20 @@ const TeamsScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Erro ao criar equipe:', error);
       
-      // Mensagem de erro mais específica
-      let errorMessage = 'Não foi possível criar a equipe. Tente novamente.';
+      // Mostrar o erro real do banco de dados
+      let errorMessage = `Erro: ${error.message || 'Desconhecido'}`;
+      
+      // Adicionar detalhes do erro se disponíveis
+      if (error.details) {
+        errorMessage += `\n\nDetalhes: ${error.details}`;
+      }
+      
+      // Adicionar código do erro se disponível
+      if (error.code) {
+        errorMessage += `\n\nCódigo: ${error.code}`;
+      }
+      
+      Alert.alert('Erro ao criar equipe', errorMessage, [{ text: 'OK' }]);
     }
     finally {
       setLoading(false);
@@ -374,9 +387,19 @@ const TeamsScreen = ({ navigation }) => {
       setLoading(true);
       console.log('Adicionando nova pessoa:', personData);
       
-      // Salvar a pessoa no banco de dados usando o profileService
-      const newPerson = await profileService.createUser(personData);
+      // 1. Primeiro criar o usuário no Auth
+      const authResult = await authService.createAuthUser(personData);
+      console.log('Usuário criado no Auth:', authResult.user.id);
       
+      // 2. Adicionar o ID do usuário aos dados para criar o perfil
+      const profileData = {
+        ...personData,
+        id: authResult.user.id
+      };
+      
+      // 3. Criar o perfil usando o ID do usuário Auth
+      const newPerson = await profileService.createUser(profileData);
+    
       Alert.alert(
         'Sucesso', 
         `Pessoa ${personData.name} adicionada com sucesso!`,
@@ -391,16 +414,20 @@ const TeamsScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Erro ao adicionar pessoa:', error);
       
-      // Mensagem de erro mais específica
-      let errorMessage = 'Não foi possível adicionar a pessoa. Tente novamente.';
+      // Mostrar o erro real do banco de dados
+      let errorMessage = `Erro: ${error.message || 'Desconhecido'}`;
       
-      if (error.message && error.message.includes('autenticado')) {
-        errorMessage = 'Erro de autenticação. Por favor, faça login novamente.';
-      } else if (error.message && error.message.includes('email')) {
-        errorMessage = 'Este email já está sendo usado por outro usuário.';
+      // Adicionar detalhes do erro se disponíveis
+      if (error.details) {
+        errorMessage += `\n\nDetalhes: ${error.details}`;
       }
       
-      Alert.alert('Erro', errorMessage, [{ text: 'OK' }]);
+      // Adicionar código do erro se disponível
+      if (error.code) {
+        errorMessage += `\n\nCódigo: ${error.code}`;
+      }
+      
+      Alert.alert('Erro ao adicionar pessoa', errorMessage, [{ text: 'OK' }]);
     } finally {
       setLoading(false);
     }

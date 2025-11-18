@@ -27,6 +27,7 @@ const CreatePersonModal = ({ visible, onClose, onSave }) => {
   // Estados para os campos do formulário
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState([]);
@@ -135,6 +136,7 @@ const CreatePersonModal = ({ visible, onClose, onSave }) => {
   const resetForm = () => {
     setName('');
     setEmail('');
+    setPassword(''); // Limpar campo de senha
     setPhone('');
     setIsAdmin(false);
     setSelectedTeams([]);
@@ -177,8 +179,14 @@ const CreatePersonModal = ({ visible, onClose, onSave }) => {
   // Salvar pessoa
   const handleSave = async () => {
     // Validação básica
-    if (!name.trim() || !email.trim()) {
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      alert('Nome, email e senha são campos obrigatórios');
       return; // Não salvar se campos obrigatórios estiverem vazios
+    }
+    
+    if (password.trim().length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres');
+      return;
     }
     
     // Evitar múltiplos cliques
@@ -192,6 +200,7 @@ const CreatePersonModal = ({ visible, onClose, onSave }) => {
       const newPerson = {
         name: name.trim(),
         email: email.trim(),
+        password: password.trim(), // Incluir senha digitada pelo usuário
         phone: phone.trim(),
         is_admin: isAdmin,
         teams: selectedTeams
@@ -271,14 +280,14 @@ const CreatePersonModal = ({ visible, onClose, onSave }) => {
             <Text style={[styles.modalTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>Nova Pessoa</Text>
             <TouchableOpacity 
               onPress={handleSave} 
-              disabled={!name.trim() || !email.trim() || isSaving}
+              disabled={!name.trim() || !email.trim() || !password.trim() || isSaving}
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Text style={[
                 styles.saveButton, 
                 { color: isDarkMode ? '#0A84FF' : '#007AFF' },
-                (!name.trim() || !email.trim() || isSaving) && styles.disabledButton
+                (!name.trim() || !email.trim() || !password.trim() || isSaving) && styles.disabledButton
               ]}>
                 {isSaving ? 'Salvando...' : 'Salvar'}
               </Text>
@@ -331,6 +340,22 @@ const CreatePersonModal = ({ visible, onClose, onSave }) => {
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                enablesReturnKeyAutomatically={true}
+              />
+            </View>
+
+            {/* Campo de senha */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Senha*</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.input, color: colors.text }]}
+                placeholder="Digite a senha"
+                placeholderTextColor={colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={true}
                 returnKeyType="next"
                 blurOnSubmit={false}
                 enablesReturnKeyAutomatically={true}

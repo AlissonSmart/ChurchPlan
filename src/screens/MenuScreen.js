@@ -12,6 +12,7 @@ const MenuScreen = ({ navigation, route }) => {
     { id: 4, icon: 'dollar', title: 'Contribuições', subtitle: 'Gerencie doações' },
     { id: 5, icon: 'book', title: 'Recursos', subtitle: 'Materiais e estudos' },
     { id: 6, icon: 'question-circle', title: 'Ajuda', subtitle: 'Central de suporte' },
+    { id: 7, icon: 'database', title: 'SQL Fixer', subtitle: 'Corrigir permissões do banco' },
   ];
 
   return (
@@ -28,7 +29,17 @@ const MenuScreen = ({ navigation, route }) => {
 
         <View style={[styles.menuSection, isDarkMode && styles.menuSectionDark]}>
           {menuItems.map((item) => (
-            <TouchableOpacity key={item.id} style={[styles.menuItem, isDarkMode && styles.menuItemDark]}>
+            <TouchableOpacity 
+              key={item.id} 
+              style={[styles.menuItem, isDarkMode && styles.menuItemDark]}
+              onPress={() => {
+                if (item.id === 7) { // SQL Fixer
+                  navigation.navigate('SqlFixer');
+                } else if (item.id === 2) { // Perfil
+                  navigation.navigate('Profile');
+                }
+              }}
+            >
               <View style={[styles.menuIconContainer, isDarkMode && styles.menuIconContainerDark]}>
                 <FontAwesome name={item.icon} size={20} color="#1877F2" />
               </View>

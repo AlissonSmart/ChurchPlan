@@ -11,23 +11,70 @@ const teamService = {
   getAllTeams: async () => {
     try {
       console.log('Buscando todas as equipes do banco de dados');
-      const { data, error } = await supabase
+      
+      // Primeiro, buscar todas as equipes com contagem de funções
+      const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select(`
           *,
-          team_members(count),
           team_roles(count)
         `);
 
-      if (error) {
-        console.error('Erro ao buscar equipes:', error);
-        throw error;
+      if (teamsError) {
+        console.error('Erro ao buscar equipes:', teamsError);
+        throw teamsError;
+      }
+      
+      // Obter IDs das equipes encontradas
+      const teamIds = teamsData.map(team => team.id);
+      console.log('IDs das equipes encontradas:', teamIds);
+      
+      // Buscar apenas os membros das equipes encontradas
+      const { data: allTeamMembers, error: membersError } = await supabase
+        .from('team_members')
+        .select('team_id, user_id')
+        .in('team_id', teamIds);
+        
+      if (membersError) {
+        console.error('Erro ao buscar membros das equipes:', membersError);
+        // Continuar mesmo com erro, apenas não terão contagem de membros
+      }
+      
+      console.log('Total de registros de membros:', allTeamMembers?.length || 0);
+      
+      // Vamos considerar todos os membros válidos por enquanto
+      const validTeamMembers = allTeamMembers || [];
+      
+      // Contar membros únicos por equipe manualmente
+      const memberCountMap = {};
+      
+      if (validTeamMembers && validTeamMembers.length > 0) {
+        // Para cada equipe, criar um Set de user_ids para contar membros únicos
+        teamsData.forEach(team => {
+          const uniqueMembers = new Set();
+          
+          // Filtrar membros desta equipe e adicionar ao Set
+          const teamMembers = validTeamMembers
+            .filter(member => member.team_id === team.id);
+          
+          console.log(`Equipe ${team.name} (${team.id}): ${teamMembers.length} registros de membros`);
+          
+          // Adicionar apenas user_ids únicos ao Set
+          teamMembers.forEach(member => {
+            uniqueMembers.add(member.user_id);
+          });
+          
+          // Armazenar a contagem de membros únicos
+          memberCountMap[team.id] = uniqueMembers.size;
+          console.log(`Equipe ${team.name}: ${uniqueMembers.size} membros únicos`);
+          console.log(`IDs dos membros da equipe ${team.name}:`, [...uniqueMembers]);
+        });
       }
 
       // Processar os dados para incluir contagens
-      const processedData = data?.map(team => ({
+      const processedData = teamsData?.map(team => ({
         ...team,
-        members_count: team.team_members[0]?.count || 0,
+        members_count: memberCountMap[team.id] || 0,
         roles_count: team.team_roles[0]?.count || 0
       })) || [];
 
@@ -47,24 +94,75 @@ const teamService = {
   searchTeamsByName: async (searchTerm) => {
     try {
       console.log('Buscando equipes por nome no banco de dados:', searchTerm);
-      const { data, error } = await supabase
+      
+      // Primeiro, buscar equipes que correspondem ao termo de busca
+      const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select(`
           *,
-          team_members(count),
           team_roles(count)
         `)
         .ilike('name', `%${searchTerm}%`);
 
-      if (error) {
-        console.error('Erro ao buscar equipes por nome:', error);
-        throw error;
+      if (teamsError) {
+        console.error('Erro ao buscar equipes por nome:', teamsError);
+        throw teamsError;
+      }
+      
+      if (!teamsData || teamsData.length === 0) {
+        return [];
+      }
+      
+      // Obter IDs das equipes encontradas
+      const teamIds = teamsData.map(team => team.id);
+      console.log('IDs das equipes encontradas na busca:', teamIds);
+      
+      // Buscar apenas os membros das equipes encontradas
+      const { data: allTeamMembers, error: membersError } = await supabase
+        .from('team_members')
+        .select('team_id, user_id')
+        .in('team_id', teamIds);
+        
+      if (membersError) {
+        console.error('Erro ao buscar membros das equipes:', membersError);
+        // Continuar mesmo com erro, apenas não terão contagem de membros
+      }
+      
+      console.log('Total de registros de membros na busca:', allTeamMembers?.length || 0);
+      
+      // Vamos considerar todos os membros válidos por enquanto
+      const validTeamMembers = allTeamMembers || [];
+      
+      // Contar membros únicos por equipe manualmente
+      const memberCountMap = {};
+      
+      if (validTeamMembers && validTeamMembers.length > 0) {
+        // Para cada equipe, criar um Set de user_ids para contar membros únicos
+        teamsData.forEach(team => {
+          const uniqueMembers = new Set();
+          
+          // Filtrar membros desta equipe e adicionar ao Set
+          const teamMembers = validTeamMembers
+            .filter(member => member.team_id === team.id);
+          
+          console.log(`Equipe ${team.name} (${team.id}): ${teamMembers.length} registros de membros`);
+          
+          // Adicionar apenas user_ids únicos ao Set
+          teamMembers.forEach(member => {
+            uniqueMembers.add(member.user_id);
+          });
+          
+          // Armazenar a contagem de membros únicos
+          memberCountMap[team.id] = uniqueMembers.size;
+          console.log(`Equipe ${team.name}: ${uniqueMembers.size} membros únicos`);
+          console.log(`IDs dos membros da equipe ${team.name}:`, [...uniqueMembers]);
+        });
       }
 
       // Processar os dados para incluir contagens
-      const processedData = data?.map(team => ({
+      const processedData = teamsData?.map(team => ({
         ...team,
-        members_count: team.team_members[0]?.count || 0,
+        members_count: memberCountMap[team.id] || 0,
         roles_count: team.team_roles[0]?.count || 0
       })) || [];
 
