@@ -15,6 +15,8 @@ import GradientButton from '../components/GradientButton';
 import { OutlineGradientButton } from '../components/GradientButton';
 import CreateTeamModal from '../components/CreateTeamModal';
 import CreatePersonModal from '../components/CreatePersonModal';
+import EditPersonModal from '../components/EditPersonModal';
+import EditTeamModal from '../components/EditTeamModal';
 import SegmentedControl from '../components/SegmentedControl';
 import TeamItem from '../components/TeamItem';
 import SkeletonLoader from '../components/SkeletonLoader';
@@ -42,6 +44,10 @@ const TeamsScreen = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
   const [isCreateTeamModalVisible, setIsCreateTeamModalVisible] = useState(false);
   const [isCreatePersonModalVisible, setIsCreatePersonModalVisible] = useState(false);
+  const [isEditPersonModalVisible, setIsEditPersonModalVisible] = useState(false);
+  const [isEditTeamModalVisible, setIsEditTeamModalVisible] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState(null);
+  const [selectedTeam, setSelectedTeam] = useState(null);
   
   // Contextos
   const { setShowLargeTitle } = useContext(HeaderContext);
@@ -180,16 +186,28 @@ const TeamsScreen = ({ navigation }) => {
   
   // Função para lidar com o clique em uma equipe
   const handleTeamPress = (team) => {
-    Alert.alert(
-      'Detalhes da Equipe',
-      `Nome: ${team.name}\nMembros: ${team.members_count}\nFunções: ${team.roles_count}`,
-      [{ text: 'OK' }]
-    );
+    Alert.alert('Equipe', `Você selecionou a equipe ${team.name}`);
   };
   
-  // Função para editar uma equipe
+  // Função para abrir o modal de edição de equipe
   const handleEditTeam = (team) => {
-    Alert.alert('Editar', `Editar equipe ${team.name}`);
+    console.log('handleEditTeam chamado com:', team);
+    // Verificar se o usuário está autenticado antes de abrir o modal
+    if (!user) {
+      Alert.alert(
+        'Erro de Autenticação', 
+        'Você precisa estar autenticado para editar uma equipe. Por favor, faça login novamente.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    console.log('Definindo selectedTeam e abrindo modal');
+    setSelectedTeam(team);
+    setTimeout(() => {
+      console.log('Abrindo modal de edição após timeout');
+      setIsEditTeamModalVisible(true);
+    }, 100); // Pequeno timeout para garantir que selectedTeam foi definido
   };
 
   const handleCreateTeam = () => {
@@ -234,17 +252,93 @@ const TeamsScreen = ({ navigation }) => {
       
       // Fechar o modal após salvar com sucesso
       setIsCreateTeamModalVisible(false);
+      
+      // Recarregar a lista de equipes
+      loadTeams();
     } catch (error) {
       console.error('Erro ao criar equipe:', error);
       
       // Mensagem de erro mais específica
       let errorMessage = 'Não foi possível criar a equipe. Tente novamente.';
-      
-      if (error.message && error.message.includes('autenticado')) {
-        errorMessage = 'Erro de autenticação. Por favor, faça login novamente.';
+    }
+    finally {
+      setLoading(false);
+    }
+  };
+  
+  // Função para atualizar uma equipe
+  const handleUpdateTeam = async (teamData) => {
+    try {
+      // Verificar se o usuário está autenticado
+      if (!user) {
+        Alert.alert(
+          'Erro de Autenticação', 
+          'Você precisa estar autenticado para editar uma equipe. Por favor, faça login novamente.',
+          [{ text: 'OK' }]
+        );
+        return;
       }
       
-      Alert.alert('Erro', errorMessage, [{ text: 'OK' }]);
+      setLoading(true);
+      console.log('Atualizando equipe:', teamData);
+      
+      // Atualizar a equipe no banco de dados
+      await teamService.updateTeam(teamData);
+      
+      Alert.alert(
+        'Sucesso', 
+        `Equipe ${teamData.name} atualizada com sucesso!`,
+        [{ text: 'OK' }]
+      );
+      
+      // Fechar o modal após atualizar com sucesso
+      setIsEditTeamModalVisible(false);
+      setSelectedTeam(null);
+      
+      // Recarregar a lista de equipes
+      loadTeams();
+    } catch (error) {
+      console.error('Erro ao atualizar equipe:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar a equipe. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Função para excluir uma equipe
+  const handleDeleteTeam = async (teamId) => {
+    try {
+      // Verificar se o usuário está autenticado
+      if (!user) {
+        Alert.alert(
+          'Erro de Autenticação', 
+          'Você precisa estar autenticado para excluir uma equipe. Por favor, faça login novamente.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      setLoading(true);
+      console.log('Excluindo equipe:', teamId);
+      
+      // Excluir a equipe do banco de dados
+      await teamService.deleteTeam(teamId);
+      
+      Alert.alert(
+        'Sucesso', 
+        'Equipe excluída com sucesso!',
+        [{ text: 'OK' }]
+      );
+      
+      // Fechar o modal após excluir com sucesso
+      setIsEditTeamModalVisible(false);
+      setSelectedTeam(null);
+      
+      // Recarregar a lista de equipes
+      loadTeams();
+    } catch (error) {
+      console.error('Erro ao excluir equipe:', error);
+      Alert.alert('Erro', 'Não foi possível excluir a equipe. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -311,6 +405,84 @@ const TeamsScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
+  
+  // Função para atualizar uma pessoa existente
+  const handleUpdatePerson = async (personData) => {
+    try {
+      // Verificar se o usuário está autenticado
+      if (!user) {
+        Alert.alert(
+          'Erro de Autenticação', 
+          'Você precisa estar autenticado para editar uma pessoa. Por favor, faça login novamente.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      setLoading(true);
+      console.log('Atualizando pessoa:', personData);
+      
+      // Atualizar a pessoa no banco de dados
+      await profileService.saveProfile(personData);
+      
+      Alert.alert(
+        'Sucesso', 
+        `Pessoa ${personData.name} atualizada com sucesso!`,
+        [{ text: 'OK' }]
+      );
+      
+      // Fechar o modal após salvar com sucesso
+      setIsEditPersonModalVisible(false);
+      setSelectedPerson(null);
+      
+      // Recarregar a lista de usuários
+      loadUsers();
+    } catch (error) {
+      console.error('Erro ao atualizar pessoa:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar a pessoa. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Função para excluir uma pessoa
+  const handleDeletePerson = async (userId) => {
+    try {
+      // Verificar se o usuário está autenticado
+      if (!user) {
+        Alert.alert(
+          'Erro de Autenticação', 
+          'Você precisa estar autenticado para excluir uma pessoa. Por favor, faça login novamente.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      setLoading(true);
+      console.log('Excluindo pessoa:', userId);
+      
+      // Excluir a pessoa do banco de dados
+      await profileService.deleteProfile(userId);
+      
+      Alert.alert(
+        'Sucesso', 
+        'Pessoa excluída com sucesso!',
+        [{ text: 'OK' }]
+      );
+      
+      // Fechar o modal após excluir com sucesso
+      setIsEditPersonModalVisible(false);
+      setSelectedPerson(null);
+      
+      // Recarregar a lista de usuários
+      loadUsers();
+    } catch (error) {
+      console.error('Erro ao excluir pessoa:', error);
+      Alert.alert('Erro', 'Não foi possível excluir a pessoa. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Renderizar item de usuário
   const renderUserItem = ({ item }) => {
@@ -319,45 +491,62 @@ const TeamsScreen = ({ navigation }) => {
       return null;
     }
     
-    // Determinar o papel do usuário com valor padrão
-    const userRole = item.role || 'membro';
+    // Obter as funções do usuário
+    const userTeams = item.teams || [];
     
-    // Determinar a cor do papel com base no valor
-    const roleColor = userRole.toLowerCase().includes('líder') || 
-                     userRole.toLowerCase().includes('admin') ? 
-                     theme.colors.primary : theme.colors.secondary;
+    // Verificar se o usuário é administrador
+    const isAdmin = item.is_admin === true;
     
     // Função para lidar com o clique no ícone de edição
     const handleEditPress = () => {
-      Alert.alert('Editar', `Editar usuário ${item.name}`);
+      setSelectedPerson(item);
+      setIsEditPersonModalVisible(true);
     };
     
     return (
       <TouchableOpacity 
         style={[styles.userItem, { backgroundColor: colors.card }]}
-        onPress={() => Alert.alert('Usuário', `Você selecionou ${item.name}`)}
+        onPress={() => handleEditPress()} // Agora abre diretamente o modal de edição ao tocar no item
       >
         <View style={styles.userAvatar}>
           <Text style={styles.userInitial}>{item.name.charAt(0)}</Text>
         </View>
         <View style={styles.userInfo}>
-          <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
+          <View style={styles.userNameContainer}>
+            <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
+            {isAdmin && (
+              <View style={styles.adminBadge}>
+                <FontAwesome name="shield" size={10} color="#FFFFFF" style={styles.adminIcon} />
+                <Text style={styles.adminText}>Admin</Text>
+              </View>
+            )}
+          </View>
           <Text style={[styles.userEmail, { color: colors.textSecondary }]}>
             {item.email}
           </Text>
+          
+          {/* Mostrar as funções do usuário */}
           <View style={styles.roleContainer}>
-            {userRole && (
-              <Text style={[
-                styles.roleText, 
-                { 
-                  backgroundColor: roleColor,
-                  color: '#FFFFFF'
-                }
-              ]}>
-                {userRole}
+            {userTeams.map((team, index) => (
+              <Text 
+                key={`${team.team_id}-${index}`}
+                style={[
+                  styles.roleText, 
+                  { 
+                    backgroundColor: team.role && team.role.toLowerCase().includes('líder') ? 
+                      theme.colors.primary : theme.colors.secondary,
+                    color: '#FFFFFF'
+                  }
+                ]}
+              >
+                {team.role || 'Membro'}
               </Text>
+            ))}
+            {userTeams.length === 0 && (
+              <Text style={[styles.noRoleText, { color: colors.textSecondary }]}>Sem função</Text>
             )}
           </View>
+          
           {item.church_name && (
             <Text style={[styles.churchName, { color: colors.textSecondary }]}>{item.church_name}</Text>
           )}
@@ -371,6 +560,7 @@ const TeamsScreen = ({ navigation }) => {
   
   // Renderizar item de equipe
   const renderTeamItem = ({ item }) => {
+    console.log('renderTeamItem chamado com:', item);
     return (
       <TeamItem 
         team={item} 
@@ -404,6 +594,30 @@ const TeamsScreen = ({ navigation }) => {
           visible={isCreatePersonModalVisible}
           onClose={() => setIsCreatePersonModalVisible(false)}
           onSave={handleSavePerson}
+        />
+        
+        {/* Modal para editar pessoa */}
+        <EditPersonModal
+          visible={isEditPersonModalVisible}
+          onClose={() => {
+            setIsEditPersonModalVisible(false);
+            setSelectedPerson(null);
+          }}
+          onSave={handleUpdatePerson}
+          onDelete={handleDeletePerson}
+          personData={selectedPerson}
+        />
+        
+        {/* Modal para editar equipe */}
+        <EditTeamModal
+          visible={isEditTeamModalVisible}
+          onClose={() => {
+            setIsEditTeamModalVisible(false);
+            setSelectedTeam(null);
+          }}
+          onSave={handleUpdateTeam}
+          onDelete={handleDeleteTeam}
+          teamData={selectedTeam}
         />
 
         {/* Controle de segmentos */}
@@ -587,9 +801,33 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: theme.spacing.md,
   },
+  userNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
   userName: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: '500',
+    marginRight: 8,
+  },
+  adminBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF', // Azul no estilo iOS
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginBottom: 2,
+    marginLeft: 4,
+  },
+  adminIcon: {
+    marginRight: 3,
+  },
+  adminText: {
+    color: '#FFFFFF',
+    fontSize: theme.typography.fontSize.xxs,
+    fontWeight: '700',
   },
   editButton: {
     padding: 8,
@@ -600,17 +838,25 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
   },
   roleContainer: {
-    marginTop: 4,
+    marginTop: 2,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   roleText: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: '500',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
-    borderRadius: theme.sizes.borderRadius.sm,
+    fontSize: theme.typography.fontSize.xxs,
+    fontWeight: '700', // Mais negrito para compensar o tamanho menor
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: 1, // Reduzir o padding vertical
+    borderRadius: theme.sizes.borderRadius.round, // Cantos 100% arredondados
     overflow: 'hidden',
     alignSelf: 'flex-start',
     textTransform: 'uppercase',
+    marginRight: 3, // Espaçamento menor entre os badges
+    marginBottom: 3, // Espaçamento menor entre linhas
+  },
+  noRoleText: {
+    fontSize: theme.typography.fontSize.xs,
+    fontStyle: 'italic',
   },
   churchName: {
     fontSize: theme.typography.fontSize.xs,

@@ -250,27 +250,42 @@ const teamService = {
 
   /**
    * Atualiza uma equipe
-   * @param {string} teamId - ID da equipe
-   * @param {Object} teamData - Dados da equipe
+   * @param {Object} teamData - Dados da equipe com ID
    * @returns {Promise<Object>} Equipe atualizada
    */
-  updateTeam: async (teamId, teamData) => {
+  updateTeam: async (teamData) => {
     try {
+      console.log('Atualizando equipe:', teamData);
+      
+      if (!teamData.id) {
+        throw new Error('ID da equipe não fornecido');
+      }
+      
+      const teamId = teamData.id;
+      
       // Atualizar a equipe
       const { data: team, error: teamError } = await supabase
         .from('teams')
         .update({ name: teamData.name })
         .eq('id', teamId)
-        .select()
-        .single();
+        .select();
 
       if (teamError) {
         console.error('Erro ao atualizar equipe:', teamError);
         throw teamError;
       }
+      
+      if (!team || team.length === 0) {
+        console.error('Nenhuma equipe foi atualizada com o ID:', teamId);
+        throw new Error('Equipe não encontrada');
+      }
+      
+      console.log('Equipe atualizada com sucesso:', team[0]);
 
       // Se houver funções para atualizar
       if (teamData.roles) {
+        console.log('Atualizando funções da equipe:', teamData.roles);
+        
         // Primeiro, remover todas as funções existentes
         const { error: deleteError } = await supabase
           .from('team_roles')
@@ -280,22 +295,28 @@ const teamService = {
         if (deleteError) {
           console.error('Erro ao remover funções existentes:', deleteError);
           // Não lançar erro aqui, pois a equipe já foi atualizada
+        } else {
+          console.log('Funções existentes removidas com sucesso');
         }
 
         // Adicionar as novas funções
         if (teamData.roles.length > 0) {
+          // Extrair os nomes das funções do formato { name: 'Função' }
           const roleData = teamData.roles.map(role => ({
             team_id: teamId,
-            name: role
+            name: typeof role === 'object' ? role.name : role
           }));
 
-          const { error: rolesError } = await supabase
+          const { data: insertedRoles, error: rolesError } = await supabase
             .from('team_roles')
-            .insert(roleData);
+            .insert(roleData)
+            .select();
 
           if (rolesError) {
             console.error('Erro ao adicionar novas funções:', rolesError);
             // Não lançar erro aqui, pois a equipe já foi atualizada
+          } else {
+            console.log('Novas funções adicionadas com sucesso:', insertedRoles);
           }
         }
       }

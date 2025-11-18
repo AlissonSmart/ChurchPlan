@@ -19,8 +19,12 @@ const TeamItem = ({ team, onPress, onEdit, colors }) => {
 
   // Função para lidar com o clique no ícone de edição
   const handleEditPress = () => {
+    console.log('TeamItem - handleEditPress chamado para equipe:', team.name);
     if (onEdit) {
+      console.log('TeamItem - chamando onEdit com:', team);
       onEdit(team);
+    } else {
+      console.warn('TeamItem - onEdit não foi fornecido para a equipe:', team.name);
     }
   };
 

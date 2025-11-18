@@ -67,6 +67,7 @@ const theme = {
     buttonHeight: 56,
     inputHeight: 56,
     borderRadius: {
+      xs: 4,
       sm: 8,
       md: 12,
       lg: 16,
@@ -83,6 +84,7 @@ const theme = {
       bold: 'System',
     },
     fontSize: {
+      xxs: 9,
       xs: 12,
       sm: 14,
       md: 16,

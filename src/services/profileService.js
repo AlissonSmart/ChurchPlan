@@ -13,15 +13,25 @@ const profileService = {
     try {
       console.log('Salvando perfil:', profileData);
       
-      // Verificar se é um usuário autenticado
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      // Usar o ID fornecido ou obter do usuário autenticado
+      let userId;
       
-      if (userError || !userData || !userData.user) {
-        console.error('Usuário não autenticado:', userError);
-        throw new Error('Usuário não autenticado');
+      if (profileData.id) {
+        // Se o ID foi fornecido, usá-lo diretamente
+        userId = profileData.id;
+        console.log('Usando ID fornecido:', userId);
+      } else {
+        // Caso contrário, verificar se é um usuário autenticado
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !userData || !userData.user) {
+          console.error('Usuário não autenticado e nenhum ID fornecido:', userError);
+          throw new Error('Usuário não autenticado e nenhum ID fornecido');
+        }
+        
+        userId = userData.user.id;
+        console.log('Usando ID do usuário autenticado:', userId);
       }
-      
-      const userId = userData.user.id;
       
       // Verificar se o perfil já existe
       const { data: existingProfile } = await supabase
@@ -44,46 +54,83 @@ const profileService = {
       
       // Se o perfil existe, atualizar; caso contrário, criar
       if (existingProfile) {
+        console.log('Atualizando perfil existente:', userId);
         const { data, error } = await supabase
           .from('profiles')
           .update(profileToSave)
           .eq('id', userId)
-          .select()
-          .single();
+          .select();
           
         if (error) {
           console.error('Erro ao atualizar perfil:', error);
           throw error;
         }
         
-        result = data;
+        if (data && data.length > 0) {
+          console.log('Perfil atualizado com sucesso:', data[0]);
+          result = data[0];
+        } else {
+          console.warn('Nenhum perfil foi atualizado. O ID pode não existir:', userId);
+          // Se não conseguiu atualizar, tentar criar
+          console.log('Tentando criar perfil já que a atualização não funcionou');
+          profileToSave.created_at = new Date().toISOString();
+          
+          const { data: insertData, error: insertError } = await supabase
+            .from('profiles')
+            .insert([profileToSave])
+            .select();
+            
+          if (insertError) {
+            console.error('Erro ao criar perfil após falha na atualização:', insertError);
+            throw insertError;
+          }
+          
+          if (insertData && insertData.length > 0) {
+            console.log('Perfil criado com sucesso após falha na atualização:', insertData[0]);
+            result = insertData[0];
+          } else {
+            console.error('Falha ao criar perfil após falha na atualização');
+            throw new Error('Falha ao criar ou atualizar perfil');
+          }
+        }
       } else {
         // Adicionar data de criação para novos perfis
+        console.log('Criando novo perfil:', userId);
         profileToSave.created_at = new Date().toISOString();
         
         const { data, error } = await supabase
           .from('profiles')
           .insert([profileToSave])
-          .select()
-          .single();
+          .select();
           
         if (error) {
           console.error('Erro ao criar perfil:', error);
           throw error;
         }
         
-        result = data;
+        if (data && data.length > 0) {
+          console.log('Perfil criado com sucesso:', data[0]);
+          result = data[0];
+        } else {
+          console.error('Falha ao criar perfil: nenhum dado retornado');
+          throw new Error('Falha ao criar perfil: nenhum dado retornado');
+        }
       }
       
       // Processar associações de equipes
       if (profileData.teams && profileData.teams.length > 0) {
-        console.log('Processando associações de equipes:', profileData.teams);
+        console.log('Processando associações de equipes para', userId, ':', profileData.teams);
         
         // Primeiro, remover todas as associações existentes
-        await supabase
+        const { error: deleteError } = await supabase
           .from('team_members')
           .delete()
           .eq('user_id', userId);
+          
+        if (deleteError) {
+          console.error('Erro ao remover associações existentes:', deleteError);
+          // Continuar mesmo com erro
+        }
         
         // Adicionar novas associações
         const teamMembers = profileData.teams.map(team => ({
@@ -92,13 +139,31 @@ const profileService = {
           role: team.role
         }));
         
-        const { error: teamError } = await supabase
+        if (teamMembers.length > 0) {
+          const { error: teamError } = await supabase
+            .from('team_members')
+            .insert(teamMembers);
+            
+          if (teamError) {
+            console.error('Erro ao associar usuário às equipes:', teamError);
+            // Não lançar erro para não interromper o fluxo
+          } else {
+            console.log('Associações de equipes atualizadas com sucesso');
+          }
+        }
+      } else {
+        console.log('Nenhuma equipe para associar ao usuário:', userId);
+        
+        // Remover todas as associações existentes já que não há novas
+        const { error: deleteError } = await supabase
           .from('team_members')
-          .insert(teamMembers);
+          .delete()
+          .eq('user_id', userId);
           
-        if (teamError) {
-          console.error('Erro ao associar usuário às equipes:', teamError);
-          // Não lançar erro para não interromper o fluxo
+        if (deleteError) {
+          console.error('Erro ao remover associações existentes:', deleteError);
+        } else {
+          console.log('Todas as associações de equipes removidas');
         }
       }
       
@@ -195,11 +260,14 @@ const profileService = {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         
         if (userError || !userData || !userData.user) {
-          console.error('Usuário não autenticado:', userError);
-          throw new Error('Usuário não autenticado');
+          console.error('Usuário não autenticado e nenhum ID fornecido:', userError);
+          throw new Error('Usuário não autenticado e nenhum ID fornecido');
         }
         
         userId = userData.user.id;
+        console.log('Usando ID do usuário autenticado para buscar perfil:', userId);
+      } else {
+        console.log('Buscando perfil com ID fornecido:', userId);
       }
       
       // Buscar perfil
@@ -227,7 +295,8 @@ const profileService = {
    */
   getAllProfiles: async () => {
     try {
-      const { data, error } = await supabase
+      // Buscar todos os perfis
+      const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
         .order('name');
@@ -237,7 +306,42 @@ const profileService = {
         throw error;
       }
       
-      return data || [];
+      if (!profiles || profiles.length === 0) {
+        return [];
+      }
+      
+      // Buscar as equipes de todos os usuários
+      const { data: teamMembers, error: teamError } = await supabase
+        .from('team_members')
+        .select(`
+          user_id,
+          team_id,
+          role,
+          teams:team_id(id, name)
+        `);
+        
+      if (teamError) {
+        console.error('Erro ao buscar equipes dos usuários:', teamError);
+        // Continuar mesmo com erro, apenas não terão equipes
+      }
+      
+      // Mapear as equipes para cada usuário
+      const profilesWithTeams = profiles.map(profile => {
+        const userTeams = teamMembers
+          ? teamMembers.filter(tm => tm.user_id === profile.id).map(tm => ({
+              team_id: tm.team_id,
+              role: tm.role,
+              name: tm.teams?.name || 'Equipe sem nome'
+            }))
+          : [];
+          
+        return {
+          ...profile,
+          teams: userTeams
+        };
+      });
+      
+      return profilesWithTeams;
     } catch (error) {
       console.error('Erro ao listar perfis:', error);
       throw error;
@@ -255,7 +359,8 @@ const profileService = {
         return profileService.getAllProfiles();
       }
       
-      const { data, error } = await supabase
+      // Buscar perfis que correspondem ao texto de busca
+      const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
         .ilike('name', `%${searchText}%`)
@@ -266,7 +371,46 @@ const profileService = {
         throw error;
       }
       
-      return data || [];
+      if (!profiles || profiles.length === 0) {
+        return [];
+      }
+      
+      // Obter os IDs dos perfis encontrados
+      const profileIds = profiles.map(profile => profile.id);
+      
+      // Buscar as equipes apenas para os usuários encontrados
+      const { data: teamMembers, error: teamError } = await supabase
+        .from('team_members')
+        .select(`
+          user_id,
+          team_id,
+          role,
+          teams:team_id(id, name)
+        `)
+        .in('user_id', profileIds);
+        
+      if (teamError) {
+        console.error('Erro ao buscar equipes dos usuários:', teamError);
+        // Continuar mesmo com erro, apenas não terão equipes
+      }
+      
+      // Mapear as equipes para cada usuário
+      const profilesWithTeams = profiles.map(profile => {
+        const userTeams = teamMembers
+          ? teamMembers.filter(tm => tm.user_id === profile.id).map(tm => ({
+              team_id: tm.team_id,
+              role: tm.role,
+              name: tm.teams?.name || 'Equipe sem nome'
+            }))
+          : [];
+          
+        return {
+          ...profile,
+          teams: userTeams
+        };
+      });
+      
+      return profilesWithTeams;
     } catch (error) {
       console.error('Erro ao buscar perfis:', error);
       throw error;
@@ -285,11 +429,14 @@ const profileService = {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         
         if (userError || !userData || !userData.user) {
-          console.error('Usuário não autenticado:', userError);
-          throw new Error('Usuário não autenticado');
+          console.error('Usuário não autenticado e nenhum ID fornecido:', userError);
+          throw new Error('Usuário não autenticado e nenhum ID fornecido');
         }
         
         userId = userData.user.id;
+        console.log('Usando ID do usuário autenticado para buscar equipes:', userId);
+      } else {
+        console.log('Buscando equipes para ID fornecido:', userId);
       }
       
       // Buscar as equipes do usuário através da tabela team_members
@@ -318,6 +465,73 @@ const profileService = {
     } catch (error) {
       console.error('Erro ao obter equipes do usuário:', error);
       return [];
+    }
+  },
+  
+  /**
+   * Exclui um perfil de usuário
+   * @param {string} userId - ID do usuário a ser excluído
+   * @returns {Promise<boolean>} - True se excluído com sucesso
+   */
+  deleteProfile: async (userId) => {
+    try {
+      if (!userId) {
+        console.error('ID do usuário não fornecido para exclusão');
+        throw new Error('ID do usuário não fornecido para exclusão');
+      }
+      
+      console.log('Excluindo perfil:', userId);
+      
+      // Primeiro, remover todas as associações de equipes
+      const { error: teamError } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('user_id', userId);
+        
+      if (teamError) {
+        console.error('Erro ao remover associações de equipes:', teamError);
+        // Continuar mesmo com erro
+      } else {
+        console.log('Associações de equipes removidas com sucesso');
+      }
+      
+      // Remover o perfil
+      console.log('Removendo perfil do usuário:', userId);
+      const { data: deleteData, error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId)
+        .select();
+        
+      if (profileError) {
+        console.error('Erro ao excluir perfil:', profileError);
+        throw profileError;
+      } else {
+        console.log('Perfil removido com sucesso:', deleteData);
+      }
+      
+      // Tentar remover o usuário da autenticação (requer permissões administrativas)
+      try {
+        console.log('Tentando remover usuário da autenticação:', userId);
+        const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+        
+        if (authError) {
+          console.error('Erro ao excluir usuário da autenticação:', authError);
+          // Continuar mesmo com erro
+        } else {
+          console.log('Usuário removido da autenticação com sucesso');
+        }
+      } catch (authError) {
+        console.error('Erro ao excluir usuário da autenticação:', authError);
+        console.log('Nota: A remoção do usuário da autenticação requer permissões administrativas');
+        console.log('O perfil foi removido do banco de dados, mas o usuário pode continuar na autenticação');
+        // Continuar mesmo com erro
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir perfil:', error);
+      throw error;
     }
   },
 };
