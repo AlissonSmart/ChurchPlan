@@ -13,10 +13,13 @@ import {
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import GradientButton from '../components/GradientButton';
 import { OutlineGradientButton } from '../components/GradientButton';
+import CreateTeamModal from '../components/CreateTeamModal';
 import userService from '../services/userService';
+import teamService from '../services/teamService';
 import theme from '../styles/theme';
 import TabScreenWrapper from '../components/TabScreenWrapper';
 import { HeaderContext } from '../contexts/HeaderContext';
+import { useAuth } from '../contexts/AuthContext';
 
 
 const TeamsScreen = ({ navigation }) => {
@@ -24,7 +27,9 @@ const TeamsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [isCreateTeamModalVisible, setIsCreateTeamModalVisible] = useState(false);
   const { setShowLargeTitle } = useContext(HeaderContext);
+  const { user } = useAuth(); // Obter o usuário autenticado do contexto
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
 
@@ -89,7 +94,61 @@ const TeamsScreen = ({ navigation }) => {
   }, [users]);
 
   const handleCreateTeam = () => {
-    Alert.alert('Criar Equipe', 'Funcionalidade de criar equipe será implementada.');
+    // Verificar se o usuário está autenticado antes de abrir o modal
+    if (!user) {
+      Alert.alert(
+        'Erro de Autenticação', 
+        'Você precisa estar autenticado para criar uma equipe. Por favor, faça login novamente.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    // Se estiver autenticado, abrir o modal
+    setIsCreateTeamModalVisible(true);
+  };
+
+  const handleSaveTeam = async (team) => {
+    try {
+      // Verificar novamente se o usuário está autenticado antes de salvar
+      if (!user) {
+        Alert.alert(
+          'Erro de Autenticação', 
+          'Você precisa estar autenticado para criar uma equipe. Por favor, faça login novamente.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      setLoading(true);
+      console.log('Criando nova equipe:', team);
+      console.log('Usuário autenticado:', user.id);
+      
+      // Salvar a equipe no banco de dados usando o serviço
+      const newTeam = await teamService.createTeam(team);
+      
+      Alert.alert(
+        'Sucesso', 
+        `Equipe ${team.name} criada com sucesso!`,
+        [{ text: 'OK' }]
+      );
+      
+      // Fechar o modal após salvar com sucesso
+      setIsCreateTeamModalVisible(false);
+    } catch (error) {
+      console.error('Erro ao criar equipe:', error);
+      
+      // Mensagem de erro mais específica
+      let errorMessage = 'Não foi possível criar a equipe. Tente novamente.';
+      
+      if (error.message && error.message.includes('autenticado')) {
+        errorMessage = 'Erro de autenticação. Por favor, faça login novamente.';
+      }
+      
+      Alert.alert('Erro', errorMessage, [{ text: 'OK' }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddPerson = () => {
@@ -163,6 +222,13 @@ const TeamsScreen = ({ navigation }) => {
       <View style={[styles.container, { 
         backgroundColor: colors.background,
       }]}>
+      {/* Modal para criar nova equipe */}
+      <CreateTeamModal 
+        visible={isCreateTeamModalVisible}
+        onClose={() => setIsCreateTeamModalVisible(false)}
+        onSave={handleSaveTeam}
+      />
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
