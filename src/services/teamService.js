@@ -12,14 +12,72 @@ const teamService = {
     try {
       const { data, error } = await supabase
         .from('teams')
-        .select('*');
+        .select(`
+          *,
+          team_members(count),
+          team_roles(count)
+        `);
 
       if (error) {
         console.error('Erro ao buscar equipes:', error);
         throw error;
       }
 
-      return data || [];
+      // Processar os dados para incluir contagens
+      const processedData = data?.map(team => ({
+        ...team,
+        members_count: team.team_members[0]?.count || 0,
+        roles_count: team.team_roles[0]?.count || 0
+      })) || [];
+
+      return processedData;
+    } catch (error) {
+      console.error('Erro inesperado ao buscar equipes:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Busca equipes por nome
+   * @param {string} searchTerm - Termo de busca
+   * @returns {Promise<Array>} Lista de equipes filtradas
+   */
+  searchTeamsByName: async (searchTerm) => {
+    try {
+      // Se estamos no modo de teste, retornar dados simulados
+      if (searchTerm === 'test-mode') {
+        return [{
+          id: 'test-team-1',
+          name: 'Equipe de Teste',
+          members_count: 3,
+          roles_count: 2,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }];
+      }
+      
+      const { data, error } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          team_members(count),
+          team_roles(count)
+        `)
+        .ilike('name', `%${searchTerm}%`);
+
+      if (error) {
+        console.error('Erro ao buscar equipes:', error);
+        throw error;
+      }
+
+      // Processar os dados para incluir contagens
+      const processedData = data?.map(team => ({
+        ...team,
+        members_count: team.team_members[0]?.count || 0,
+        roles_count: team.team_roles[0]?.count || 0
+      })) || [];
+
+      return processedData;
     } catch (error) {
       console.error('Erro inesperado ao buscar equipes:', error);
       throw error;

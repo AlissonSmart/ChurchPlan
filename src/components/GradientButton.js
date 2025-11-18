@@ -72,11 +72,15 @@ export const OutlineGradientButton = ({
   start = { x: 0, y: 0 },
   end = { x: 1, y: 0 },
   icon,
+  outlined = false,
   ...props 
 }) => {
   const useColorScheme = require('react-native').useColorScheme;
   const isDarkMode = useColorScheme() === 'dark';
   const backgroundColor = isDarkMode ? theme.colors.dark.background : theme.colors.light.background;
+  
+  // Usar a cor principal para o texto e borda
+  const mainColor = colors[1];
   
   return (
     <TouchableOpacity
@@ -91,23 +95,23 @@ export const OutlineGradientButton = ({
         { 
           opacity: disabled ? 0.7 : 1,
           backgroundColor: backgroundColor,
-          borderColor: theme.colors.gradient.end,
+          borderColor: mainColor,
         }
       ]}>
         {loading ? (
-          <ActivityIndicator color={theme.colors.gradient.end} size="small" />
+          <ActivityIndicator color={mainColor} size="small" />
         ) : (
           <View style={styles.buttonContent}>
             {icon && (
               <FontAwesome 
                 name={icon} 
                 size={18} 
-                color={theme.colors.gradient.end} 
+                color={mainColor} 
                 style={styles.buttonIcon} 
               />
             )}
             <Text 
-              style={[styles.outlineText, { color: theme.colors.gradient.end }, textStyle]}
+              style={[styles.outlineText, { color: mainColor }, textStyle]}
             >
               {title}
             </Text>
@@ -160,7 +164,6 @@ const styles = StyleSheet.create({
   outlineText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
-    color: theme.colors.gradient.end,
   },
 });
 

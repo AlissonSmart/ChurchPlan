@@ -14,6 +14,8 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import GradientButton from '../components/GradientButton';
 import { OutlineGradientButton } from '../components/GradientButton';
 import CreateTeamModal from '../components/CreateTeamModal';
+import SegmentedControl from '../components/SegmentedControl';
+import TeamItem from '../components/TeamItem';
 import userService from '../services/userService';
 import teamService from '../services/teamService';
 import theme from '../styles/theme';
@@ -23,15 +25,33 @@ import { useAuth } from '../contexts/AuthContext';
 
 
 const TeamsScreen = ({ navigation }) => {
+  // Estados para usuários
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  
+  // Estados para equipes
+  const [teams, setTeams] = useState([]);
+  const [filteredTeams, setFilteredTeams] = useState([]);
+  
+  // Estados compartilhados
+  const [activeSegment, setActiveSegment] = useState('people'); // 'people' ou 'teams'
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState([]);
   const [isCreateTeamModalVisible, setIsCreateTeamModalVisible] = useState(false);
+  
+  // Contextos
   const { setShowLargeTitle } = useContext(HeaderContext);
   const { user } = useAuth(); // Obter o usuário autenticado do contexto
+  
+  // Tema
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
+  
+  // Segmentos disponíveis
+  const segments = [
+    { key: 'people', label: 'Pessoas' },
+    { key: 'teams', label: 'Equipes' },
+  ];
 
   // Função para carregar usuários do Supabase
   const loadUsers = async () => {
@@ -51,11 +71,39 @@ const TeamsScreen = ({ navigation }) => {
     }
   };
 
+  // Função para carregar equipes do Supabase
+  const loadTeams = async () => {
+    try {
+      setLoading(true);
+      const teamsData = await teamService.getAllTeams();
+      console.log('Equipes carregadas:', teamsData);
+      setTeams(teamsData);
+      setFilteredTeams(teamsData);
+    } catch (error) {
+      console.error('Erro ao carregar equipes:', error);
+      Alert.alert('Erro', 'Não foi possível carregar a lista de equipes.');
+      setTeams([]);
+      setFilteredTeams([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Carregar dados iniciais com base no segmento ativo
   useEffect(() => {
-    loadUsers();
+    if (activeSegment === 'people') {
+      loadUsers();
+    } else {
+      loadTeams();
+    }
+  }, [activeSegment]);
+  
+  // Carregar dados iniciais ao montar o componente
+  useEffect(() => {
+    loadTeams(); // Carregar equipes por padrão
   }, []);
 
-  // Função para buscar usuários por nome
+  // Função para buscar por nome (equipes ou pessoas)
   const handleSearch = async (text) => {
     setSearchText(text);
     
@@ -64,34 +112,81 @@ const TeamsScreen = ({ navigation }) => {
         // Busca no Supabase se o texto tiver pelo menos 2 caracteres
         if (text.trim().length >= 2) {
           setLoading(true);
-          const searchResults = await userService.searchUsersByName(text);
-          console.log('Resultados da busca:', searchResults);
-          setFilteredUsers(searchResults);
+          
+          if (activeSegment === 'people') {
+            // Buscar pessoas
+            const searchResults = await userService.searchUsersByName(text);
+            console.log('Resultados da busca de pessoas:', searchResults);
+            setFilteredUsers(searchResults);
+          } else {
+            // Buscar equipes
+            const searchResults = await teamService.searchTeamsByName(text);
+            console.log('Resultados da busca de equipes:', searchResults);
+            setFilteredTeams(searchResults);
+          }
+          
           setLoading(false);
         } else {
           // Filtro local para buscas com menos de 2 caracteres
-          const filtered = users.filter(user => 
-            user.name.toLowerCase().includes(text.toLowerCase())
-          );
-          setFilteredUsers(filtered);
+          if (activeSegment === 'people') {
+            const filtered = users.filter(user => 
+              user.name.toLowerCase().includes(text.toLowerCase())
+            );
+            setFilteredUsers(filtered);
+          } else {
+            const filtered = teams.filter(team => 
+              team.name.toLowerCase().includes(text.toLowerCase())
+            );
+            setFilteredTeams(filtered);
+          }
         }
       } catch (error) {
-        console.error('Erro ao buscar usuários:', error);
-        // Manter os usuários atuais em caso de erro
-        setFilteredUsers(users);
+        console.error(`Erro ao buscar ${activeSegment === 'people' ? 'usuários' : 'equipes'}:`, error);
+        // Manter os dados atuais em caso de erro
+        if (activeSegment === 'people') {
+          setFilteredUsers(users);
+        } else {
+          setFilteredTeams(teams);
+        }
         setLoading(false);
       }
     } else {
-      setFilteredUsers(users);
+      // Limpar busca
+      if (activeSegment === 'people') {
+        setFilteredUsers(users);
+      } else {
+        setFilteredTeams(teams);
+      }
     }
   };
   
-  // Atualizar lista filtrada quando users mudar
+  // Atualizar listas filtradas quando os dados originais mudarem
   useEffect(() => {
     if (!searchText) {
       setFilteredUsers(users);
+      setFilteredTeams(teams);
     }
-  }, [users]);
+  }, [users, teams, searchText]);
+  
+  // Função para lidar com a mudança de segmento
+  const handleSegmentChange = (segmentKey) => {
+    setActiveSegment(segmentKey);
+    setSearchText(''); // Limpar a busca ao mudar de segmento
+  };
+  
+  // Função para lidar com o clique em uma equipe
+  const handleTeamPress = (team) => {
+    Alert.alert(
+      'Detalhes da Equipe',
+      `Nome: ${team.name}\nMembros: ${team.members_count}\nFunções: ${team.roles_count}`,
+      [{ text: 'OK' }]
+    );
+  };
+  
+  // Função para editar uma equipe
+  const handleEditTeam = (team) => {
+    Alert.alert('Editar', `Editar equipe ${team.name}`);
+  };
 
   const handleCreateTeam = () => {
     // Verificar se o usuário está autenticado antes de abrir o modal
@@ -155,6 +250,7 @@ const TeamsScreen = ({ navigation }) => {
     Alert.alert('Adicionar Pessoa', 'Funcionalidade de adicionar pessoa será implementada.');
   };
 
+  // Renderizar item de usuário
   const renderUserItem = ({ item }) => {
     // Verificar se o item é válido
     if (!item || !item.name) {
@@ -210,6 +306,18 @@ const TeamsScreen = ({ navigation }) => {
       </TouchableOpacity>
     );
   };
+  
+  // Renderizar item de equipe
+  const renderTeamItem = ({ item }) => {
+    return (
+      <TeamItem 
+        team={item} 
+        onPress={handleTeamPress} 
+        onEdit={handleEditTeam} 
+        colors={colors} 
+      />
+    );
+  };
 
   // Definir o título grande ao montar o componente
   useEffect(() => {
@@ -222,75 +330,116 @@ const TeamsScreen = ({ navigation }) => {
       <View style={[styles.container, { 
         backgroundColor: colors.background,
       }]}>
-      {/* Modal para criar nova equipe */}
-      <CreateTeamModal 
-        visible={isCreateTeamModalVisible}
-        onClose={() => setIsCreateTeamModalVisible(false)}
-        onSave={handleSaveTeam}
-      />
+        {/* Modal para criar nova equipe */}
+        <CreateTeamModal 
+          visible={isCreateTeamModalVisible}
+          onClose={() => setIsCreateTeamModalVisible(false)}
+          onSave={handleSaveTeam}
+        />
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+        {/* Controle de segmentos */}
+        <SegmentedControl
+          segments={segments}
+          selectedKey={activeSegment}
+          onSelect={handleSegmentChange}
+          style={styles.segmentedControl}
+        />
+
+        {/* Botões de ação */}
+        {activeSegment === 'people' ? (
+          <OutlineGradientButton
+            title="Adicionar Pessoa"
+            onPress={handleAddPerson}
+            style={styles.fullWidthButton}
+            colors={[theme.colors.secondary, '#007AFF']} // Azul para pessoas
+            icon="user-plus"
+          />
+        ) : (
+          <OutlineGradientButton
+            title="Criar Equipe"
+            onPress={handleCreateTeam}
+            style={styles.fullWidthButton}
+            colors={[theme.colors.gradient.start, '#1ac8aa']} // Verde água para equipes
+            icon="users"
+          />
+        )}
+        
+        {/* Campo de busca */}
+        <View style={[styles.searchContainer, { backgroundColor: colors.input }]}>
+          <FontAwesome name="search" size={18} color={colors.textSecondary} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder={`Buscar ${activeSegment === 'people' ? 'pessoa' : 'equipe'}...`}
+            placeholderTextColor={colors.textSecondary}
+            value={searchText}
+            onChangeText={handleSearch}
+          />
         </View>
-      ) : (
-        <FlatList
-          data={filteredUsers}
-          renderItem={renderUserItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <>
-              <View style={styles.buttonContainer}>
-                <GradientButton
-                  title="Criar Equipe"
-                  onPress={handleCreateTeam}
-                  style={styles.createTeamButton}
-                  colors={[theme.colors.gradient.start, theme.colors.gradient.end]}
-                  icon="users"
-                />
-                <OutlineGradientButton
-                  title="Adicionar Pessoa"
-                  onPress={handleAddPerson}
-                  style={styles.addPersonButton}
-                  colors={[theme.colors.secondary, theme.colors.gradient.start]}
-                  icon="user-plus"
-                />
-              </View>
 
-              <View style={[styles.searchContainer, { backgroundColor: colors.input }]}>
-                <FontAwesome name="search" size={18} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.searchInput, { color: colors.text }]}
-                  placeholder="Buscar pessoa..."
-                  placeholderTextColor={colors.textSecondary}
-                  value={searchText}
-                  onChangeText={handleSearch}
-                />
-              </View>
-
-              <View style={styles.listHeader}>
-                <Text style={[styles.listHeaderText, { color: colors.textSecondary }]}>
-                  {filteredUsers.length} {filteredUsers.length === 1 ? 'pessoa' : 'pessoas'}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={activeSegment === 'people' ? '#007AFF' : '#1ac8aa'} />
+          </View>
+        ) : activeSegment === 'people' ? (
+          // Lista de pessoas
+          <FlatList
+            data={filteredUsers}
+            renderItem={renderUserItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <>
+                <View style={styles.listHeader}>
+                  <Text style={[styles.listHeaderText, { color: colors.textSecondary }]}>
+                    {filteredUsers.length} {filteredUsers.length === 1 ? 'pessoa' : 'pessoas'}
+                  </Text>
+                </View>
+              </>
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <FontAwesome name="users" size={50} color={colors.textSecondary} style={styles.emptyIcon} />
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  Nenhuma pessoa encontrada
+                </Text>
+                <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                  Os usuários cadastrados no sistema aparecerão aqui
                 </Text>
               </View>
-            </>
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <FontAwesome name="users" size={50} color={colors.textSecondary} style={styles.emptyIcon} />
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                Nenhuma pessoa encontrada
-              </Text>
-              <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
-                Os usuários cadastrados no sistema aparecerão aqui
-              </Text>
-            </View>
-          }
-        />
-      )}
-    </View>
+            }
+          />
+        ) : (
+          // Lista de equipes
+          <FlatList
+            data={filteredTeams}
+            renderItem={renderTeamItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <>
+                <View style={styles.listHeader}>
+                  <Text style={[styles.listHeaderText, { color: colors.textSecondary }]}>
+                    {filteredTeams.length} {filteredTeams.length === 1 ? 'equipe' : 'equipes'}
+                  </Text>
+                </View>
+              </>
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <FontAwesome name="users" size={50} color={colors.textSecondary} style={styles.emptyIcon} />
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  Nenhuma equipe encontrada
+                </Text>
+                <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                  As equipes criadas aparecerão aqui
+                </Text>
+              </View>
+            }
+          />
+        )}
+      </View>
     </TabScreenWrapper>
   );
 };
@@ -311,18 +460,12 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xxl,
     fontWeight: 'bold',
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  segmentedControl: {
     marginBottom: theme.spacing.md,
   },
-  createTeamButton: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  addPersonButton: {
-    flex: 1,
-    marginLeft: theme.spacing.sm,
+  fullWidthButton: {
+    width: '100%',
+    marginBottom: theme.spacing.md,
   },
   searchContainer: {
     flexDirection: 'row',
