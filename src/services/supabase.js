@@ -14,8 +14,18 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     persistSession: true, // Garante que a sessão seja persistente
     detectSessionInUrl: false,
     flowType: 'pkce', // Usar PKCE para autenticação mais segura em apps móveis
+    // Configuração para sessão de longa duração (30 dias)
+    storageKey: 'churchplan-auth-token',
+    // Configuração para manter a sessão por 30 dias
+    cookieOptions: {
+      maxAge: 30 * 24 * 60 * 60, // 30 dias em segundos
+      sameSite: 'lax',
+      secure: true
+    }
   },
   localStorage: AsyncStorage, // Adiciona o AsyncStorage como localStorage
+  // Configuração global para persistência
+  persistSession: true,
 });
 
 export default supabase;

@@ -18,10 +18,13 @@ const authService = {
         console.log('Modo de teste: Tentando login real primeiro');
         
         try {
-          // Tentar login real primeiro
+          // Tentar login real primeiro com sessão de longa duração
           const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
+            options: {
+              expiresIn: 30 * 24 * 60 * 60, // 30 dias em segundos
+            }
           });
           
           if (!error && data && data.user) {
@@ -64,7 +67,7 @@ const authService = {
         const mockSession = {
           access_token: 'mock-token',
           refresh_token: 'mock-refresh-token',
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 dias em segundos
           user: mockUser
         };
         
@@ -92,9 +95,13 @@ const authService = {
       }
       
       // Comportamento normal para outros usuários
+      // Configuração para sessão de longa duração (30 dias)
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: {
+          expiresIn: 30 * 24 * 60 * 60, // 30 dias em segundos
+        }
       });
       
       if (error) {
@@ -107,7 +114,8 @@ const authService = {
             email,
             password,
             options: {
-              emailRedirectTo: null
+              emailRedirectTo: null,
+              expiresIn: 30 * 24 * 60 * 60 // 30 dias em segundos
             }
           });
           
@@ -154,6 +162,7 @@ const authService = {
         password,
         options: {
           data: userData,
+          expiresIn: 30 * 24 * 60 * 60, // 30 dias em segundos
         },
       });
       
@@ -259,6 +268,49 @@ const authService = {
     } catch (error) {
       console.error('Erro ao atualizar dados do usuário:', error.message);
       throw error;
+    }
+  },
+  
+  /**
+   * Verifica e renova a sessão do usuário se necessário
+   * @returns {Promise} - Sessão renovada ou atual
+   */
+  refreshSession: async () => {
+    try {
+      // Verificar sessão atual
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData || !sessionData.session) {
+        console.log('Nenhuma sessão encontrada para renovar');
+        return null;
+      }
+      
+      // Verificar se a sessão está próxima de expirar (menos de 7 dias)
+      const expiresAt = sessionData.session.expires_at;
+      const now = Math.floor(Date.now() / 1000);
+      const sevenDaysInSeconds = 7 * 24 * 60 * 60;
+      
+      if (expiresAt - now < sevenDaysInSeconds) {
+        console.log('Sessão próxima de expirar, renovando...');
+        
+        // Renovar a sessão
+        const { data, error } = await supabase.auth.refreshSession({
+          refresh_token: sessionData.session.refresh_token,
+        });
+        
+        if (error) {
+          console.error('Erro ao renovar sessão:', error);
+          return sessionData.session;
+        }
+        
+        console.log('Sessão renovada com sucesso');
+        return data.session;
+      }
+      
+      return sessionData.session;
+    } catch (error) {
+      console.error('Erro ao verificar/renovar sessão:', error);
+      return null;
     }
   },
 };

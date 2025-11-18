@@ -24,23 +24,40 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Efeito para verificar a sessão do usuário ao iniciar
+  // Efeito para verificar e renovar a sessão do usuário ao iniciar
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const { session } = await authService.getCurrentSession();
+        // Verificar se há uma sessão e renová-la se necessário
+        const session = await authService.refreshSession();
+        
         if (session) {
+          console.log('Sessão válida encontrada, expira em:', new Date(session.expires_at * 1000).toLocaleString());
           const currentUser = await authService.getCurrentUser();
           setUser(currentUser);
+        } else {
+          console.log('Nenhuma sessão válida encontrada');
         }
       } catch (error) {
-        console.error('Erro ao verificar usuário:', error);
+        console.error('Erro ao verificar/renovar sessão do usuário:', error);
       } finally {
         setLoading(false);
       }
     };
 
     checkUser();
+    
+    // Configurar verificador periódico da sessão (a cada 24 horas)
+    const sessionCheckInterval = setInterval(() => {
+      console.log('Verificando sessão periodicamente...');
+      authService.refreshSession()
+        .then(session => {
+          if (session) {
+            console.log('Sessão renovada, nova expiração:', new Date(session.expires_at * 1000).toLocaleString());
+          }
+        })
+        .catch(error => console.error('Erro na verificação periódica da sessão:', error));
+    }, 24 * 60 * 60 * 1000); // 24 horas em milissegundos
 
     // Configurar ouvinte para mudanças de autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -56,6 +73,10 @@ export const AuthProvider = ({ children }) => {
 
     // Limpar ouvinte ao desmontar
     return () => {
+      // Limpar o intervalo de verificação ao desmontar o componente
+      clearInterval(sessionCheckInterval);
+      
+      // Limpar o listener de autenticação
       if (authListener && authListener.subscription) {
         authListener.subscription.unsubscribe();
       }
