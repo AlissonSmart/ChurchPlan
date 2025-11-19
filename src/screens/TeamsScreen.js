@@ -485,28 +485,57 @@ const TeamsScreen = ({ navigation }) => {
         return;
       }
       
-      setLoading(true);
-      console.log('Excluindo pessoa:', userId);
-      
-      // Excluir a pessoa do banco de dados
-      await profileService.deleteProfile(userId);
-      
+      // Confirmar exclusão
       Alert.alert(
-        'Sucesso', 
-        'Pessoa excluída com sucesso!',
-        [{ text: 'OK' }]
+        'Confirmar Exclusão',
+        'Tem certeza que deseja excluir esta pessoa? Esta ação não pode ser desfeita.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Excluir', 
+            style: 'destructive',
+            onPress: async () => {
+              setLoading(true);
+              console.log('Excluindo pessoa:', userId);
+              
+              try {
+                // Excluir a pessoa do banco de dados
+                const result = await profileService.deleteProfile(userId);
+                
+                // Verificar se foi uma exclusão parcial
+                if (result && result.partialDeletion) {
+                  Alert.alert(
+                    'Exclusão Parcial', 
+                    'O perfil foi removido do banco de dados, mas o usuário pode continuar na autenticação. Para uma exclusão completa, acesse o painel do Supabase.',
+                    [{ text: 'OK' }]
+                  );
+                } else {
+                  Alert.alert(
+                    'Sucesso', 
+                    'Pessoa excluída com sucesso!',
+                    [{ text: 'OK' }]
+                  );
+                }
+                
+                // Fechar o modal após excluir com sucesso
+                setIsEditPersonModalVisible(false);
+                setSelectedPerson(null);
+                
+                // Recarregar a lista de usuários
+                loadUsers();
+              } catch (error) {
+                console.error('Erro ao excluir pessoa:', error);
+                Alert.alert('Erro', 'Não foi possível excluir a pessoa. Tente novamente.');
+              } finally {
+                setLoading(false);
+              }
+            }
+          }
+        ]
       );
-      
-      // Fechar o modal após excluir com sucesso
-      setIsEditPersonModalVisible(false);
-      setSelectedPerson(null);
-      
-      // Recarregar a lista de usuários
-      loadUsers();
     } catch (error) {
-      console.error('Erro ao excluir pessoa:', error);
-      Alert.alert('Erro', 'Não foi possível excluir a pessoa. Tente novamente.');
-    } finally {
+      console.error('Erro ao processar exclusão de pessoa:', error);
+      Alert.alert('Erro', 'Ocorreu um erro ao processar a exclusão. Tente novamente.');
       setLoading(false);
     }
   };

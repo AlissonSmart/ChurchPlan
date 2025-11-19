@@ -13,38 +13,29 @@ const authService = {
   createAuthUser: async (userData) => {
     try {
       console.log('Criando usuário no Auth (método simplificado):', userData);
-      
       // Verificar se a senha foi fornecida
       if (!userData.password) {
         throw new Error('Senha não fornecida para criar usuário');
       }
-      
       console.log('Usando senha fornecida pelo usuário');
-      
-      // Usar o método signUp diretamente com configuração mínima
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
-        password: userData.password, // Usar a senha fornecida pelo usuário
+        password: userData.password,
         options: {
-          // Sem usar configurações avançadas que possam depender de WebCrypto
-          emailRedirectTo: undefined,
           data: {
             name: userData.name,
-            is_admin: userData.is_admin || false
-          }
-        }
+            is_admin: userData.is_admin || false,
+          },
+        },
       });
-      
       if (error) {
         console.error('Erro ao criar usuário no Auth:', error);
         throw error;
       }
-      
       if (!data || !data.user) {
         console.error('Resposta inválida ao criar usuário:', data);
         throw new Error('Resposta inválida ao criar usuário');
       }
-      
       console.log('Usuário criado com sucesso no Auth:', data.user.id);
       return data;
     } catch (error) {
@@ -52,6 +43,9 @@ const authService = {
       throw error;
     }
   },
+  
+  // confirmUserEmail and checkAndConfirmEmail removed (admin-only)
+  
   /**
    * Realiza login com email e senha
    * @param {string} email - Email do usuário
@@ -63,7 +57,6 @@ const authService = {
       // MODO DE TESTE: Tentar login real primeiro, com fallback para credenciais de teste
       if (email === 'eualissonmartins@gmail.com' && password === '123456') {
         console.log('Modo de teste: Tentando login real primeiro');
-        
         try {
           // Tentar login real primeiro com sessão de longa duração
           const { data, error } = await supabase.auth.signInWithPassword({
@@ -71,12 +64,12 @@ const authService = {
             password,
             options: {
               expiresIn: 30 * 24 * 60 * 60, // 30 dias em segundos
+              emailRedirectTo: undefined,
+              shouldCreateUser: true,
             }
           });
-          
           if (!error && data && data.user) {
             console.log('Login real bem-sucedido no modo de teste');
-            
             // Salvar o email do usuário ao fazer login
             try {
               await storage.saveLastEmail(email);
@@ -84,16 +77,13 @@ const authService = {
             } catch (storageError) {
               console.error('Erro ao salvar email no login:', storageError);
             }
-            
             return { user: data.user, session: data.session };
           }
-          
           // Se falhar, usar o modo de teste com usuário simulado
           console.log('Login real falhou, usando credenciais fixas');
         } catch (loginError) {
           console.log('Erro ao tentar login real:', loginError);
         }
-        
         // Criar um usuário fictício para testes como fallback
         const mockUser = {
           id: 'test-user-id',
@@ -110,17 +100,14 @@ const authService = {
           aud: 'authenticated',
           created_at: new Date().toISOString()
         };
-        
         const mockSession = {
           access_token: 'mock-token',
           refresh_token: 'mock-refresh-token',
           expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 dias em segundos
           user: mockUser
         };
-        
         // Configurar a sessão no Supabase para o modo de teste
         try {
-          // Tentar definir a sessão manualmente
           await supabase.auth.setSession({
             access_token: mockSession.access_token,
             refresh_token: mockSession.refresh_token
@@ -129,7 +116,6 @@ const authService = {
         } catch (sessionError) {
           console.log('Erro ao configurar sessão de teste:', sessionError);
         }
-        
         // Salvar o email do usuário ao fazer login
         try {
           await storage.saveLastEmail(email);
@@ -137,12 +123,10 @@ const authService = {
         } catch (storageError) {
           console.error('Erro ao salvar email no login (modo teste):', storageError);
         }
-        
         return { user: mockUser, session: mockSession };
       }
-      
       // Comportamento normal para outros usuários
-      // Configuração para sessão de longa duração (30 dias)
+      console.log('Tentando login normal para:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -150,36 +134,9 @@ const authService = {
           expiresIn: 30 * 24 * 60 * 60, // 30 dias em segundos
         }
       });
-      
       if (error) {
-        // Se o erro for de e-mail não verificado, vamos tentar verificar o e-mail automaticamente
-        if (error.message.includes('Email not confirmed')) {
-          console.log('Tentando confirmar e-mail automaticamente...');
-          
-          // Primeiro, vamos tentar fazer login novamente para obter uma sessão
-          const { data: signInData } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-            options: {
-              emailRedirectTo: null,
-              expiresIn: 30 * 24 * 60 * 60 // 30 dias em segundos
-            }
-          });
-          
-          if (signInData && signInData.user) {
-            // Salvar o email do usuário ao fazer login
-            try {
-              await storage.saveLastEmail(email);
-              console.log('Email salvo com sucesso no login:', email);
-            } catch (storageError) {
-              console.error('Erro ao salvar email no login:', storageError);
-            }
-            return { user: signInData.user, session: signInData.session };
-          }
-        }
         throw error;
       }
-      
       // Salvar o email do usuário ao fazer login
       try {
         await storage.saveLastEmail(email);
@@ -187,7 +144,6 @@ const authService = {
       } catch (storageError) {
         console.error('Erro ao salvar email no login:', storageError);
       }
-      
       return { user: data.user, session: data.session };
     } catch (error) {
       console.error('Erro ao fazer login:', error.message);
@@ -205,27 +161,21 @@ const authService = {
   signUp: async (email, password, userData = {}) => {
     try {
       console.log('Registrando novo usuário com email:', email);
-      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          // Configuração mínima para evitar problemas com WebCrypto
-          emailRedirectTo: undefined,
-          data: userData
+          data: userData,
         }
       });
-      
       if (error) {
         console.error('Erro ao registrar usuário:', error);
         throw error;
       }
-      
       if (!data || !data.user) {
         console.error('Resposta inválida ao registrar usuário:', data);
         throw new Error('Resposta inválida ao registrar usuário');
       }
-      
       console.log('Usuário registrado com sucesso:', data.user.id);
       return { user: data.user, session: data.session };
     } catch (error) {
@@ -327,6 +277,24 @@ const authService = {
       return data.user;
     } catch (error) {
       console.error('Erro ao atualizar dados do usuário:', error.message);
+      throw error;
+    }
+  },
+  
+  /**
+   * Tenta excluir um usuário da autenticação
+   * @param {string} userId - ID do usuário a ser excluído
+   * @returns {Promise<Object>} - Resultado da operação
+   */
+  deleteAuthUser: async (userId) => {
+    try {
+      console.log('Solicitação para excluir usuário da autenticação (não suportado no cliente):', userId);
+      return {
+        success: false,
+        message: 'Exclusão de usuário da autenticação só pode ser feita no backend usando a service role.',
+      };
+    } catch (error) {
+      console.error('Erro ao excluir usuário da autenticação:', error);
       throw error;
     }
   },

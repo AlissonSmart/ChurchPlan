@@ -501,25 +501,50 @@ const profileService = {
         console.log('Perfil removido com sucesso:', deleteData);
       }
       
-      // Tentar remover o usuário da autenticação (requer permissões administrativas)
+      // Tentar remover o usuário da autenticação usando o método do authService
+      console.log('Tentando remover o usuário da autenticação...');
+      
       try {
-        console.log('Tentando remover usuário da autenticação:', userId);
-        const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+        // Importar authService
+        const authService = require('./authService').default;
         
-        if (authError) {
-          console.error('Erro ao excluir usuário da autenticação:', authError);
-          // Continuar mesmo com erro
+        // Tentar excluir o usuário da autenticação
+        const authResult = await authService.deleteAuthUser(userId);
+        
+        if (authResult && authResult.success) {
+          console.log('Usuário removido com sucesso da autenticação');
+          
+          // Retornar informações sobre a exclusão completa
+          return {
+            success: true,
+            message: 'Perfil e usuário removidos com sucesso',
+            userId: userId,
+            partialDeletion: false
+          };
         } else {
-          console.log('Usuário removido da autenticação com sucesso');
+          console.log('Não foi possível remover o usuário da autenticação:', authResult?.message);
+          
+          // Retornar informações sobre a exclusão parcial
+          return {
+            success: true,
+            message: 'Perfil removido com sucesso, mas o usuário pode continuar na autenticação',
+            userId: userId,
+            partialDeletion: true,
+            authError: authResult?.error
+          };
         }
       } catch (authError) {
-        console.error('Erro ao excluir usuário da autenticação:', authError);
-        console.log('Nota: A remoção do usuário da autenticação requer permissões administrativas');
-        console.log('O perfil foi removido do banco de dados, mas o usuário pode continuar na autenticação');
-        // Continuar mesmo com erro
+        console.error('Erro ao tentar remover usuário da autenticação:', authError);
+        
+        // Retornar informações sobre a exclusão parcial
+        return {
+          success: true,
+          message: 'Perfil removido com sucesso, mas o usuário pode continuar na autenticação',
+          userId: userId,
+          partialDeletion: true,
+          authError: authError
+        };
       }
-      
-      return true;
     } catch (error) {
       console.error('Erro ao excluir perfil:', error);
       throw error;
