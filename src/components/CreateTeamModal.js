@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -36,8 +36,8 @@ const CreateTeamModal = ({ visible, onClose, onSave }) => {
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
   
   // Animações
-  const slideAnim = new Animated.Value(0);
-  const fadeAnim = new Animated.Value(0);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   
   // Monitorar o teclado
   useEffect(() => {
