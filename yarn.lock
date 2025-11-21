@@ -6925,13 +6925,6 @@ react-native-size-matters@^0.3.1:
   resolved "https://registry.npmjs.org/react-native-size-matters/-/react-native-size-matters-0.3.1.tgz"
   integrity sha512-mKOfBLIBFBcs9br1rlZDvxD5+mAl8Gfr5CounwJtxI6Z82rGrMO+Kgl9EIg3RMVf3G855a85YVqHJL2f5EDRlw==
 
-react-native-sortable-list@^0.0.25:
-  version "0.0.25"
-  resolved "https://registry.npmjs.org/react-native-sortable-list/-/react-native-sortable-list-0.0.25.tgz"
-  integrity sha512-51hqk+4wx2N1Ii1nsXfNUI84XrCwM4y7M64O4hQMtDn5v6RO5gmRO80ueK0DcZH77Yz0iU5Y9Drrbf8r0DxvqQ==
-  dependencies:
-    prop-types "^15.5.10"
-
 react-native-url-polyfill@^3.0.0:
   version "3.0.0"
   resolved "https://registry.npmjs.org/react-native-url-polyfill/-/react-native-url-polyfill-3.0.0.tgz"

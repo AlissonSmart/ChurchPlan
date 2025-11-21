@@ -1,14 +1,34 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  StyleSheet, 
+  TouchableOpacity, 
+  useColorScheme,
+  ActivityIndicator,
+  Alert,
+  RefreshControl
+} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { HeaderContext } from '../contexts/HeaderContext';
 import TabScreenWrapper from '../components/TabScreenWrapper';
+import notificationService from '../services/notificationService';
+import eventService from '../services/eventService';
+import supabase from '../services/supabase';
+import theme from '../styles/theme';
 
 const HomeScreen = ({ navigation, route }) => {
   const [activeSegment, setActiveSegment] = useState('agenda');
   const isDarkMode = useColorScheme() === 'dark';
+  const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
   const { setShowLargeTitle } = useContext(HeaderContext);
   const lastLargeTitleState = useRef(true);
+
+  // Estados para convites/eventos
+  const [invitations, setInvitations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     setShowLargeTitle(true);
@@ -18,6 +38,79 @@ const HomeScreen = ({ navigation, route }) => {
       setShowLargeTitle(true);
     };
   }, [setShowLargeTitle]);
+
+  // Carregar convites de eventos
+  const loadInvitations = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // Buscar notificações de convite de evento
+      const notifications = await notificationService.getUserNotifications(user.id);
+      const eventInvitations = notifications.filter(n => n.type === 'event_invitation');
+      
+      // Formatar para exibição
+      const formattedInvitations = eventInvitations.map(inv => ({
+        id: inv.id,
+        eventId: inv.event_id,
+        eventName: inv.event_name,
+        eventDate: inv.event_date,
+        eventTime: inv.event_time,
+        isRead: inv.is_read,
+        createdAt: inv.created_at
+      }));
+
+      setInvitations(formattedInvitations);
+    } catch (error) {
+      console.error('Erro ao carregar convites:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Recarregar convites (pull to refresh)
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadInvitations();
+    setRefreshing(false);
+  };
+
+  // Abrir evento do convite
+  const handleOpenInvitation = async (invitation) => {
+    try {
+      // Marcar notificação como lida
+      if (!invitation.isRead) {
+        await notificationService.markAsRead(invitation.id);
+      }
+
+      // Navegar para o evento
+      navigation.navigate('EventCreation', {
+        eventId: invitation.eventId,
+        isEditing: true
+      });
+    } catch (error) {
+      console.error('Erro ao abrir convite:', error);
+      Alert.alert('Erro', 'Não foi possível abrir o evento');
+    }
+  };
+
+  // Carregar ao montar
+  useEffect(() => {
+    loadInvitations();
+  }, []);
+
+  // Recarregar quando a tela receber foco
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadInvitations();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const handleScroll = useCallback((event) => {
     const offsetY = event.nativeEvent.contentOffset.y;
@@ -32,10 +125,13 @@ const HomeScreen = ({ navigation, route }) => {
   return (
     <TabScreenWrapper activeTab="Agenda" navigation={navigation}>
       <ScrollView
-        style={[styles.container, isDarkMode && styles.containerDark]}
+        style={[styles.container, { backgroundColor: colors.background }]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         contentInsetAdjustmentBehavior="automatic"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       >
       <View style={styles.content}>
         {/* Segment Control */}
@@ -55,10 +151,68 @@ const HomeScreen = ({ navigation, route }) => {
         </View>
         {activeSegment === 'agenda' ? (
           <>
-            {/* Agenda (4 eventos de exemplo) */}
+            {/* Agenda - Convites de Eventos */}
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>Sua Agenda</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Seus Convites</Text>
             </View>
+
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                  Carregando convites...
+                </Text>
+              </View>
+            ) : invitations.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Icon name="calendar-o" size={48} color={colors.textSecondary} style={styles.emptyIcon} />
+                <Text style={[styles.emptyText, { color: colors.text }]}>
+                  Nenhum convite
+                </Text>
+                <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                  Você não tem convites de eventos no momento
+                </Text>
+              </View>
+            ) : (
+              invitations.map((invitation) => (
+                <TouchableOpacity
+                  key={invitation.id}
+                  style={[
+                    styles.eventCard, 
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    !invitation.isRead && { backgroundColor: colors.primary + '10' }
+                  ]}
+                  onPress={() => handleOpenInvitation(invitation)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.eventHeader}>
+                    <View style={[styles.eventIconCircle, { backgroundColor: colors.primary + '20' }]}>
+                      <Icon name="calendar" size={18} color={colors.primary} />
+                    </View>
+                    <Text style={[styles.eventTitle, { color: colors.text }]}>
+                      {invitation.eventName}
+                    </Text>
+                    {!invitation.isRead && (
+                      <View style={[styles.newBadge, { backgroundColor: colors.primary }]}>
+                        <Text style={styles.newBadgeText}>NOVO</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.eventMetaRow}>
+                    <Icon name="calendar" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
+                      {new Date(invitation.eventDate).toLocaleDateString('pt-BR')} às {invitation.eventTime?.substring(0, 5)}
+                    </Text>
+                  </View>
+                  <View style={styles.eventMetaRow}>
+                    <Icon name="envelope" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
+                      Você foi convidado para este evento
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
           </>
         ) : (
           <>
@@ -225,6 +379,47 @@ const styles = StyleSheet.create({
   },
   segmentTextActiveDark: {
     color: '#1877F2',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyIcon: {
+    marginBottom: 16,
+    opacity: 0.3,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  newBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  newBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
   content: {
     flex: 1,

@@ -7,6 +7,30 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
+-- TABELA: notifications (Notificações)
+-- ============================================
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL, -- ID do usuário que receberá a notificação
+  type VARCHAR(50) NOT NULL, -- event_invitation, event_update, event_reminder, etc.
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+  event_name VARCHAR(255),
+  event_date DATE,
+  event_time TIME,
+  is_read BOOLEAN DEFAULT FALSE,
+  action_url TEXT, -- URL ou rota para ação (ex: abrir evento)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Índices para melhor performance
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+
+-- ============================================
 -- TABELA: events (Eventos)
 -- ============================================
 CREATE TABLE IF NOT EXISTS events (
@@ -125,6 +149,7 @@ CREATE TABLE IF NOT EXISTS roles (
 -- ============================================
 CREATE TABLE IF NOT EXISTS volunteers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID, -- Referência ao usuário autenticado (auth.users)
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
   email VARCHAR(255) UNIQUE,

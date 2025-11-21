@@ -19,11 +19,12 @@ import LinearGradient from 'react-native-linear-gradient';
 import Modal from 'react-native-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import SortableList from 'react-native-sortable-list';
 import theme from '../styles/theme';
 import StepEditorModal from '../components/StepEditorModal';
 import StepItemEditorModal from '../components/StepItemEditorModal';
+import AddTeamMemberModal from '../components/AddTeamMemberModal';
 import eventService from '../services/eventService';
+import notificationService from '../services/notificationService';
 import supabase from '../services/supabase';
 
 /**
@@ -251,6 +252,86 @@ const EventCreationScreen = ({ navigation, route }) => {
   const handleGoBack = () => {
     // Voltar sem salvar (usuário deve clicar em Salvar explicitamente)
     navigation.goBack();
+  };
+
+  // Função para adicionar membro à equipe
+  const handleAddTeamMember = async (member) => {
+    try {
+      // Adicionar membro ao estado local
+      setTeamMembers(prev => [...prev, {
+        ...member,
+        status: 'pending'
+      }]);
+
+      // Se o evento já foi salvo, enviar convite
+      if (eventId && eventData && member.user_id) {
+        await sendEventInvitation(member.user_id, member.name);
+      } else if (!member.user_id) {
+        Alert.alert(
+          'Membro Adicionado', 
+          `${member.name} foi adicionado à equipe, mas não possui conta no sistema. O convite não será enviado.`
+        );
+      } else {
+        Alert.alert(
+          'Membro Adicionado', 
+          `${member.name} foi adicionado à equipe. O convite será enviado quando você salvar o evento.`
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar membro:', error);
+      Alert.alert('Erro', 'Não foi possível adicionar o membro');
+    }
+  };
+
+  // Função para enviar convite ao adicionar membro à equipe
+  const sendEventInvitation = async (userId, memberName) => {
+    try {
+      if (!eventId || !eventData) {
+        console.log('Evento ainda não foi salvo, convite será enviado após salvar');
+        return;
+      }
+
+      // Formatar data e hora
+      const eventDate = eventData.date instanceof Date ? eventData.date : new Date(eventData.date);
+      const eventTime = eventData.time instanceof Date ? eventData.time : new Date(eventData.time);
+      const formattedDate = eventDate.toISOString().split('T')[0];
+      const hours = String(eventTime.getHours()).padStart(2, '0');
+      const minutes = String(eventTime.getMinutes()).padStart(2, '0');
+      const formattedTime = `${hours}:${minutes}:00`;
+
+      // Criar notificação de convite
+      await notificationService.createEventInvitation(
+        userId,
+        eventId,
+        eventData.name,
+        formattedDate,
+        formattedTime
+      );
+
+      console.log(`Convite enviado para ${memberName}`);
+      Alert.alert('Sucesso', `Convite enviado para ${memberName}!`);
+    } catch (error) {
+      console.error('Erro ao enviar convite:', error);
+      Alert.alert('Erro', 'Não foi possível enviar o convite');
+    }
+  };
+
+  // Função para remover membro da equipe
+  const handleRemoveTeamMember = (memberId) => {
+    Alert.alert(
+      'Remover Membro',
+      'Deseja remover este membro da equipe?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: () => {
+            setTeamMembers(prev => prev.filter(m => m.id !== memberId));
+          }
+        }
+      ]
+    );
   };
   
   // Função para abrir o modal de adição de etapa
@@ -659,148 +740,44 @@ const EventCreationScreen = ({ navigation, route }) => {
           
           {activeTab === 'team' && (
             <View style={styles.teamContainer}>
-              {/* Campo de busca */}
-              <View style={styles.searchContainer}>
-                <View style={[styles.searchInputContainer, { backgroundColor: colors.inputBackground }]}>
-                  <FontAwesome name="search" size={16} color={colors.textSecondary} style={styles.searchIcon} />
-                  <TextInput
-                    style={[styles.searchInput, { color: colors.text }]}
-                    placeholder="Buscar por equipe ou nome..."
-                    placeholderTextColor={colors.textSecondary}
-                  />
-                </View>
-                <TouchableOpacity style={[styles.sendButton, { backgroundColor: '#00C853' }]}>
-                  <Text style={styles.sendButtonText}>Enviar</Text>
-                </TouchableOpacity>
-              </View>
-              
               <View style={styles.teamContent}>
-                {/* Ministério de Louvor */}
-                <View style={[styles.teamSection, { backgroundColor: colors.card }]}>
-                  <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Ministério de Louvor</Text>
-                  
-                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
-                    <View style={styles.memberInfo}>
-                      <Text style={[styles.memberName, { color: colors.text }]}>João</Text>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Silva</Text>
-                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Vocal</Text>
-                    </View>
-                    
-                    <View style={styles.confirmBadge}>
-                      <Text style={styles.badgeText}>Confirmado</Text>
-                    </View>
+                {teamMembers.length === 0 ? (
+                  <View style={styles.emptyTeamContainer}>
+                    <FontAwesome name="users" size={48} color={colors.textSecondary} style={{ opacity: 0.3, marginBottom: 16 }} />
+                    <Text style={[styles.emptyTeamText, { color: colors.text }]}>Nenhum membro adicionado</Text>
+                    <Text style={[styles.emptyTeamSubText, { color: colors.textSecondary }]}>Toque no botão + para adicionar membros à equipe</Text>
                   </View>
+                ) : (
+                  <View style={[styles.teamSection, { backgroundColor: colors.card }]}>
+                    <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Membros da Equipe ({teamMembers.length})</Text>
                   
-                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
-                    <View style={styles.memberInfo}>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Maria</Text>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Santos</Text>
-                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Teclado</Text>
-                    </View>
-                    
-                    <View style={styles.confirmBadge}>
-                      <Text style={styles.badgeText}>Confirmado</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
-                    <View style={styles.memberInfo}>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Pedro</Text>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Costa</Text>
-                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Guitarra</Text>
-                    </View>
-                    
-                    <View style={styles.pendingBadge}>
-                      <Text style={styles.badgeText}>Pendente</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
-                    <View style={styles.memberInfo}>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Ana</Text>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Lima</Text>
-                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Bateria</Text>
-                    </View>
-                    
-                    <View style={styles.notSentContainer}>
-                      <View style={styles.notSentBadge}>
-                        <Text style={styles.notSentText}>Não Enviado</Text>
+                    {teamMembers.map((member) => (
+                      <View key={member.id} style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
+                        <View style={styles.memberInfo}>
+                          <Text style={[styles.memberName, { color: colors.text }]}>{member.name}</Text>
+                          <Text style={[styles.memberRole, { color: colors.textSecondary }]}>{member.role}</Text>
+                        </View>
+                        
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          <View style={[
+                            member.status === 'confirmed' ? styles.confirmBadge :
+                            member.status === 'pending' ? styles.pendingBadge :
+                            styles.notSentBadge
+                          ]}>
+                            <Text style={styles.badgeText}>
+                              {member.status === 'confirmed' ? 'Confirmado' :
+                               member.status === 'pending' ? 'Pendente' :
+                               'Não Enviado'}
+                            </Text>
+                          </View>
+                          <TouchableOpacity onPress={() => handleRemoveTeamMember(member.id)}>
+                            <FontAwesome name="trash-o" size={18} color={colors.danger} />
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                      <TouchableOpacity>
-                        <FontAwesome name="chevron-right" size={16} color="#00C853" />
-                      </TouchableOpacity>
-                    </View>
+                    ))}
                   </View>
-                  
-                  <View style={[styles.memberContainer, styles.highlightedMember, { borderBottomColor: colors.border }]}>
-                    <View style={styles.memberInfo}>
-                      <Text style={[styles.memberName, { color: '#FF9800' }]}>Carlos</Text>
-                      <Text style={[styles.memberName, { color: '#FF9800' }]}>Mendes</Text>
-                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Vocal</Text>
-                    </View>
-                    
-                    <View style={styles.notSentContainer}>
-                      <View style={styles.notSentBadge}>
-                        <Text style={styles.notSentText}>Não Enviado</Text>
-                      </View>
-                      <TouchableOpacity>
-                        <FontAwesome name="chevron-right" size={16} color="#00C853" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-                
-                {/* Equipe Técnica */}
-                <View style={[styles.teamSection, { backgroundColor: colors.card }]}>
-                  <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Equipe Técnica</Text>
-                  
-                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
-                    <View style={styles.memberInfo}>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Roberto</Text>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Silva</Text>
-                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Som</Text>
-                    </View>
-                    
-                    <View style={styles.confirmBadge}>
-                      <Text style={styles.badgeText}>Confirmado</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
-                    <View style={styles.memberInfo}>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Fernanda</Text>
-                      <Text style={[styles.memberName, { color: colors.text }]}>Costa</Text>
-                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Video</Text>
-                    </View>
-                    
-                    <View style={styles.confirmBadge}>
-                      <Text style={styles.badgeText}>Confirmado</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.memberContainer, styles.highlightedMember]}>
-                    <View style={styles.memberInfo}>
-                      <Text style={[styles.memberName, { color: '#FF9800' }]}>Paulo</Text>
-                      <Text style={[styles.memberName, { color: '#FF9800' }]}>Santos</Text>
-                      <Text style={styles.memberRole}>Iluminação</Text>
-                    </View>
-                    
-                    <View style={styles.notSentContainer}>
-                      <View style={styles.notSentBadge}>
-                        <Text style={styles.notSentText}>Não Enviado</Text>
-                      </View>
-                      <TouchableOpacity>
-                        <FontAwesome name="exclamation-circle" size={16} color="#FF9800" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-                
-                {/* Mensagem de bloqueados */}
-                <TouchableOpacity style={styles.blockedMessage}>
-                  <FontAwesome name="ban" size={16} color="#F44336" />
-                  <Text style={styles.blockedMessageText}>Ver bloqueados para esta data (2)</Text>
-                </TouchableOpacity>
+                )}
               </View>
             </View>
           )}
@@ -1130,97 +1107,14 @@ const EventCreationScreen = ({ navigation, route }) => {
         </View>
       </Modal>
       
-      {/* Modal para adicionar voluntário à equipe */}
-      <Modal
-        isVisible={isAddTeamMemberModalVisible}
-        onBackdropPress={() => setIsAddTeamMemberModalVisible(false)}
-        style={styles.modal}
-        backdropOpacity={0.5}
-        animationIn="slideInUp"
-        animationOut="slideOutDown"
-        useNativeDriver
-      >
-        <View style={[styles.modalContent, { backgroundColor: colors.background, height: 'auto' }]}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Adicionar Voluntário</Text>
-            <TouchableOpacity onPress={() => setIsAddTeamMemberModalVisible(false)}>
-              <FontAwesome name="times" size={20} color="#000000" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.teamMemberSearchContainer}>
-            <View style={styles.teamMemberSearchInputContainer}>
-              <FontAwesome name="search" size={16} color="#8E8E93" style={styles.searchIcon} />
-              <TextInput
-                style={styles.teamMemberSearchInput}
-                placeholder="Buscar voluntários..."
-                placeholderTextColor="#8E8E93"
-              />
-            </View>
-          </View>
-          
-          <ScrollView style={styles.modalScrollView}>
-            {/* Ministério de Louvor */}
-            <Text style={styles.teamMemberSectionTitle}>Ministério de Louvor</Text>
-            
-            {/* João Silva */}
-            <View style={styles.teamMemberSelectItem}>
-              <View style={styles.teamMemberSelectInfo}>
-                <Text style={styles.teamMemberSelectName}>João Silva</Text>
-                <Text style={styles.teamMemberSelectRole}>Vocal</Text>
-              </View>
-              <TouchableOpacity style={styles.teamMemberAddButton}>
-                <FontAwesome name="plus-circle" size={24} color="#00C853" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Maria Santos */}
-            <View style={styles.teamMemberSelectItem}>
-              <View style={styles.teamMemberSelectInfo}>
-                <Text style={styles.teamMemberSelectName}>Maria Santos</Text>
-                <Text style={styles.teamMemberSelectRole}>Teclado</Text>
-              </View>
-              <TouchableOpacity style={styles.teamMemberAddButton}>
-                <FontAwesome name="plus-circle" size={24} color="#00C853" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Pedro Costa */}
-            <View style={styles.teamMemberSelectItem}>
-              <View style={styles.teamMemberSelectInfo}>
-                <Text style={styles.teamMemberSelectName}>Pedro Costa</Text>
-                <Text style={styles.teamMemberSelectRole}>Guitarra</Text>
-              </View>
-              <TouchableOpacity style={styles.teamMemberAddButton}>
-                <FontAwesome name="plus-circle" size={24} color="#00C853" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Carlos Mendes - Indisponível */}
-            <View style={styles.teamMemberUnavailableItem}>
-              <View style={styles.teamMemberSelectInfo}>
-                <Text style={styles.teamMemberSelectName}>Carlos Mendes</Text>
-                <Text style={styles.teamMemberSelectRole}>Vocal</Text>
-                <Text style={styles.teamMemberUnavailableReason}>Motivo: Viagem de trabalho</Text>
-              </View>
-              <TouchableOpacity style={styles.teamMemberBlockedButton}>
-                <FontAwesome name="ban" size={24} color="#F44336" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Roberto Silva */}
-            <View style={styles.teamMemberSelectItem}>
-              <View style={styles.teamMemberSelectInfo}>
-                <Text style={styles.teamMemberSelectName}>Roberto Silva</Text>
-                <Text style={styles.teamMemberSelectRole}>Baixo</Text>
-              </View>
-              <TouchableOpacity style={styles.teamMemberAddButton}>
-                <FontAwesome name="plus-circle" size={24} color="#00C853" />
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
+      {/* Modal para adicionar membro à equipe */}
+      <AddTeamMemberModal
+        visible={isAddTeamMemberModalVisible}
+        onClose={() => setIsAddTeamMemberModalVisible(false)}
+        onAddMember={handleAddTeamMember}
+        eventId={eventId}
+        eventData={eventData}
+      />
       
       {/* Modal para adicionar cabeçalho */}
       <Modal
@@ -1467,6 +1361,22 @@ const styles = StyleSheet.create({
   },
   teamContainer: {
     flex: 1,
+  },
+  emptyTeamContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyTeamText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptyTeamSubText: {
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
   songsContainer: {
     flex: 1,
