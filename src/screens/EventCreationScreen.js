@@ -704,7 +704,7 @@ const EventCreationScreen = ({ navigation, route }) => {
               }}
             >
               <View style={styles.fabMenuItemContent}>
-                <FontAwesome name="header" size={20} color={isDarkMode ? '#FFFFFF' : '#58adf7'} />
+                <FontAwesome name="star" size={20} color={isDarkMode ? '#FFFFFF' : '#58adf7'} />
                 <Text style={[styles.fabMenuItemText, { color: isDarkMode ? '#FFFFFF' : '#58adf7' }]}>Cabeçalho</Text>
               </View>
             </TouchableOpacity>
