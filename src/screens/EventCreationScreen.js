@@ -574,83 +574,73 @@ const EventCreationScreen = ({ navigation, route }) => {
               <View style={styles.teamSection}>
                 <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Ministério de Louvor</Text>
                 
-                {/* João Silva - Vocal - Confirmado */}
-                <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberNameRole}>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>João</Text>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Silva</Text>
-                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Vocal</Text>
+                <View style={styles.memberContainer}>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>João</Text>
+                    <Text style={styles.memberName}>Silva</Text>
+                    <Text style={styles.memberRole}>Vocal</Text>
                   </View>
-                  <View style={styles.statusContainer}>
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>Confirmado</Text>
-                    </View>
+                  
+                  <View style={styles.confirmBadge}>
+                    <Text style={styles.badgeText}>Confirmado</Text>
                   </View>
                 </View>
                 
-                {/* Maria Santos - Teclado - Confirmado */}
-                <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberNameRole}>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Maria</Text>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Santos</Text>
-                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Teclado</Text>
+                <View style={styles.memberContainer}>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>Maria</Text>
+                    <Text style={styles.memberName}>Santos</Text>
+                    <Text style={styles.memberRole}>Teclado</Text>
                   </View>
-                  <View style={styles.statusContainer}>
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>Confirmado</Text>
-                    </View>
+                  
+                  <View style={styles.confirmBadge}>
+                    <Text style={styles.badgeText}>Confirmado</Text>
                   </View>
                 </View>
                 
-                {/* Pedro Costa - Guitarra - Pendente */}
-                <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberNameRole}>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Pedro</Text>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Costa</Text>
-                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Guitarra</Text>
+                <View style={styles.memberContainer}>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>Pedro</Text>
+                    <Text style={styles.memberName}>Costa</Text>
+                    <Text style={styles.memberRole}>Guitarra</Text>
                   </View>
-                  <View style={styles.statusContainer}>
-                    <View style={[styles.statusBadge, styles.pendingBadge]}>
-                      <Text style={styles.statusText}>Pendente</Text>
-                    </View>
+                  
+                  <View style={styles.pendingBadge}>
+                    <Text style={styles.badgeText}>Pendente</Text>
                   </View>
                 </View>
                 
-                {/* Ana Lima - Bateria - Não Enviado */}
-                <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberNameRole}>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Ana</Text>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Lima</Text>
-                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Bateria</Text>
+                <View style={styles.memberContainer}>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>Ana</Text>
+                    <Text style={styles.memberName}>Lima</Text>
+                    <Text style={styles.memberRole}>Bateria</Text>
                   </View>
-                  <View style={styles.statusContainer}>
-                    <View style={styles.notSentContainer}>
-                      <View style={[styles.statusBadge, styles.notSentBadge]}>
-                        <Text style={[styles.statusText, styles.notSentText]}>Não Enviado</Text>
-                      </View>
-                      <TouchableOpacity style={styles.sendIcon}>
-                        <FontAwesome name="chevron-right" size={16} color="#00C853" />
-                      </TouchableOpacity>
+                  
+                  <View style={styles.notSentContainer}>
+                    <View style={styles.notSentBadge}>
+                      <Text style={styles.notSentText}>Não Enviado</Text>
                     </View>
+                    <TouchableOpacity>
+                      <FontAwesome name="chevron-right" size={16} color="#00C853" />
+                    </TouchableOpacity>
                   </View>
                 </View>
                 
-                {/* Carlos Mendes - Vocal - Não Enviado - Destacado */}
-                <View style={[styles.teamMemberCard, styles.highlightedCard]}>
-                  <View style={styles.teamMemberNameRole}>
-                    <Text style={[styles.teamMemberName, { color: '#FF9800' }]}>Carlos</Text>
-                    <Text style={[styles.teamMemberName, { color: '#FF9800' }]}>Mendes</Text>
-                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Vocal</Text>
+                <View style={[styles.memberContainer, styles.highlightedMember]}>
+                  <View style={styles.memberInfo}>
+                    <Text style={[styles.memberName, { color: '#FF9800' }]}>Carlos</Text>
+                    <Text style={[styles.memberName, { color: '#FF9800' }]}>Mendes</Text>
+                    <Text style={styles.memberRole}>Vocal</Text>
                   </View>
-                  <View style={styles.statusContainer}>
-                    <View style={styles.notSentContainer}>
-                      <View style={[styles.statusBadge, styles.notSentBadge]}>
-                        <Text style={[styles.statusText, styles.notSentText]}>Não Enviado</Text>
-                      </View>
-                      <TouchableOpacity style={styles.sendIcon}>
-                        <FontAwesome name="chevron-right" size={16} color="#00C853" />
-                      </TouchableOpacity>
+                  
+                  <View style={styles.notSentContainer}>
+                    <View style={styles.notSentBadge}>
+                      <Text style={styles.notSentText}>Não Enviado</Text>
                     </View>
+                    <TouchableOpacity>
+                      <FontAwesome name="chevron-right" size={16} color="#00C853" />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -659,50 +649,44 @@ const EventCreationScreen = ({ navigation, route }) => {
               <View style={styles.teamSection}>
                 <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Equipe Técnica</Text>
                 
-                {/* Roberto Silva - Som - Confirmado */}
-                <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberNameRole}>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Roberto</Text>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Silva</Text>
-                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Som</Text>
+                <View style={styles.memberContainer}>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>Roberto</Text>
+                    <Text style={styles.memberName}>Silva</Text>
+                    <Text style={styles.memberRole}>Som</Text>
                   </View>
-                  <View style={styles.statusContainer}>
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>Confirmado</Text>
-                    </View>
+                  
+                  <View style={styles.confirmBadge}>
+                    <Text style={styles.badgeText}>Confirmado</Text>
                   </View>
                 </View>
                 
-                {/* Fernanda Costa - Video - Confirmado */}
-                <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberNameRole}>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Fernanda</Text>
-                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Costa</Text>
-                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Video</Text>
+                <View style={styles.memberContainer}>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>Fernanda</Text>
+                    <Text style={styles.memberName}>Costa</Text>
+                    <Text style={styles.memberRole}>Video</Text>
                   </View>
-                  <View style={styles.statusContainer}>
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>Confirmado</Text>
-                    </View>
+                  
+                  <View style={styles.confirmBadge}>
+                    <Text style={styles.badgeText}>Confirmado</Text>
                   </View>
                 </View>
                 
-                {/* Paulo Santos - Iluminação - Não Enviado - Destacado */}
-                <View style={[styles.teamMemberCard, styles.highlightedCard]}>
-                  <View style={styles.teamMemberNameRole}>
-                    <Text style={[styles.teamMemberName, { color: '#FF9800' }]}>Paulo</Text>
-                    <Text style={[styles.teamMemberName, { color: '#FF9800' }]}>Santos</Text>
-                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Iluminação</Text>
+                <View style={[styles.memberContainer, styles.highlightedMember]}>
+                  <View style={styles.memberInfo}>
+                    <Text style={[styles.memberName, { color: '#FF9800' }]}>Paulo</Text>
+                    <Text style={[styles.memberName, { color: '#FF9800' }]}>Santos</Text>
+                    <Text style={styles.memberRole}>Iluminação</Text>
                   </View>
-                  <View style={styles.statusContainer}>
-                    <View style={styles.notSentContainer}>
-                      <View style={[styles.statusBadge, styles.notSentBadge]}>
-                        <Text style={[styles.statusText, styles.notSentText]}>Não Enviado</Text>
-                      </View>
-                      <TouchableOpacity style={styles.sendIcon}>
-                        <FontAwesome name="exclamation-circle" size={16} color="#FF9800" />
-                      </TouchableOpacity>
+                  
+                  <View style={styles.notSentContainer}>
+                    <View style={styles.notSentBadge}>
+                      <Text style={styles.notSentText}>Não Enviado</Text>
                     </View>
+                    <TouchableOpacity>
+                      <FontAwesome name="exclamation-circle" size={16} color="#FF9800" />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -1141,34 +1125,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  teamMemberCard: {
+  memberContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#E5E5EA',
   },
-  highlightedCard: {
+  highlightedMember: {
     backgroundColor: 'rgba(255, 152, 0, 0.1)',
   },
-  teamMemberNameRole: {
+  memberInfo: {
     flex: 1,
   },
-  teamMemberName: {
+  memberName: {
     fontSize: 20,
     fontWeight: '500',
-    lineHeight: 26,
+    lineHeight: 24,
+    color: '#000000',
   },
-  teamMemberRole: {
+  memberRole: {
     fontSize: 16,
     marginTop: 4,
+    color: '#8E8E93',
   },
-  statusContainer: {
-    alignItems: 'flex-end',
-  },
-  statusBadge: {
+  confirmBadge: {
     backgroundColor: '#00C853',
     borderRadius: 16,
     paddingHorizontal: 12,
@@ -1176,25 +1159,30 @@ const styles = StyleSheet.create({
   },
   pendingBadge: {
     backgroundColor: '#FF9800',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   notSentBadge: {
     backgroundColor: '#9E9E9E',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
-  statusText: {
+  badgeText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
   },
   notSentText: {
     color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
   notSentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  sendIcon: {
-    marginLeft: 8,
-    padding: 4,
+    gap: 8,
   },
   blockedMessage: {
     flexDirection: 'row',
