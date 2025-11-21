@@ -42,6 +42,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [currentStep, setCurrentStep] = useState(null);
   const [currentStepItem, setCurrentStepItem] = useState(null);
   const [currentStepId, setCurrentStepId] = useState(null);
+  const [isFabExpanded, setIsFabExpanded] = useState(false);
   // Estados para a aba Equipe
   const [teamMembers, setTeamMembers] = useState([
     {
@@ -690,22 +691,83 @@ const EventCreationScreen = ({ navigation, route }) => {
       </ScrollView>
       
       {/* Floating Action Button */}
-      <TouchableOpacity 
-        style={styles.fab}
-        onPress={() => {
-          // Adicionar Etapa
-          handleAddStep();
-        }}
-      >
-        <LinearGradient 
-          colors={['#5fccb3', '#58adf7']} 
-          start={{x: 0, y: 0}} 
-          end={{x: 1, y: 0}} 
-          style={styles.fabGradient}
+      <View style={styles.fabContainer}>
+        {/* FAB Menu Items - Visible when expanded */}
+        {isFabExpanded && (
+          <View style={styles.fabMenu}>
+            <TouchableOpacity 
+              style={styles.fabMenuItem}
+              onPress={() => {
+                setIsFabExpanded(false);
+                // Adicionar Cabeçalho
+                Alert.alert('Adicionar Cabeçalho', 'Função a ser implementada');
+              }}
+            >
+              <LinearGradient 
+                colors={['#5fccb3', '#58adf7']} 
+                start={{x: 0, y: 0}} 
+                end={{x: 1, y: 0}} 
+                style={styles.fabMenuItemGradient}
+              >
+                <FontAwesome name="header" size={20} color="#FFFFFF" />
+                <Text style={styles.fabMenuItemText}>Cabeçalho</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.fabMenuItem}
+              onPress={() => {
+                setIsFabExpanded(false);
+                handleAddStep();
+              }}
+            >
+              <LinearGradient 
+                colors={['#5fccb3', '#58adf7']} 
+                start={{x: 0, y: 0}} 
+                end={{x: 1, y: 0}} 
+                style={styles.fabMenuItemGradient}
+              >
+                <FontAwesome name="list" size={20} color="#FFFFFF" />
+                <Text style={styles.fabMenuItemText}>Etapa</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.fabMenuItem}
+              onPress={() => {
+                setIsFabExpanded(false);
+                // Adicionar Música
+                Alert.alert('Adicionar Música', 'Função a ser implementada');
+              }}
+            >
+              <LinearGradient 
+                colors={['#5fccb3', '#58adf7']} 
+                start={{x: 0, y: 0}} 
+                end={{x: 1, y: 0}} 
+                style={styles.fabMenuItemGradient}
+              >
+                <FontAwesome name="music" size={20} color="#FFFFFF" />
+                <Text style={styles.fabMenuItemText}>Música</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* Main FAB Button */}
+        <TouchableOpacity 
+          style={styles.fab}
+          onPress={() => setIsFabExpanded(!isFabExpanded)}
         >
-          <FontAwesome name="plus" size={24} color="#FFFFFF" />
-        </LinearGradient>
-      </TouchableOpacity>
+          <LinearGradient 
+            colors={['#5fccb3', '#58adf7']} 
+            start={{x: 0, y: 0}} 
+            end={{x: 1, y: 0}} 
+            style={styles.fabGradient}
+          >
+            <FontAwesome name="plus" size={24} color="#FFFFFF" />
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
       
       
       {/* Step Editor Modal */}
@@ -966,10 +1028,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  fab: {
+  fabContainer: {
     position: 'absolute',
     bottom: 24,
     right: 24,
+    alignItems: 'flex-end',
+  },
+  fabMenu: {
+    marginBottom: 16,
+    alignItems: 'flex-end',
+  },
+  fabMenuItem: {
+    marginBottom: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  fabMenuItemGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    justifyContent: 'center',
+  },
+  fabMenuItemText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
