@@ -709,217 +709,50 @@ const EventCreationScreen = ({ navigation, route }) => {
           
           {activeTab === 'songs' && (
             <View style={styles.songsContainer}>
-              {/* Barra de pesquisa e filtro */}
-              <View style={styles.searchFilterContainer}>
-                <View style={styles.searchBarContainer}>
-                  <FontAwesome name="search" size={16} color="#8E8E93" style={styles.searchIcon} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Pesquisar"
-                    placeholderTextColor="#8E8E93"
-                  />
-                  <TouchableOpacity>
-                    <FontAwesome name="times" size={16} color="#8E8E93" />
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity style={styles.filterButton}>
-                  <FontAwesome name="sliders" size={16} color="#000000" />
-                  <Text style={styles.filterText}>Filtrar</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Título da seção */}
+              <Text style={styles.songsSectionTitle}>Músicas do Cronograma (4)</Text>
               
-              {/* Abas de Músicas e Vídeos */}
-              <View style={styles.mediaTabsContainer}>
-                <TouchableOpacity 
-                  style={[styles.mediaTab, styles.mediaTabActive]}
-                >
-                  <Text style={[styles.mediaTabText, styles.mediaTabTextActive]}>Músicas</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.mediaTab}>
-                  <Text style={styles.mediaTabText}>Vídeos</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {/* Lista de músicas */}
+              {/* Lista de músicas do cronograma */}
               <FlatList
                 data={[
-                  { id: '1', title: '1000 Graus', artist: 'Renascer Praise' },
-                  { id: '2', title: '500 GRAUS', artist: 'Cassiane' },
-                  { id: '3', title: '500 GRAUS', artist: 'Cassiane' },
-                  { id: '4', title: 'A ALEGRIA ESTÁ NO CORAÇÃO', artist: 'Mateus Brito' },
-                  { id: '5', title: 'ABBA', artist: 'Laura Souguellis' },
-                  { id: '6', title: 'A bênção / The Blessing', artist: 'Gabriela Rocha / Elevation Worship & Kari Jobi' },
-                  { id: '7', title: 'Abra a Sua Boca e Profetiza', artist: 'Marcus Salles' },
-                  { id: '8', title: 'Abraça-em (Quero Ser Como Criança)', artist: 'David Quinlan' },
+                  { id: '1', title: 'Se Aperfeiçoa Em Mim', artist: 'Ministério Zoe', time: '19:03', duration: '5min', tags: ['Vocal', 'Violão'] },
+                  { id: '2', title: 'TUDO É PERDA', artist: 'Morada', time: '19:08', duration: '5min', tags: ['Vocal'] },
+                  { id: '3', title: 'LINDO MOMENTO', artist: 'Ministério Zoe', time: '19:13', duration: '5min', tags: ['Vocal'] },
+                  { id: '4', title: 'Vitorioso És / Victory is Yours', artist: 'Elevation Worship', time: '19:18', duration: '7min', tags: ['Vocal', 'Piano'] },
                 ]}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
-                  <View style={styles.songItem}>
-                    <View style={styles.songIconContainer}>
-                      <FontAwesome name="music" size={24} color="#FFFFFF" />
+                  <View style={styles.songProgramItem}>
+                    <View style={styles.songProgramIconContainer}>
+                      <FontAwesome name="music" size={24} color="#FFD700" />
                     </View>
-                    <View style={styles.songInfo}>
-                      <Text style={styles.songTitle}>{item.title}</Text>
-                      <Text style={styles.songArtist}>{item.artist}</Text>
+                    <View style={styles.songProgramInfo}>
+                      <Text style={styles.songProgramTitle}>{item.title}</Text>
+                      <Text style={styles.songProgramArtist}>por {item.artist}</Text>
+                      <Text style={styles.songProgramTime}>{item.time} • {item.duration}</Text>
+                      <View style={styles.songProgramTags}>
+                        {item.tags.map((tag, index) => (
+                          <View key={index} style={styles.songProgramTag}>
+                            <Text style={styles.songProgramTagText}>{tag}</Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
-                    <View style={styles.songActions}>
-                      <TouchableOpacity style={styles.songActionButton}>
-                        <FontAwesome name="pencil" size={20} color="#000000" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.songActionButton}>
-                        <FontAwesome name="trash" size={20} color="#FF3B30" />
+                    <View style={styles.songProgramActions}>
+                      <View style={[styles.songProgramStatus, { backgroundColor: '#FF9500' }]}>
+                        <Text style={styles.songProgramStatusText}>OK</Text>
+                      </View>
+                      <TouchableOpacity>
+                        <FontAwesome name="chevron-right" size={16} color="#8E8E93" />
                       </TouchableOpacity>
                     </View>
                   </View>
                 )}
-                style={styles.songsList}
+                style={styles.songsProgramList}
+                contentContainerStyle={styles.songsProgramListContent}
               />
             </View>
-          )}
-          
-          {/* Modal para adicionar música */}
-          <Modal
-            isVisible={isAddSongModalVisible}
-            onBackdropPress={() => setIsAddSongModalVisible(false)}
-            style={styles.modal}
-            backdropOpacity={0.5}
-            animationIn="slideInUp"
-            animationOut="slideOutDown"
-            useNativeDriver
-          >
-                <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-                  <View style={styles.modalHeader}>
-                    <TouchableOpacity onPress={() => setIsAddSongModalVisible(false)}>
-                      <Text style={styles.modalBackButton}>Voltar para mídias</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setIsAddSongModalVisible(false)}>
-                      <FontAwesome name="times" size={20} color="#000000" />
-                    </TouchableOpacity>
-                  </View>
-                  
-                  <ScrollView style={styles.modalScrollView}>
-                    {/* Seção de vídeo do YouTube */}
-                    <View style={styles.modalSection}>
-                      <View style={styles.modalSectionHeader}>
-                        <View style={[styles.modalSectionIcon, { backgroundColor: '#FF0000' }]}>
-                          <FontAwesome name="youtube-play" size={24} color="#FFFFFF" />
-                        </View>
-                        <Text style={styles.modalSectionTitle}>Adicionar Vídeo do YouTube</Text>
-                      </View>
-                      
-                      <View style={styles.searchVideoContainer}>
-                        <TextInput
-                          style={styles.searchVideoInput}
-                          placeholder="Pesquisar vídeo"
-                          placeholderTextColor="#8E8E93"
-                        />
-                        <TouchableOpacity style={styles.searchVideoButton}>
-                          <FontAwesome name="search" size={16} color="#000000" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    
-                    {/* Seção de informações da música */}
-                    <View style={styles.modalSection}>
-                      <View style={styles.modalSectionHeader}>
-                        <View style={[styles.modalSectionIcon, { backgroundColor: '#8A2BE2' }]}>
-                          <FontAwesome name="file-text" size={24} color="#FFFFFF" />
-                        </View>
-                        <Text style={styles.modalSectionTitle}>Informações - </Text>
-                        <View style={styles.musicBadge}>
-                          <Text style={styles.musicBadgeText}>Música</Text>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.formGroup}>
-                        <Text style={styles.formLabel}>Título</Text>
-                        <TextInput
-                          style={styles.formInput}
-                          placeholder=""
-                          placeholderTextColor="#8E8E93"
-                        />
-                      </View>
-                      
-                      <View style={styles.formGroup}>
-                        <Text style={styles.formLabel}>Artista</Text>
-                        <TextInput
-                          style={styles.formInput}
-                          placeholder=""
-                          placeholderTextColor="#8E8E93"
-                        />
-                      </View>
-                      
-                      <View style={styles.formGroup}>
-                        <Text style={styles.formLabel}>URL</Text>
-                        <TextInput
-                          style={styles.formInput}
-                          placeholder=""
-                          placeholderTextColor="#8E8E93"
-                        />
-                      </View>
-                      
-                      <View style={styles.formGroup}>
-                        <Text style={styles.formLabel}>Observações</Text>
-                        <TextInput
-                          style={[styles.formInput, styles.formTextarea]}
-                          placeholder=""
-                          placeholderTextColor="#8E8E93"
-                          multiline
-                          numberOfLines={4}
-                        />
-                      </View>
-                    </View>
-                    
-                    {/* Seção de links externos */}
-                    <View style={styles.modalSection}>
-                      <View style={styles.modalSectionHeader}>
-                        <View style={[styles.modalSectionIcon, { backgroundColor: '#E5E5EA' }]}>
-                          <FontAwesome name="link" size={24} color="#000000" />
-                        </View>
-                        <Text style={styles.modalSectionTitle}>Links Externos</Text>
-                      </View>
-                      
-                      <TouchableOpacity style={styles.addLinkButton}>
-                        <Text style={styles.addLinkText}>Adicionar Link</Text>
-                        <FontAwesome name="plus" size={16} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </View>
-                    
-                    {/* Seção de letra da música */}
-                    <View style={styles.modalSection}>
-                      <Text style={styles.formLabel}>Letra</Text>
-                      <TextInput
-                        style={[styles.formInput, styles.lyricsTextarea]}
-                        placeholder=""
-                        placeholderTextColor="#8E8E93"
-                        multiline
-                        numberOfLines={10}
-                      />
-                    </View>
-                    
-                    {/* Seção de arquivos */}
-                    <View style={styles.modalSection}>
-                      <Text style={styles.modalSectionTitle}>Arquivos</Text>
-                      <Text style={styles.noFilesText}>SEM ARQUIVOS</Text>
-                      <TouchableOpacity style={styles.addFilesButton}>
-                        <FontAwesome name="upload" size={16} color="#FFFFFF" />
-                        <Text style={styles.addFilesText}>Adicionar arquivos à mídia</Text>
-                      </TouchableOpacity>
-                    </View>
-                    
-                    {/* Botão de salvar */}
-                    <TouchableOpacity 
-                      style={styles.saveSongButton}
-                      onPress={() => setIsAddSongModalVisible(false)}
-                    >
-                      <Text style={styles.saveSongButtonText}>Salvar Música</Text>
-                      <FontAwesome name="save" size={16} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  </ScrollView>
-                </View>
-              </Modal>
-            </View>
-          )}
+          </View>
           
           {activeTab === 'schedule' && (
             <View style={styles.scheduleContainer}>
@@ -1342,6 +1175,76 @@ const EventCreationScreen = ({ navigation, route }) => {
           )}
         </View>
       </Modal>
+      
+      {/* Modal para adicionar música */}
+      <Modal
+        isVisible={isAddSongModalVisible}
+        onBackdropPress={() => setIsAddSongModalVisible(false)}
+        style={styles.modal}
+        backdropOpacity={0.5}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        useNativeDriver
+      >
+        <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Adicionar Música</Text>
+            <TouchableOpacity onPress={() => setIsAddSongModalVisible(false)}>
+              <FontAwesome name="times" size={20} color="#000000" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Barra de pesquisa */}
+          <View style={styles.songSearchContainer}>
+            <View style={styles.songSearchInputContainer}>
+              <FontAwesome name="search" size={16} color="#8E8E93" style={styles.searchIcon} />
+              <TextInput
+                style={styles.songSearchInput}
+                placeholder="Pesquisar músicas..."
+                placeholderTextColor="#8E8E93"
+              />
+            </View>
+          </View>
+          
+          {/* Lista de músicas disponíveis */}
+          <FlatList
+            data={[
+              { id: '1', title: 'Se Aperfeiçoa Em Mim', artist: 'Ministério Zoe', tags: ['Vocal', 'Violão'] },
+              { id: '2', title: 'TUDO É PERDA', artist: 'Morada', tags: ['Vocal'] },
+              { id: '3', title: 'LINDO MOMENTO', artist: 'Ministério Zoe', tags: ['Vocal'] },
+              { id: '4', title: 'Vitorioso És / Victory is Yours', artist: 'Elevation Worship', tags: ['Vocal', 'Piano'] },
+              { id: '5', title: '1000 Graus', artist: 'Renascer Praise', tags: ['Vocal'] },
+              { id: '6', title: '500 GRAUS', artist: 'Cassiane', tags: ['Vocal'] },
+              { id: '7', title: 'A ALEGRIA ESTÁ NO CORAÇÃO', artist: 'Mateus Brito', tags: ['Vocal'] },
+              { id: '8', title: 'ABBA', artist: 'Laura Souguellis', tags: ['Vocal'] },
+            ]}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.songSearchItem}>
+                <View style={styles.songSearchIconContainer}>
+                  <FontAwesome name="music" size={24} color="#8A2BE2" />
+                </View>
+                <View style={styles.songSearchInfo}>
+                  <Text style={styles.songSearchTitle}>{item.title}</Text>
+                  <Text style={styles.songSearchArtist}>{item.artist}</Text>
+                  <View style={styles.songSearchTags}>
+                    {item.tags.map((tag, index) => (
+                      <View key={index} style={styles.songSearchTag}>
+                        <Text style={styles.songSearchTagText}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+                <TouchableOpacity style={styles.songSearchAddButton}>
+                  <FontAwesome name="plus-circle" size={24} color="#00C853" />
+                </TouchableOpacity>
+              </View>
+            )}
+            style={styles.songSearchList}
+            contentContainerStyle={styles.songSearchListContent}
+          />
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -1436,6 +1339,86 @@ const styles = StyleSheet.create({
   },
   songsContainer: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  songsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    padding: 16,
+  },
+  songsProgramList: {
+    flex: 1,
+  },
+  songsProgramListContent: {
+    paddingBottom: 80,
+  },
+  songProgramItem: {
+    flexDirection: 'row',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  songProgramIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF9C4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  songProgramInfo: {
+    flex: 1,
+  },
+  songProgramTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  songProgramArtist: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginBottom: 4,
+  },
+  songProgramTime: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginBottom: 8,
+  },
+  songProgramTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  songProgramTag: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  songProgramTagText: {
+    fontSize: 12,
+    color: '#000000',
+  },
+  songProgramActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 8,
+  },
+  songProgramStatus: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 8,
+  },
+  songProgramStatusText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '500',
   },
   searchFilterContainer: {
     flexDirection: 'row',
@@ -2194,6 +2177,82 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Estilos para a pesquisa de músicas no modal
+  songSearchContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  songSearchInputContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    height: 40,
+  },
+  songSearchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 16,
+    color: '#000000',
+    marginLeft: 8,
+  },
+  songSearchList: {
+    flex: 1,
+  },
+  songSearchListContent: {
+    paddingBottom: 20,
+  },
+  songSearchItem: {
+    flexDirection: 'row',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  songSearchIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0E6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  songSearchInfo: {
+    flex: 1,
+  },
+  songSearchTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  songSearchArtist: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginBottom: 8,
+  },
+  songSearchTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  songSearchTag: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  songSearchTagText: {
+    fontSize: 12,
+    color: '#000000',
+  },
+  songSearchAddButton: {
+    padding: 8,
+    justifyContent: 'center',
   },
   fabContainer: {
     position: 'absolute',
