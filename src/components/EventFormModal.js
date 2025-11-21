@@ -140,21 +140,11 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
   // Funções para lidar com o picker de data
   const handleOpenDatePicker = () => {
     Keyboard.dismiss();
-    // No Android, o picker já aparece automaticamente
-    if (Platform.OS === 'ios') {
-      setShowDatePicker(true);
-    } else {
-      // No Android, precisamos mostrar o picker diretamente
-      setShowDatePicker(true);
-    }
+    setShowDatePicker(true);
   };
   
   const handleDateChange = (event, selectedDate) => {
-    // No Android, o picker fecha automaticamente após a seleção
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    
+    setShowDatePicker(false);
     if (selectedDate) {
       setEventDate(selectedDate);
     }
@@ -163,21 +153,11 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
   // Funções para lidar com o picker de hora
   const handleOpenTimePicker = () => {
     Keyboard.dismiss();
-    // No Android, o picker já aparece automaticamente
-    if (Platform.OS === 'ios') {
-      setShowTimePicker(true);
-    } else {
-      // No Android, precisamos mostrar o picker diretamente
-      setShowTimePicker(true);
-    }
+    setShowTimePicker(true);
   };
   
   const handleTimeChange = (event, selectedTime) => {
-    // No Android, o picker fecha automaticamente após a seleção
-    if (Platform.OS === 'android') {
-      setShowTimePicker(false);
-    }
-    
+    setShowTimePicker(false);
     if (selectedTime) {
       setEventTime(selectedTime);
     }
@@ -327,31 +307,11 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
                 <FontAwesome name="calendar" size={20} color={colors.primary} style={styles.inputIcon} />
               </View>
             </TouchableOpacity>
-            {showDatePicker && Platform.OS === 'ios' && (
-              <View style={styles.datePickerContainer}>
-                <DateTimePicker
-                  value={eventDate}
-                  mode="date"
-                  display="spinner"
-                  onChange={handleDateChange}
-                  locale="pt-BR"
-                  style={styles.datePicker}
-                />
-                <View style={styles.datePickerButtonContainer}>
-                  <TouchableOpacity 
-                    style={styles.datePickerButton}
-                    onPress={() => setShowDatePicker(false)}
-                  >
-                    <Text style={[styles.datePickerButtonText, { color: colors.primary }]}>OK</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-            {showDatePicker && Platform.OS === 'android' && (
+            {showDatePicker && (
               <DateTimePicker
                 value={eventDate}
                 mode="date"
-                display="default"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleDateChange}
               />
             )}
@@ -369,31 +329,11 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
                 <FontAwesome name="clock-o" size={20} color={colors.primary} style={styles.inputIcon} />
               </View>
             </TouchableOpacity>
-            {showTimePicker && Platform.OS === 'ios' && (
-              <View style={styles.datePickerContainer}>
-                <DateTimePicker
-                  value={eventTime}
-                  mode="time"
-                  display="spinner"
-                  onChange={handleTimeChange}
-                  locale="pt-BR"
-                  style={styles.datePicker}
-                />
-                <View style={styles.datePickerButtonContainer}>
-                  <TouchableOpacity 
-                    style={styles.datePickerButton}
-                    onPress={() => setShowTimePicker(false)}
-                  >
-                    <Text style={[styles.datePickerButtonText, { color: colors.primary }]}>OK</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-            {showTimePicker && Platform.OS === 'android' && (
+            {showTimePicker && (
               <DateTimePicker
                 value={eventTime}
                 mode="time"
-                display="default"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleTimeChange}
               />
             )}
@@ -553,42 +493,6 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 48,
-  },
-  datePicker: {
-    width: '100%',
-    height: 200,
-    backgroundColor: 'transparent',
-  },
-  datePickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginTop: 8,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-      },
-      android: {
-        elevation: 5,
-      },
-    }),
-  },
-  datePickerButtonContainer: {
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
-    padding: 12,
-    alignItems: 'center',
-  },
-  datePickerButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  datePickerButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   pickerModal: {
     margin: 0,
