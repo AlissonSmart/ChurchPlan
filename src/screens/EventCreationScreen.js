@@ -46,6 +46,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [currentStepId, setCurrentStepId] = useState(null);
   const [isAddSongModalVisible, setIsAddSongModalVisible] = useState(false);
   const [isAddScheduleModalVisible, setIsAddScheduleModalVisible] = useState(false);
+  const [isAddTeamMemberModalVisible, setIsAddTeamMemberModalVisible] = useState(false);
   // Estados para a aba Equipe
   const [teamMembers, setTeamMembers] = useState([
     {
@@ -999,6 +1000,7 @@ const EventCreationScreen = ({ navigation, route }) => {
       {activeTab === 'team' && (
         <TouchableOpacity 
           style={styles.addButton}
+          onPress={() => setIsAddTeamMemberModalVisible(true)}
         >
           <LinearGradient 
             colors={['#5fccb3', '#58adf7']} 
@@ -1135,6 +1137,98 @@ const EventCreationScreen = ({ navigation, route }) => {
             >
               <Text style={styles.addScheduleButtonText}>Adicionar Horário</Text>
             </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
+      
+      {/* Modal para adicionar voluntário à equipe */}
+      <Modal
+        isVisible={isAddTeamMemberModalVisible}
+        onBackdropPress={() => setIsAddTeamMemberModalVisible(false)}
+        style={styles.modal}
+        backdropOpacity={0.5}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        useNativeDriver
+      >
+        <View style={[styles.modalContent, { backgroundColor: colors.background, height: 'auto' }]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Adicionar Voluntário</Text>
+            <TouchableOpacity onPress={() => setIsAddTeamMemberModalVisible(false)}>
+              <FontAwesome name="times" size={20} color="#000000" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.teamMemberSearchContainer}>
+            <View style={styles.teamMemberSearchInputContainer}>
+              <FontAwesome name="search" size={16} color="#8E8E93" style={styles.searchIcon} />
+              <TextInput
+                style={styles.teamMemberSearchInput}
+                placeholder="Buscar voluntários..."
+                placeholderTextColor="#8E8E93"
+              />
+            </View>
+          </View>
+          
+          <ScrollView style={styles.modalScrollView}>
+            {/* Ministério de Louvor */}
+            <Text style={styles.teamMemberSectionTitle}>Ministério de Louvor</Text>
+            
+            {/* João Silva */}
+            <View style={styles.teamMemberSelectItem}>
+              <View style={styles.teamMemberSelectInfo}>
+                <Text style={styles.teamMemberSelectName}>João Silva</Text>
+                <Text style={styles.teamMemberSelectRole}>Vocal</Text>
+              </View>
+              <TouchableOpacity style={styles.teamMemberAddButton}>
+                <FontAwesome name="plus-circle" size={24} color="#00C853" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Maria Santos */}
+            <View style={styles.teamMemberSelectItem}>
+              <View style={styles.teamMemberSelectInfo}>
+                <Text style={styles.teamMemberSelectName}>Maria Santos</Text>
+                <Text style={styles.teamMemberSelectRole}>Teclado</Text>
+              </View>
+              <TouchableOpacity style={styles.teamMemberAddButton}>
+                <FontAwesome name="plus-circle" size={24} color="#00C853" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Pedro Costa */}
+            <View style={styles.teamMemberSelectItem}>
+              <View style={styles.teamMemberSelectInfo}>
+                <Text style={styles.teamMemberSelectName}>Pedro Costa</Text>
+                <Text style={styles.teamMemberSelectRole}>Guitarra</Text>
+              </View>
+              <TouchableOpacity style={styles.teamMemberAddButton}>
+                <FontAwesome name="plus-circle" size={24} color="#00C853" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Carlos Mendes - Indisponível */}
+            <View style={styles.teamMemberUnavailableItem}>
+              <View style={styles.teamMemberSelectInfo}>
+                <Text style={styles.teamMemberSelectName}>Carlos Mendes</Text>
+                <Text style={styles.teamMemberSelectRole}>Vocal</Text>
+                <Text style={styles.teamMemberUnavailableReason}>Motivo: Viagem de trabalho</Text>
+              </View>
+              <TouchableOpacity style={styles.teamMemberBlockedButton}>
+                <FontAwesome name="ban" size={24} color="#F44336" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Roberto Silva */}
+            <View style={styles.teamMemberSelectItem}>
+              <View style={styles.teamMemberSelectInfo}>
+                <Text style={styles.teamMemberSelectName}>Roberto Silva</Text>
+                <Text style={styles.teamMemberSelectRole}>Baixo</Text>
+              </View>
+              <TouchableOpacity style={styles.teamMemberAddButton}>
+                <FontAwesome name="plus-circle" size={24} color="#00C853" />
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         </View>
       </Modal>
@@ -1873,6 +1967,77 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Estilos para o modal de adicionar voluntário
+  teamMemberSearchContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  teamMemberSearchInputContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    height: 40,
+  },
+  teamMemberSearchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 16,
+    color: '#000000',
+    marginLeft: 8,
+  },
+  teamMemberSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  teamMemberSelectItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  teamMemberSelectInfo: {
+    flex: 1,
+  },
+  teamMemberSelectName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  teamMemberSelectRole: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  teamMemberAddButton: {
+    padding: 8,
+  },
+  teamMemberUnavailableItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+    backgroundColor: '#FFF9C4',
+  },
+  teamMemberUnavailableReason: {
+    fontSize: 12,
+    color: '#FF9800',
+    marginTop: 4,
+  },
+  teamMemberBlockedButton: {
+    padding: 8,
   },
 });
 
