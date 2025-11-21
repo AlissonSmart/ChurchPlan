@@ -49,6 +49,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [isAddTeamMemberModalVisible, setIsAddTeamMemberModalVisible] = useState(false);
   const [isAddHeaderModalVisible, setIsAddHeaderModalVisible] = useState(false);
   const [activeHeaderTab, setActiveHeaderTab] = useState('details');
+  const [isFabOpen, setIsFabOpen] = useState(false);
   // Estados para a aba Equipe
   const [teamMembers, setTeamMembers] = useState([
     {
@@ -436,7 +437,7 @@ const EventCreationScreen = ({ navigation, route }) => {
         </View>
       </View>
       
-      <View style={styles.container}>
+      <ScrollView style={styles.container}>
         {/* Event Image/Banner */}
         <View style={[styles.bannerContainer, { backgroundColor: '#5E5CEC' }]}>
           <TouchableOpacity style={styles.addImageButton}>
@@ -578,14 +579,14 @@ const EventCreationScreen = ({ navigation, route }) => {
               
               <View style={styles.teamContent}>
                 {/* Ministério de Louvor */}
-                <View style={styles.teamSection}>
+                <View style={[styles.teamSection, { backgroundColor: colors.card }]}>
                   <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Ministério de Louvor</Text>
                   
-                  <View style={styles.memberContainer}>
+                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
                     <View style={styles.memberInfo}>
-                      <Text style={styles.memberName}>João</Text>
-                      <Text style={styles.memberName}>Silva</Text>
-                      <Text style={styles.memberRole}>Vocal</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>João</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Silva</Text>
+                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Vocal</Text>
                     </View>
                     
                     <View style={styles.confirmBadge}>
@@ -593,11 +594,11 @@ const EventCreationScreen = ({ navigation, route }) => {
                     </View>
                   </View>
                   
-                  <View style={styles.memberContainer}>
+                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
                     <View style={styles.memberInfo}>
-                      <Text style={styles.memberName}>Maria</Text>
-                      <Text style={styles.memberName}>Santos</Text>
-                      <Text style={styles.memberRole}>Teclado</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Maria</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Santos</Text>
+                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Teclado</Text>
                     </View>
                     
                     <View style={styles.confirmBadge}>
@@ -605,11 +606,11 @@ const EventCreationScreen = ({ navigation, route }) => {
                     </View>
                   </View>
                   
-                  <View style={styles.memberContainer}>
+                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
                     <View style={styles.memberInfo}>
-                      <Text style={styles.memberName}>Pedro</Text>
-                      <Text style={styles.memberName}>Costa</Text>
-                      <Text style={styles.memberRole}>Guitarra</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Pedro</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Costa</Text>
+                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Guitarra</Text>
                     </View>
                     
                     <View style={styles.pendingBadge}>
@@ -617,11 +618,11 @@ const EventCreationScreen = ({ navigation, route }) => {
                     </View>
                   </View>
                   
-                  <View style={styles.memberContainer}>
+                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
                     <View style={styles.memberInfo}>
-                      <Text style={styles.memberName}>Ana</Text>
-                      <Text style={styles.memberName}>Lima</Text>
-                      <Text style={styles.memberRole}>Bateria</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Ana</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Lima</Text>
+                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Bateria</Text>
                     </View>
                     
                     <View style={styles.notSentContainer}>
@@ -634,11 +635,11 @@ const EventCreationScreen = ({ navigation, route }) => {
                     </View>
                   </View>
                   
-                  <View style={[styles.memberContainer, styles.highlightedMember]}>
+                  <View style={[styles.memberContainer, styles.highlightedMember, { borderBottomColor: colors.border }]}>
                     <View style={styles.memberInfo}>
                       <Text style={[styles.memberName, { color: '#FF9800' }]}>Carlos</Text>
                       <Text style={[styles.memberName, { color: '#FF9800' }]}>Mendes</Text>
-                      <Text style={styles.memberRole}>Vocal</Text>
+                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Vocal</Text>
                     </View>
                     
                     <View style={styles.notSentContainer}>
@@ -653,14 +654,14 @@ const EventCreationScreen = ({ navigation, route }) => {
                 </View>
                 
                 {/* Equipe Técnica */}
-                <View style={styles.teamSection}>
+                <View style={[styles.teamSection, { backgroundColor: colors.card }]}>
                   <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Equipe Técnica</Text>
                   
-                  <View style={styles.memberContainer}>
+                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
                     <View style={styles.memberInfo}>
-                      <Text style={styles.memberName}>Roberto</Text>
-                      <Text style={styles.memberName}>Silva</Text>
-                      <Text style={styles.memberRole}>Som</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Roberto</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Silva</Text>
+                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Som</Text>
                     </View>
                     
                     <View style={styles.confirmBadge}>
@@ -668,11 +669,11 @@ const EventCreationScreen = ({ navigation, route }) => {
                     </View>
                   </View>
                   
-                  <View style={styles.memberContainer}>
+                  <View style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
                     <View style={styles.memberInfo}>
-                      <Text style={styles.memberName}>Fernanda</Text>
-                      <Text style={styles.memberName}>Costa</Text>
-                      <Text style={styles.memberRole}>Video</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Fernanda</Text>
+                      <Text style={[styles.memberName, { color: colors.text }]}>Costa</Text>
+                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>Video</Text>
                     </View>
                     
                     <View style={styles.confirmBadge}>
@@ -708,9 +709,9 @@ const EventCreationScreen = ({ navigation, route }) => {
           )}
           
           {activeTab === 'songs' && (
-            <View style={styles.songsContainer}>
+            <View style={[styles.songsContainer, { backgroundColor: colors.background }]}>
               {/* Título da seção */}
-              <Text style={styles.songsSectionTitle}>Músicas do Cronograma (4)</Text>
+              <Text style={[styles.songsSectionTitle, { color: colors.text }]}>Músicas do Cronograma (4)</Text>
               
               {/* Lista de músicas do cronograma */}
               <FlatList
@@ -722,18 +723,18 @@ const EventCreationScreen = ({ navigation, route }) => {
                 ]}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
-                  <View style={styles.songProgramItem}>
+                  <View style={[styles.songProgramItem, { borderBottomColor: colors.border }]}>
                     <View style={styles.songProgramIconContainer}>
                       <FontAwesome name="music" size={24} color="#FFD700" />
                     </View>
                     <View style={styles.songProgramInfo}>
-                      <Text style={styles.songProgramTitle}>{item.title}</Text>
-                      <Text style={styles.songProgramArtist}>por {item.artist}</Text>
-                      <Text style={styles.songProgramTime}>{item.time} • {item.duration}</Text>
+                      <Text style={[styles.songProgramTitle, { color: colors.text }]}>{item.title}</Text>
+                      <Text style={[styles.songProgramArtist, { color: colors.textSecondary }]}>por {item.artist}</Text>
+                      <Text style={[styles.songProgramTime, { color: colors.textSecondary }]}>{item.time} • {item.duration}</Text>
                       <View style={styles.songProgramTags}>
                         {item.tags.map((tag, index) => (
-                          <View key={index} style={styles.songProgramTag}>
-                            <Text style={styles.songProgramTagText}>{tag}</Text>
+                          <View key={index} style={[styles.songProgramTag, { backgroundColor: colors.inputBackground }]}>
+                            <Text style={[styles.songProgramTagText, { color: colors.text }]}>{tag}</Text>
                           </View>
                         ))}
                       </View>
@@ -752,12 +753,12 @@ const EventCreationScreen = ({ navigation, route }) => {
                 contentContainerStyle={styles.songsProgramListContent}
               />
             </View>
-          </View>
+          )}
           
           {activeTab === 'schedule' && (
             <View style={styles.scheduleContainer}>
               {/* Evento Principal */}
-              <View style={styles.scheduleSection}>
+              <View style={[styles.scheduleSection, { backgroundColor: colors.card }]}>
                 <Text style={[styles.scheduleSectionTitle, { color: colors.text }]}>Evento Principal</Text>
                 <View style={styles.scheduleMainInfo}>
                   <View style={styles.scheduleInfoRow}>
@@ -776,20 +777,20 @@ const EventCreationScreen = ({ navigation, route }) => {
               </View>
               
               {/* Horários Extras */}
-              <View style={styles.scheduleSection}>
+              <View style={[styles.scheduleSection, { backgroundColor: colors.card }]}>
                 <Text style={[styles.scheduleSectionTitle, { color: colors.text }]}>Horários Extras</Text>
                 
                 {/* Card de Horário Extra - Ensaio Geral */}
-                <View style={styles.scheduleExtraCard}>
+                <View style={[styles.scheduleExtraCard, { backgroundColor: colors.card }]}>
                   <View style={styles.scheduleExtraContent}>
-                    <Text style={styles.scheduleExtraTitle}>Ensaio Geral</Text>
+                    <Text style={[styles.scheduleExtraTitle, { color: colors.text }]}>Ensaio Geral</Text>
                     <View style={styles.scheduleExtraInfo}>
-                      <Text style={styles.scheduleExtraDate}>05/09/2024 às 19:30</Text>
+                      <Text style={[styles.scheduleExtraDate, { color: colors.textSecondary }]}>05/09/2024 às 19:30</Text>
                       <View style={styles.scheduleExtraLocationRow}>
                         <FontAwesome name="map-marker" size={16} color="#FF3B30" style={styles.locationIcon} />
-                        <Text style={styles.scheduleExtraLocation}>Santuário Principal</Text>
+                        <Text style={[styles.scheduleExtraLocation, { color: colors.textSecondary }]}>Santuário Principal</Text>
                       </View>
-                      <Text style={styles.scheduleExtraDescription}>Ensaio com toda a banda e equipe técnica</Text>
+                      <Text style={[styles.scheduleExtraDescription, { color: colors.textSecondary }]}>Ensaio com toda a banda e equipe técnica</Text>
                     </View>
                   </View>
                   <TouchableOpacity style={styles.deleteScheduleButton}>
@@ -798,16 +799,16 @@ const EventCreationScreen = ({ navigation, route }) => {
                 </View>
                 
                 {/* Card de Horário Extra - Chegada da Equipe */}
-                <View style={styles.scheduleExtraCard}>
+                <View style={[styles.scheduleExtraCard, { backgroundColor: colors.card }]}>
                   <View style={styles.scheduleExtraContent}>
-                    <Text style={styles.scheduleExtraTitle}>Chegada da Equipe</Text>
+                    <Text style={[styles.scheduleExtraTitle, { color: colors.text }]}>Chegada da Equipe</Text>
                     <View style={styles.scheduleExtraInfo}>
-                      <Text style={styles.scheduleExtraDate}>07/09/2024 às 18:00</Text>
+                      <Text style={[styles.scheduleExtraDate, { color: colors.textSecondary }]}>07/09/2024 às 18:00</Text>
                       <View style={styles.scheduleExtraLocationRow}>
                         <FontAwesome name="map-marker" size={16} color="#FF3B30" style={styles.locationIcon} />
-                        <Text style={styles.scheduleExtraLocation}>Entrada dos Fundos</Text>
+                        <Text style={[styles.scheduleExtraLocation, { color: colors.textSecondary }]}>Entrada dos Fundos</Text>
                       </View>
-                      <Text style={styles.scheduleExtraDescription}>Chegada dos voluntários para preparação</Text>
+                      <Text style={[styles.scheduleExtraDescription, { color: colors.textSecondary }]}>Chegada dos voluntários para preparação</Text>
                     </View>
                   </View>
                   <TouchableOpacity style={styles.deleteScheduleButton}>
@@ -823,10 +824,57 @@ const EventCreationScreen = ({ navigation, route }) => {
       {/* Botões flutuantes para a aba Etapas */}
       {activeTab === 'steps' && (
         <View style={styles.fabContainer}>
-          {/* Botão para adicionar cabeçalho */}
+          {/* Sub-botões (aparecem quando FAB está aberto) */}
+          {isFabOpen && (
+            <>
+              {/* Botão para adicionar cabeçalho */}
+              <TouchableOpacity 
+                style={[styles.subButton, { bottom: 220 }]}
+                onPress={() => {
+                  handleAddHeader();
+                  setIsFabOpen(false);
+                }}
+              >
+                <View style={[styles.subButtonContainer, { backgroundColor: '#5fccb3' }]}>
+                  <Text style={styles.subButtonLabel}>Cabeçalho</Text>
+                  <FontAwesome name="star" size={20} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+              
+              {/* Botão para adicionar etapa */}
+              <TouchableOpacity 
+                style={[styles.subButton, { bottom: 150 }]}
+                onPress={() => {
+                  handleAddStep();
+                  setIsFabOpen(false);
+                }}
+              >
+                <View style={[styles.subButtonContainer, { backgroundColor: '#6366F1' }]}>
+                  <Text style={styles.subButtonLabel}>Etapa</Text>
+                  <FontAwesome name="list" size={20} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+              
+              {/* Botão para adicionar música */}
+              <TouchableOpacity 
+                style={[styles.subButton, { bottom: 80 }]}
+                onPress={() => {
+                  setIsAddSongModalVisible(true);
+                  setIsFabOpen(false);
+                }}
+              >
+                <View style={[styles.subButtonContainer, { backgroundColor: '#FF9500' }]}>
+                  <Text style={styles.subButtonLabel}>Música</Text>
+                  <FontAwesome name="music" size={20} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
+          
+          {/* Botão principal do FAB */}
           <TouchableOpacity 
-            style={[styles.addButton, { bottom: 88 }]}
-            onPress={handleAddHeader}
+            style={styles.addButton}
+            onPress={() => setIsFabOpen(!isFabOpen)}
           >
             <LinearGradient 
               colors={['#5fccb3', '#58adf7']} 
@@ -834,24 +882,10 @@ const EventCreationScreen = ({ navigation, route }) => {
               end={{x: 1, y: 0}} 
               style={styles.addButtonGradient}
             >
-              <FontAwesome name="star" size={24} color="#FFFFFF" />
+              <FontAwesome name={isFabOpen ? "times" : "plus"} size={24} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
-          
-          {/* Botão para adicionar etapa */}
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={handleAddStep}
-          >
-          <LinearGradient 
-            colors={['#5fccb3', '#58adf7']} 
-            start={{x: 0, y: 0}} 
-            end={{x: 1, y: 0}} 
-            style={styles.addButtonGradient}
-          >
-            <FontAwesome name="plus" size={24} color="#FFFFFF" />
-          </LinearGradient>
-        </TouchableOpacity>
+        </View>
       )}
       
       {/* Botão para adicionar membro à equipe */}
@@ -1188,20 +1222,20 @@ const EventCreationScreen = ({ navigation, route }) => {
       >
         <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Adicionar Música</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Adicionar Música</Text>
             <TouchableOpacity onPress={() => setIsAddSongModalVisible(false)}>
-              <FontAwesome name="times" size={20} color="#000000" />
+              <FontAwesome name="times" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
           
           {/* Barra de pesquisa */}
           <View style={styles.songSearchContainer}>
-            <View style={styles.songSearchInputContainer}>
-              <FontAwesome name="search" size={16} color="#8E8E93" style={styles.searchIcon} />
+            <View style={[styles.songSearchInputContainer, { backgroundColor: colors.inputBackground }]}>
+              <FontAwesome name="search" size={16} color={colors.textSecondary} style={styles.searchIcon} />
               <TextInput
-                style={styles.songSearchInput}
+                style={[styles.songSearchInput, { color: colors.text }]}
                 placeholder="Pesquisar músicas..."
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor={colors.textSecondary}
               />
             </View>
           </View>
@@ -1220,17 +1254,17 @@ const EventCreationScreen = ({ navigation, route }) => {
             ]}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <View style={styles.songSearchItem}>
+              <View style={[styles.songSearchItem, { borderBottomColor: colors.border }]}>
                 <View style={styles.songSearchIconContainer}>
                   <FontAwesome name="music" size={24} color="#8A2BE2" />
                 </View>
                 <View style={styles.songSearchInfo}>
-                  <Text style={styles.songSearchTitle}>{item.title}</Text>
-                  <Text style={styles.songSearchArtist}>{item.artist}</Text>
+                  <Text style={[styles.songSearchTitle, { color: colors.text }]}>{item.title}</Text>
+                  <Text style={[styles.songSearchArtist, { color: colors.textSecondary }]}>{item.artist}</Text>
                   <View style={styles.songSearchTags}>
                     {item.tags.map((tag, index) => (
-                      <View key={index} style={styles.songSearchTag}>
-                        <Text style={styles.songSearchTagText}>{tag}</Text>
+                      <View key={index} style={[styles.songSearchTag, { backgroundColor: colors.inputBackground }]}>
+                        <Text style={[styles.songSearchTagText, { color: colors.text }]}>{tag}</Text>
                       </View>
                     ))}
                   </View>
@@ -1339,12 +1373,10 @@ const styles = StyleSheet.create({
   },
   songsContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   songsSectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
     padding: 16,
   },
   songsProgramList: {
@@ -1357,7 +1389,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
   },
   songProgramIconContainer: {
     width: 40,
@@ -1374,17 +1405,14 @@ const styles = StyleSheet.create({
   songProgramTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
     marginBottom: 4,
   },
   songProgramArtist: {
     fontSize: 14,
-    color: '#8E8E93',
     marginBottom: 4,
   },
   songProgramTime: {
     fontSize: 14,
-    color: '#8E8E93',
     marginBottom: 8,
   },
   songProgramTags: {
@@ -1392,7 +1420,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   songProgramTag: {
-    backgroundColor: '#F2F2F7',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -1401,7 +1428,6 @@ const styles = StyleSheet.create({
   },
   songProgramTagText: {
     fontSize: 12,
-    color: '#000000',
   },
   songProgramActions: {
     flexDirection: 'row',
@@ -1424,13 +1450,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#F2F2F7',
     alignItems: 'center',
   },
   searchBarContainer: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingHorizontal: 12,
     alignItems: 'center',
@@ -1444,21 +1468,18 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     fontSize: 16,
-    color: '#000000',
   },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
   },
   filterText: {
     marginLeft: 6,
     fontSize: 14,
     fontWeight: '500',
-    color: '#000000',
   },
   mediaTabsContainer: {
     flexDirection: 'row',
@@ -1875,7 +1896,6 @@ const styles = StyleSheet.create({
   },
   teamSection: {
     marginBottom: 20,
-    backgroundColor: '#FFFFFF',
   },
   teamSectionTitle: {
     fontSize: 18,
@@ -1890,7 +1910,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
   },
   highlightedMember: {
     backgroundColor: 'rgba(255, 152, 0, 0.1)',
@@ -1902,12 +1921,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '500',
     lineHeight: 24,
-    color: '#000000',
   },
   memberRole: {
     fontSize: 16,
     marginTop: 4,
-    color: '#8E8E93',
   },
   confirmBadge: {
     backgroundColor: '#00C853',
@@ -1965,7 +1982,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F7',
   },
   scheduleSection: {
-    backgroundColor: '#FFFFFF',
     marginBottom: 16,
     paddingVertical: 16,
   },
@@ -1991,7 +2007,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   scheduleExtraCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     marginHorizontal: 16,
     marginBottom: 12,
@@ -2259,6 +2274,30 @@ const styles = StyleSheet.create({
     bottom: 24,
     right: 24,
     zIndex: 999,
+  },
+  subButton: {
+    position: 'absolute',
+    right: 24,
+    zIndex: 998,
+  },
+  subButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    backgroundColor: '#8E8E93',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  subButtonLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 8,
   },
 });
 
