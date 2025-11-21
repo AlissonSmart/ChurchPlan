@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import MainTabs from './MainTabsNavigator';
 import ProfileScreen from '../screens/ProfileScreen';
 import SqlFixerScreen from '../screens/SqlFixerScreen';
+import EventCreationScreen from '../screens/EventCreationScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -16,6 +17,7 @@ const AppNavigator = () => {
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="SqlFixer" component={SqlFixerScreen} />
+      <Stack.Screen name="EventCreation" component={EventCreationScreen} />
     </Stack.Navigator>
   );
 };

@@ -28,6 +28,9 @@ const theme = {
       inputText: '#1C1C1E',
       inputPlaceholder: '#A0A0A5',
       shadow: 'rgba(0, 0, 0, 0.1)',
+      primary: '#1877F2',
+      danger: '#FF3B30',
+      inputBackground: '#F5F5F5',
     },
     
     // Cores de interface - Dark Mode
@@ -41,6 +44,9 @@ const theme = {
       inputText: '#FFFFFF',
       inputPlaceholder: '#8E8E93',
       shadow: 'rgba(0, 0, 0, 0.3)',
+      primary: '#1877F2',
+      danger: '#FF453A',
+      inputBackground: '#2C2C2E',
     },
     
     // Cores de estado

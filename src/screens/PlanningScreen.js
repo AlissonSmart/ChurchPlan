@@ -5,14 +5,15 @@ import {
   StyleSheet,
   FlatList,
   useColorScheme,
-  ScrollView
+  ScrollView,
+  Alert
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
-import FloatingActionButton from '../components/FloatingActionButton';
-import EventCard from '../components/EventCard';
 import StandardButton from '../components/StandardButton';
 import TabScreenWrapper from '../components/TabScreenWrapper';
+import AddEventModal from '../components/AddEventModal';
+import EventCard from '../components/EventCard';
 import { HeaderContext } from '../contexts/HeaderContext';
 
 /**
@@ -56,11 +57,31 @@ const PlanningScreen = ({ navigation }) => {
   ]);
   
 
-  // Função para criar um novo evento
+  // Estado para controlar a visibilidade do modal de adicionar evento
+  const [isAddEventModalVisible, setIsAddEventModalVisible] = useState(false);
+
+  // Função para abrir o modal de adicionar evento
   const handleCreateEvent = () => {
+    setIsAddEventModalVisible(true);
+  };
+  
+  // Função para fechar o modal de adicionar evento
+  const handleCloseAddEventModal = () => {
+    setIsAddEventModalVisible(false);
+  };
+  
+  // Função para criar um evento do zero
+  const handleCreateFromScratch = () => {
+    setIsAddEventModalVisible(false);
     // Navegar para a tela de criação de evento
-    // navigation.navigate('EventCreationSelection');
-    console.log('Criar novo evento');
+    navigation.navigate('EventCreation');
+  };
+  
+  // Função para usar um template
+  const handleUseTemplate = (templateId) => {
+    setIsAddEventModalVisible(false);
+    // Navegar para a tela de criação de evento com o template selecionado
+    navigation.navigate('EventCreation', { templateId });
   };
 
   // Função para editar um evento
@@ -102,11 +123,19 @@ const PlanningScreen = ({ navigation }) => {
         contentInsetAdjustmentBehavior="automatic"
       >
         <View style={[styles.content, { paddingHorizontal: 0 }]}>
+          
+          {/* Modal de adicionar evento */}
+          <AddEventModal 
+            visible={isAddEventModalVisible}
+            onClose={handleCloseAddEventModal}
+            onCreateFromScratch={handleCreateFromScratch}
+            onUseTemplate={handleUseTemplate}
+          />
         
         {/* Área de botões */}
         <View style={styles.buttonsContainer}>
           <View style={styles.buttonRow}>
-            <View style={[styles.buttonContainer, { paddingRight: 4 }]}>
+            <View style={[styles.buttonContainer, { paddingRight: 3 }]}>
               <StandardButton 
                 title="Adicionar Evento"
                 icon="plus"
@@ -115,7 +144,7 @@ const PlanningScreen = ({ navigation }) => {
               />
             </View>
             
-            <View style={[styles.buttonContainer, { paddingLeft: 4 }]}>
+            <View style={[styles.buttonContainer, { paddingLeft: 3 }]}>
               <StandardButton 
                 title="Planilha de Escalas"
                 icon="calendar-check-o"
