@@ -572,125 +572,133 @@ const EventCreationScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
               </View>
               
-              {/* Ministério de Louvor */}
-              <View style={styles.teamSection}>
-                <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Ministério de Louvor</Text>
-                
-                <View style={styles.memberContainer}>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>João</Text>
-                    <Text style={styles.memberName}>Silva</Text>
-                    <Text style={styles.memberRole}>Vocal</Text>
-                  </View>
+              <View style={styles.teamContent}>
+                {/* Ministério de Louvor */}
+                <View style={styles.teamSection}>
+                  <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Ministério de Louvor</Text>
                   
-                  <View style={styles.confirmBadge}>
-                    <Text style={styles.badgeText}>Confirmado</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.memberContainer}>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>Maria</Text>
-                    <Text style={styles.memberName}>Santos</Text>
-                    <Text style={styles.memberRole}>Teclado</Text>
-                  </View>
-                  
-                  <View style={styles.confirmBadge}>
-                    <Text style={styles.badgeText}>Confirmado</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.memberContainer}>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>Pedro</Text>
-                    <Text style={styles.memberName}>Costa</Text>
-                    <Text style={styles.memberRole}>Guitarra</Text>
-                  </View>
-                  
-                  <View style={styles.pendingBadge}>
-                    <Text style={styles.badgeText}>Pendente</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.memberContainer}>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>Ana</Text>
-                    <Text style={styles.memberName}>Lima</Text>
-                    <Text style={styles.memberRole}>Bateria</Text>
-                  </View>
-                  
-                  <View style={styles.notSentContainer}>
-                    <View style={styles.notSentBadge}>
-                      <Text style={styles.notSentText}>Não Enviado</Text>
+                  <View style={styles.memberContainer}>
+                    <View style={styles.memberInfo}>
+                      <Text style={styles.memberName}>João</Text>
+                      <Text style={styles.memberName}>Silva</Text>
+                      <Text style={styles.memberRole}>Vocal</Text>
                     </View>
-                    <TouchableOpacity>
-                      <FontAwesome name="chevron-right" size={16} color="#00C853" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                
-                <View style={[styles.memberContainer, styles.highlightedMember]}>
-                  <View style={styles.memberInfo}>
-                    <Text style={[styles.memberName, { color: '#FF9800' }]}>Carlos</Text>
-                    <Text style={[styles.memberName, { color: '#FF9800' }]}>Mendes</Text>
-                    <Text style={styles.memberRole}>Vocal</Text>
-                  </View>
-                  
-                  <View style={styles.notSentContainer}>
-                    <View style={styles.notSentBadge}>
-                      <Text style={styles.notSentText}>Não Enviado</Text>
+                    
+                    <View style={styles.confirmBadge}>
+                      <Text style={styles.badgeText}>Confirmado</Text>
                     </View>
-                    <TouchableOpacity>
-                      <FontAwesome name="chevron-right" size={16} color="#00C853" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-              
-              {/* Equipe Técnica */}
-              <View style={styles.teamSection}>
-                <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Equipe Técnica</Text>
-                
-                <View style={styles.memberContainer}>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>Roberto</Text>
-                    <Text style={styles.memberName}>Silva</Text>
-                    <Text style={styles.memberRole}>Som</Text>
                   </View>
                   
-                  <View style={styles.confirmBadge}>
-                    <Text style={styles.badgeText}>Confirmado</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.memberContainer}>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>Fernanda</Text>
-                    <Text style={styles.memberName}>Costa</Text>
-                    <Text style={styles.memberRole}>Video</Text>
-                  </View>
-                  
-                  <View style={styles.confirmBadge}>
-                    <Text style={styles.badgeText}>Confirmado</Text>
-                  </View>
-                </View>
-                
-                <View style={[styles.memberContainer, styles.highlightedMember]}>
-                  <View style={styles.memberInfo}>
-                    <Text style={[styles.memberName, { color: '#FF9800' }]}>Paulo</Text>
-                    <Text style={[styles.memberName, { color: '#FF9800' }]}>Santos</Text>
-                    <Text style={styles.memberRole}>Iluminação</Text>
-                  </View>
-                  
-                  <View style={styles.notSentContainer}>
-                    <View style={styles.notSentBadge}>
-                      <Text style={styles.notSentText}>Não Enviado</Text>
+                  <View style={styles.memberContainer}>
+                    <View style={styles.memberInfo}>
+                      <Text style={styles.memberName}>Maria</Text>
+                      <Text style={styles.memberName}>Santos</Text>
+                      <Text style={styles.memberRole}>Teclado</Text>
                     </View>
-                    <TouchableOpacity>
-                      <FontAwesome name="exclamation-circle" size={16} color="#FF9800" />
-                    </TouchableOpacity>
+                    
+                    <View style={styles.confirmBadge}>
+                      <Text style={styles.badgeText}>Confirmado</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.memberContainer}>
+                    <View style={styles.memberInfo}>
+                      <Text style={styles.memberName}>Pedro</Text>
+                      <Text style={styles.memberName}>Costa</Text>
+                      <Text style={styles.memberRole}>Guitarra</Text>
+                    </View>
+                    
+                    <View style={styles.pendingBadge}>
+                      <Text style={styles.badgeText}>Pendente</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.memberContainer}>
+                    <View style={styles.memberInfo}>
+                      <Text style={styles.memberName}>Ana</Text>
+                      <Text style={styles.memberName}>Lima</Text>
+                      <Text style={styles.memberRole}>Bateria</Text>
+                    </View>
+                    
+                    <View style={styles.notSentContainer}>
+                      <View style={styles.notSentBadge}>
+                        <Text style={styles.notSentText}>Não Enviado</Text>
+                      </View>
+                      <TouchableOpacity>
+                        <FontAwesome name="chevron-right" size={16} color="#00C853" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
+                  <View style={[styles.memberContainer, styles.highlightedMember]}>
+                    <View style={styles.memberInfo}>
+                      <Text style={[styles.memberName, { color: '#FF9800' }]}>Carlos</Text>
+                      <Text style={[styles.memberName, { color: '#FF9800' }]}>Mendes</Text>
+                      <Text style={styles.memberRole}>Vocal</Text>
+                    </View>
+                    
+                    <View style={styles.notSentContainer}>
+                      <View style={styles.notSentBadge}>
+                        <Text style={styles.notSentText}>Não Enviado</Text>
+                      </View>
+                      <TouchableOpacity>
+                        <FontAwesome name="chevron-right" size={16} color="#00C853" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
+                
+                {/* Equipe Técnica */}
+                <View style={styles.teamSection}>
+                  <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Equipe Técnica</Text>
+                  
+                  <View style={styles.memberContainer}>
+                    <View style={styles.memberInfo}>
+                      <Text style={styles.memberName}>Roberto</Text>
+                      <Text style={styles.memberName}>Silva</Text>
+                      <Text style={styles.memberRole}>Som</Text>
+                    </View>
+                    
+                    <View style={styles.confirmBadge}>
+                      <Text style={styles.badgeText}>Confirmado</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.memberContainer}>
+                    <View style={styles.memberInfo}>
+                      <Text style={styles.memberName}>Fernanda</Text>
+                      <Text style={styles.memberName}>Costa</Text>
+                      <Text style={styles.memberRole}>Video</Text>
+                    </View>
+                    
+                    <View style={styles.confirmBadge}>
+                      <Text style={styles.badgeText}>Confirmado</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={[styles.memberContainer, styles.highlightedMember]}>
+                    <View style={styles.memberInfo}>
+                      <Text style={[styles.memberName, { color: '#FF9800' }]}>Paulo</Text>
+                      <Text style={[styles.memberName, { color: '#FF9800' }]}>Santos</Text>
+                      <Text style={styles.memberRole}>Iluminação</Text>
+                    </View>
+                    
+                    <View style={styles.notSentContainer}>
+                      <View style={styles.notSentBadge}>
+                        <Text style={styles.notSentText}>Não Enviado</Text>
+                      </View>
+                      <TouchableOpacity>
+                        <FontAwesome name="exclamation-circle" size={16} color="#FF9800" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+                
+                {/* Mensagem de bloqueados */}
+                <TouchableOpacity style={styles.blockedMessage}>
+                  <FontAwesome name="ban" size={16} color="#F44336" />
+                  <Text style={styles.blockedMessageText}>Ver bloqueados para esta data (2)</Text>
+                </TouchableOpacity>
               </View>
               
               {/* Botão Adicionar Membro */}
@@ -703,12 +711,6 @@ const EventCreationScreen = ({ navigation, route }) => {
                 >
                   <FontAwesome name="plus" size={24} color="#FFFFFF" />
                 </LinearGradient>
-              </TouchableOpacity>
-              
-              {/* Mensagem de bloqueados */}
-              <TouchableOpacity style={styles.blockedMessage}>
-                <FontAwesome name="ban" size={16} color="#F44336" />
-                <Text style={styles.blockedMessageText}>Ver bloqueados para esta data (2)</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1085,9 +1087,6 @@ const styles = StyleSheet.create({
   },
   teamContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
   },
   songsContainer: {
     flex: 1,
@@ -1540,14 +1539,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  teamContent: {
+    flex: 1,
+    backgroundColor: '#F2F2F7',
+  },
   teamSection: {
     marginBottom: 20,
+    backgroundColor: '#FFFFFF',
   },
   teamSectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 16,
   },
   memberContainer: {
     flexDirection: 'row',
