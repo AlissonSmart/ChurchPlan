@@ -13,7 +13,6 @@ import {
   Alert
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import ActionButton from 'react-native-action-button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
@@ -43,6 +42,63 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [currentStep, setCurrentStep] = useState(null);
   const [currentStepItem, setCurrentStepItem] = useState(null);
   const [currentStepId, setCurrentStepId] = useState(null);
+  // Estados para a aba Equipe
+  const [teamMembers, setTeamMembers] = useState([
+    {
+      id: '1',
+      name: 'João Silva',
+      role: 'Vocal',
+      status: 'confirmed'
+    },
+    {
+      id: '2',
+      name: 'Maria Santos',
+      role: 'Teclado',
+      status: 'confirmed'
+    },
+    {
+      id: '3',
+      name: 'Pedro Costa',
+      role: 'Guitarra',
+      status: 'pending'
+    },
+    {
+      id: '4',
+      name: 'Ana Lima',
+      role: 'Bateria',
+      status: 'not_sent'
+    },
+    {
+      id: '5',
+      name: 'Carlos Mendes',
+      role: 'Vocal',
+      status: 'not_sent',
+      highlighted: true
+    }
+  ]);
+  
+  const [technicalTeam, setTechnicalTeam] = useState([
+    {
+      id: '6',
+      name: 'Roberto Silva',
+      role: 'Som',
+      status: 'confirmed'
+    },
+    {
+      id: '7',
+      name: 'Fernanda Costa',
+      role: 'Video',
+      status: 'confirmed'
+    },
+    {
+      id: '8',
+      name: 'Paulo Santos',
+      role: 'Iluminação',
+      status: 'not_sent',
+      highlighted: true
+    }
+  ]);
+  
   const [steps, setSteps] = useState([
     {
       id: '1',
@@ -498,7 +554,124 @@ const EventCreationScreen = ({ navigation, route }) => {
           
           {activeTab === 'team' && (
             <View style={styles.teamContainer}>
-              <Text style={{ color: colors.text }}>Conteúdo da aba Equipe</Text>
+              {/* Campo de busca */}
+              <View style={styles.searchContainer}>
+                <View style={[styles.searchInputContainer, { backgroundColor: colors.inputBackground }]}>
+                  <FontAwesome name="search" size={16} color={colors.textSecondary} style={styles.searchIcon} />
+                  <TextInput
+                    style={[styles.searchInput, { color: colors.text }]}
+                    placeholder="Buscar por equipe ou nome..."
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                </View>
+                <TouchableOpacity style={[styles.sendButton, { backgroundColor: '#00C853' }]}>
+                  <Text style={styles.sendButtonText}>Enviar</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Ministério de Louvor */}
+              <View style={styles.teamSection}>
+                <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Ministério de Louvor</Text>
+                
+                {teamMembers.map(member => (
+                  <View 
+                    key={member.id} 
+                    style={[
+                      styles.teamMemberCard,
+                      member.highlighted && styles.highlightedCard
+                    ]}
+                  >
+                    <View style={styles.teamMemberInfo}>
+                      <Text style={[styles.teamMemberName, { 
+                        color: member.highlighted ? '#FF9800' : colors.text 
+                      }]}>
+                        {member.name}
+                      </Text>
+                      <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>
+                        {member.role}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.teamMemberActions}>
+                      {member.status === 'confirmed' && (
+                        <View style={styles.statusBadge}>
+                          <Text style={styles.statusText}>Confirmado</Text>
+                        </View>
+                      )}
+                      {member.status === 'pending' && (
+                        <View style={[styles.statusBadge, styles.pendingBadge]}>
+                          <Text style={styles.statusText}>Pendente</Text>
+                        </View>
+                      )}
+                      {member.status === 'not_sent' && (
+                        <View style={styles.notSentContainer}>
+                          <View style={[styles.statusBadge, styles.notSentBadge]}>
+                            <Text style={[styles.statusText, styles.notSentText]}>Não Enviado</Text>
+                          </View>
+                          <TouchableOpacity style={styles.sendIcon}>
+                            <FontAwesome name="chevron-right" size={16} color="#00C853" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+              
+              {/* Equipe Técnica */}
+              <View style={styles.teamSection}>
+                <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Equipe Técnica</Text>
+                
+                {technicalTeam.map(member => (
+                  <View 
+                    key={member.id} 
+                    style={[
+                      styles.teamMemberCard,
+                      member.highlighted && styles.highlightedCard
+                    ]}
+                  >
+                    <View style={styles.teamMemberInfo}>
+                      <Text style={[styles.teamMemberName, { 
+                        color: member.highlighted ? '#FF9800' : colors.text 
+                      }]}>
+                        {member.name}
+                      </Text>
+                      <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>
+                        {member.role}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.teamMemberActions}>
+                      {member.status === 'confirmed' && (
+                        <View style={styles.statusBadge}>
+                          <Text style={styles.statusText}>Confirmado</Text>
+                        </View>
+                      )}
+                      {member.status === 'pending' && (
+                        <View style={[styles.statusBadge, styles.pendingBadge]}>
+                          <Text style={styles.statusText}>Pendente</Text>
+                        </View>
+                      )}
+                      {member.status === 'not_sent' && (
+                        <View style={styles.notSentContainer}>
+                          <View style={[styles.statusBadge, styles.notSentBadge]}>
+                            <Text style={[styles.statusText, styles.notSentText]}>Não Enviado</Text>
+                          </View>
+                          <TouchableOpacity style={styles.sendIcon}>
+                            <FontAwesome name="exclamation-circle" size={16} color="#FF9800" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+              
+              {/* Mensagem de bloqueados */}
+              <TouchableOpacity style={styles.blockedMessage}>
+                <FontAwesome name="ban" size={16} color="#F44336" />
+                <Text style={styles.blockedMessageText}>Ver bloqueados para esta data (2)</Text>
+              </TouchableOpacity>
             </View>
           )}
           
@@ -517,86 +690,23 @@ const EventCreationScreen = ({ navigation, route }) => {
       </ScrollView>
       
       {/* Floating Action Button */}
-      <ActionButton
-        buttonColor="transparent"
-        renderButtonContent={() => (
-          <LinearGradient 
-            colors={['#5fccb3', '#58adf7']} 
-            start={{x: 0, y: 0}} 
-            end={{x: 1, y: 0}} 
-            style={styles.fabGradient}
-          >
-            <FontAwesome name="plus" size={24} color="#FFFFFF" />
-          </LinearGradient>
-        )}
-        position="right"
-        spacing={15}
-        offsetX={10}
-        offsetY={10}
-        buttonSize={56}
-        hideShadow={true}
-        useNativeFeedback={false}
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => {
+          // Adicionar Etapa
+          handleAddStep();
+        }}
       >
-        <ActionButton.Item 
-          buttonColor="transparent"
-          title="Cabeçalho" 
-          textStyle={styles.actionButtonItemText}
-          textContainerStyle={styles.actionButtonItemTextContainer}
-          onPress={() => {
-            // Lógica para adicionar cabeçalho aqui
-            Alert.alert('Adicionar Cabeçalho', 'Função a ser implementada');
-          }}
-          renderBtnContent={() => (
-            <LinearGradient 
-              colors={['#5fccb3', '#58adf7']} 
-              start={{x: 0, y: 0}} 
-              end={{x: 1, y: 0}} 
-              style={styles.actionButtonItemGradient}
-            >
-              <FontAwesome name="header" size={20} color="#FFFFFF" />
-            </LinearGradient>
-          )}
-        />
-        
-        <ActionButton.Item 
-          buttonColor="transparent"
-          title="Etapa" 
-          textStyle={styles.actionButtonItemText}
-          textContainerStyle={styles.actionButtonItemTextContainer}
-          onPress={() => handleAddStep()}
-          renderBtnContent={() => (
-            <LinearGradient 
-              colors={['#5fccb3', '#58adf7']} 
-              start={{x: 0, y: 0}} 
-              end={{x: 1, y: 0}} 
-              style={styles.actionButtonItemGradient}
-            >
-              <FontAwesome name="list" size={20} color="#FFFFFF" />
-            </LinearGradient>
-          )}
-        />
-        
-        <ActionButton.Item 
-          buttonColor="transparent"
-          title="Música" 
-          textStyle={styles.actionButtonItemText}
-          textContainerStyle={styles.actionButtonItemTextContainer}
-          onPress={() => {
-            // Lógica para adicionar música aqui
-            Alert.alert('Adicionar Música', 'Função a ser implementada');
-          }}
-          renderBtnContent={() => (
-            <LinearGradient 
-              colors={['#5fccb3', '#58adf7']} 
-              start={{x: 0, y: 0}} 
-              end={{x: 1, y: 0}} 
-              style={styles.actionButtonItemGradient}
-            >
-              <FontAwesome name="music" size={20} color="#FFFFFF" />
-            </LinearGradient>
-          )}
-        />
-      </ActionButton>
+        <LinearGradient 
+          colors={['#5fccb3', '#58adf7']} 
+          start={{x: 0, y: 0}} 
+          end={{x: 1, y: 0}} 
+          style={styles.fabGradient}
+        >
+          <FontAwesome name="plus" size={24} color="#FFFFFF" />
+        </LinearGradient>
+      </TouchableOpacity>
+      
       
       {/* Step Editor Modal */}
       <StepEditorModal 
@@ -856,23 +966,138 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  actionButtonItemGradient: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    overflow: 'hidden',
+  },
+  // Estilos para a aba Equipe
+  searchContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 40,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    marginRight: 10,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 16,
+  },
+  sendButton: {
+    height: 40,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  actionButtonItemText: {
-    fontSize: 14,
+  sendButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
+    fontSize: 14,
   },
-  actionButtonItemTextContainer: {
-    backgroundColor: '#58adf7',
-    borderRadius: 5,
+  teamSection: {
+    marginBottom: 20,
+  },
+  teamSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  teamMemberCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  highlightedCard: {
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+  },
+  teamMemberInfo: {
+    flex: 1,
+  },
+  teamMemberName: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  teamMemberRole: {
+    fontSize: 14,
+  },
+  teamMemberActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusBadge: {
+    backgroundColor: '#00C853',
+    borderRadius: 16,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    paddingHorizontal: 8,
+  },
+  pendingBadge: {
+    backgroundColor: '#FF9800',
+  },
+  notSentBadge: {
+    backgroundColor: '#9E9E9E',
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  notSentText: {
+    color: '#FFFFFF',
+  },
+  notSentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sendIcon: {
+    marginLeft: 8,
+    padding: 4,
+  },
+  blockedMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  blockedMessageText: {
+    color: '#F44336',
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 
