@@ -43,17 +43,21 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
   // Estados para os pickers de data e hora
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showReminderPicker, setShowReminderPicker] = useState(false);
   
   // Referência para o input de nome
   const nameInputRef = useRef(null);
   
   // Opções para o lembrete
   const reminderOptions = [
-    { label: 'Lembrar 1 dia antes', value: '1' },
-    { label: 'Lembrar 2 dias antes', value: '2' },
-    { label: 'Lembrar 3 dias antes', value: '3' },
-    { label: 'Lembrar 5 dias antes', value: '5' },
-    { label: 'Lembrar 7 dias antes', value: '7' },
+    { label: '7 dias antes do culto', value: '7' },
+    { label: '6 dias antes do culto', value: '6' },
+    { label: '5 dias antes do culto', value: '5' },
+    { label: '4 dias antes do culto', value: '4' },
+    { label: '3 dias antes do culto', value: '3' },
+    { label: '2 dias antes do culto', value: '2' },
+    { label: '1 dia antes do culto', value: '1' },
+    { label: 'No dia do culto', value: '0' },
   ];
   
   // Animações
@@ -342,23 +346,56 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
           {/* Lembrar Equipe */}
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Lembrar Equipe</Text>
-            <View style={[styles.pickerContainer, { backgroundColor: colors.input }]}>
-              <Picker
-                selectedValue={reminderDays}
-                onValueChange={(itemValue) => setReminderDays(itemValue)}
-                style={[styles.picker, { color: colors.text }]}
-                dropdownIconColor={colors.primary}
-              >
-                {reminderOptions.map((option) => (
-                  <Picker.Item 
-                    key={option.value} 
-                    label={option.label} 
-                    value={option.value} 
-                    color={isDarkMode ? '#FFFFFF' : '#000000'}
-                  />
-                ))}
-              </Picker>
-            </View>
+            <TouchableOpacity 
+              onPress={() => setShowReminderPicker(true)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.input, { backgroundColor: colors.input }]}>
+                <Text style={{ color: colors.text }}>
+                  {reminderOptions.find(option => option.value === reminderDays)?.label || '2 dias antes do culto'}
+                </Text>
+                <FontAwesome name="chevron-down" size={16} color={colors.primary} style={styles.inputIcon} />
+              </View>
+            </TouchableOpacity>
+            
+            {/* Modal para o Picker de Lembrete */}
+            <Modal
+              isVisible={showReminderPicker}
+              onBackdropPress={() => setShowReminderPicker(false)}
+              backdropOpacity={0.5}
+              style={styles.pickerModal}
+              animationIn="fadeIn"
+              animationOut="fadeOut"
+              useNativeDriver
+            >
+              <View style={[styles.pickerModalContent, { backgroundColor: isDarkMode ? '#333333' : '#FFFFFF' }]}>
+                <View style={styles.pickerHeader}>
+                  <TouchableOpacity onPress={() => setShowReminderPicker(false)}>
+                    <Text style={[styles.pickerHeaderButton, { color: colors.primary }]}>Fechar</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.pickerHeaderTitle, { color: colors.text }]}>Lembrar Equipe</Text>
+                  <View style={{ width: 60 }} />
+                </View>
+                
+                <ScrollView style={styles.pickerOptionsContainer}>
+                  {reminderOptions.map((option) => (
+                    <TouchableOpacity 
+                      key={option.value}
+                      style={[styles.pickerOption, reminderDays === option.value && styles.pickerOptionSelected]}
+                      onPress={() => {
+                        setReminderDays(option.value);
+                        setShowReminderPicker(false);
+                      }}
+                    >
+                      <Text style={[styles.pickerOptionText, { color: colors.text }]}>{option.label}</Text>
+                      {reminderDays === option.value && (
+                        <FontAwesome name="check" size={16} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </Modal>
           </View>
         </ScrollView>
       </Animated.View>
@@ -465,6 +502,52 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: 'transparent',
     marginTop: Platform.OS === 'ios' ? 10 : 0,
+  },
+  pickerModal: {
+    margin: 0,
+    justifyContent: 'flex-end',
+  },
+  pickerModalContent: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+    maxHeight: '80%',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  pickerHeaderTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  pickerHeaderButton: {
+    fontSize: 17,
+    fontWeight: '400',
+    padding: 4,
+  },
+  pickerOptionsContainer: {
+    maxHeight: 300,
+  },
+  pickerOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  pickerOptionSelected: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  pickerOptionText: {
+    fontSize: 17,
   },
 });
 
