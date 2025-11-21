@@ -45,6 +45,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [currentStepItem, setCurrentStepItem] = useState(null);
   const [currentStepId, setCurrentStepId] = useState(null);
   const [isAddSongModalVisible, setIsAddSongModalVisible] = useState(false);
+  const [isAddScheduleModalVisible, setIsAddScheduleModalVisible] = useState(false);
   // Estados para a aba Equipe
   const [teamMembers, setTeamMembers] = useState([
     {
@@ -913,8 +914,65 @@ const EventCreationScreen = ({ navigation, route }) => {
           
           {activeTab === 'schedule' && (
             <View style={styles.scheduleContainer}>
-              <Text style={{ color: colors.text }}>Conteúdo da aba Horários</Text>
+              {/* Evento Principal */}
+              <View style={styles.scheduleSection}>
+                <Text style={[styles.scheduleSectionTitle, { color: colors.text }]}>Evento Principal</Text>
+                <View style={styles.scheduleMainInfo}>
+                  <View style={styles.scheduleInfoRow}>
+                    <Text style={[styles.scheduleInfoLabel, { color: colors.textSecondary }]}>Data:</Text>
+                    <Text style={[styles.scheduleInfoValue, { color: colors.text }]}>2025-09-07</Text>
+                  </View>
+                  <View style={styles.scheduleInfoRow}>
+                    <Text style={[styles.scheduleInfoLabel, { color: colors.textSecondary }]}>Horário:</Text>
+                    <Text style={[styles.scheduleInfoValue, { color: colors.text }]}>19:00</Text>
+                  </View>
+                  <View style={styles.scheduleInfoRow}>
+                    <Text style={[styles.scheduleInfoLabel, { color: colors.textSecondary }]}>Duração:</Text>
+                    <Text style={[styles.scheduleInfoValue, { color: colors.text }]}>35min</Text>
+                  </View>
+                </View>
+              </View>
               
+              {/* Horários Extras */}
+              <View style={styles.scheduleSection}>
+                <Text style={[styles.scheduleSectionTitle, { color: colors.text }]}>Horários Extras</Text>
+                
+                {/* Card de Horário Extra - Ensaio Geral */}
+                <View style={styles.scheduleExtraCard}>
+                  <View style={styles.scheduleExtraContent}>
+                    <Text style={styles.scheduleExtraTitle}>Ensaio Geral</Text>
+                    <View style={styles.scheduleExtraInfo}>
+                      <Text style={styles.scheduleExtraDate}>05/09/2024 às 19:30</Text>
+                      <View style={styles.scheduleExtraLocationRow}>
+                        <FontAwesome name="map-marker" size={16} color="#FF3B30" style={styles.locationIcon} />
+                        <Text style={styles.scheduleExtraLocation}>Santuário Principal</Text>
+                      </View>
+                      <Text style={styles.scheduleExtraDescription}>Ensaio com toda a banda e equipe técnica</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity style={styles.deleteScheduleButton}>
+                    <FontAwesome name="trash" size={20} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+                
+                {/* Card de Horário Extra - Chegada da Equipe */}
+                <View style={styles.scheduleExtraCard}>
+                  <View style={styles.scheduleExtraContent}>
+                    <Text style={styles.scheduleExtraTitle}>Chegada da Equipe</Text>
+                    <View style={styles.scheduleExtraInfo}>
+                      <Text style={styles.scheduleExtraDate}>07/09/2024 às 18:00</Text>
+                      <View style={styles.scheduleExtraLocationRow}>
+                        <FontAwesome name="map-marker" size={16} color="#FF3B30" style={styles.locationIcon} />
+                        <Text style={styles.scheduleExtraLocation}>Entrada dos Fundos</Text>
+                      </View>
+                      <Text style={styles.scheduleExtraDescription}>Chegada dos voluntários para preparação</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity style={styles.deleteScheduleButton}>
+                    <FontAwesome name="trash" size={20} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           )}
         </View>
@@ -970,6 +1028,23 @@ const EventCreationScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       )}
       
+      {/* Botão para adicionar horário extra */}
+      {activeTab === 'schedule' && (
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => setIsAddScheduleModalVisible(true)}
+        >
+          <LinearGradient 
+            colors={['#5fccb3', '#58adf7']} 
+            start={{x: 0, y: 0}} 
+            end={{x: 1, y: 0}} 
+            style={styles.addButtonGradient}
+          >
+            <FontAwesome name="plus" size={24} color="#FFFFFF" />
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
+      
       
       {/* Step Editor Modal */}
       <StepEditorModal 
@@ -987,6 +1062,82 @@ const EventCreationScreen = ({ navigation, route }) => {
         item={currentStepItem}
         stepId={currentStepId}
       />
+      
+      {/* Modal para adicionar horário extra */}
+      <Modal
+        isVisible={isAddScheduleModalVisible}
+        onBackdropPress={() => setIsAddScheduleModalVisible(false)}
+        style={styles.modal}
+        backdropOpacity={0.5}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        useNativeDriver
+      >
+        <View style={[styles.modalContent, { backgroundColor: colors.background, height: 'auto' }]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Adicionar Horário Extra</Text>
+            <TouchableOpacity onPress={() => setIsAddScheduleModalVisible(false)}>
+              <FontAwesome name="times" size={20} color="#000000" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalScrollView}>
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Nome do Evento *</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Ex: Ensaio Geral, Chegada da Equipe..."
+                placeholderTextColor="#8E8E93"
+              />
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Data</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="07/09/2024"
+                placeholderTextColor="#8E8E93"
+              />
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Horário *</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="19:30"
+                placeholderTextColor="#8E8E93"
+              />
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Local</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Santuário Principal, Sala de Ensaio..."
+                placeholderTextColor="#8E8E93"
+              />
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Descrição</Text>
+              <TextInput
+                style={[styles.formInput, styles.formTextarea]}
+                placeholder="Detalhes sobre este horário..."
+                placeholderTextColor="#8E8E93"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.addScheduleButton}
+              onPress={() => setIsAddScheduleModalVisible(false)}
+            >
+              <Text style={styles.addScheduleButtonText}>Adicionar Horário</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -1620,6 +1771,108 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Estilos para a aba Horários
+  scheduleContainer: {
+    flex: 1,
+    backgroundColor: '#F2F2F7',
+  },
+  scheduleSection: {
+    backgroundColor: '#FFFFFF',
+    marginBottom: 16,
+    paddingVertical: 16,
+  },
+  scheduleSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    paddingHorizontal: 16,
+  },
+  scheduleMainInfo: {
+    paddingHorizontal: 16,
+  },
+  scheduleInfoRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  scheduleInfoLabel: {
+    fontSize: 16,
+    width: 80,
+  },
+  scheduleInfoValue: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  scheduleExtraCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  scheduleExtraContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  scheduleExtraTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  scheduleExtraInfo: {
+    marginTop: 4,
+  },
+  scheduleExtraDate: {
+    fontSize: 16,
+    color: '#007AFF',
+    marginBottom: 8,
+  },
+  scheduleExtraLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  locationIcon: {
+    marginRight: 6,
+  },
+  scheduleExtraLocation: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  scheduleExtraDescription: {
+    fontSize: 14,
+    color: '#8E8E93',
+    lineHeight: 20,
+  },
+  deleteScheduleButton: {
+    padding: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  addScheduleButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 30,
+    marginHorizontal: 16,
+  },
+  addScheduleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
