@@ -9,6 +9,8 @@ import AppNavigator from './AppNavigator';
  */
 const RootNavigator = () => {
   const { user } = useAuth();
+  
+  // Mostrar a tela apropriada com base no estado de autenticação
   return user ? <AppNavigator /> : <AuthNavigator />;
 };
 

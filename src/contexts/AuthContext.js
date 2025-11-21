@@ -21,63 +21,51 @@ export const useAuth = () => useContext(AuthContext);
  */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-
-  // Efeito para verificar e renovar a sessão do usuário ao iniciar
+  
+  // Efeito para verificar a sessão ao iniciar o aplicativo
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        // Verificar se há uma sessão e renová-la se necessário
-        const session = await authService.refreshSession();
-        
-        if (session) {
-          console.log('Sessão válida encontrada, expira em:', new Date(session.expires_at * 1000).toLocaleString());
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
-        } else {
-          console.log('Nenhuma sessão válida encontrada');
-        }
-      } catch (error) {
-        console.error('Erro ao verificar/renovar sessão do usuário:', error);
-      }
-    };
-
-    checkUser();
-    
-    // Configurar verificador periódico da sessão (a cada 24 horas)
-    const sessionCheckInterval = setInterval(() => {
-      console.log('Verificando sessão periodicamente...');
-      authService.refreshSession()
-        .then(session => {
-          if (session) {
-            console.log('Sessão renovada, nova expiração:', new Date(session.expires_at * 1000).toLocaleString());
-          }
-        })
-        .catch(error => console.error('Erro na verificação periódica da sessão:', error));
-    }, 24 * 60 * 60 * 1000); // 24 horas em milissegundos
-
     // Configurar ouvinte para mudanças de autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
+          try {
+            const { data: userData } = await supabase.auth.getUser();
+            setUser(userData.user);
+            console.log('Usuário autenticado:', userData.user.email);
+          } catch (error) {
+            console.error('Erro ao obter dados do usuário:', error);
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
+          console.log('Usuário deslogado');
         }
       }
     );
-
+    
+    // Verificar sessão atual
+    const checkSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data && data.session) {
+          const { data: userData } = await supabase.auth.getUser();
+          setUser(userData.user);
+          console.log('Sessão existente encontrada');
+        }
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error);
+      }
+    };
+    
+    checkSession();
+    
     // Limpar ouvinte ao desmontar
     return () => {
-      // Limpar o intervalo de verificação ao desmontar o componente
-      clearInterval(sessionCheckInterval);
-      
-      // Limpar o listener de autenticação
       if (authListener && authListener.subscription) {
         authListener.subscription.unsubscribe();
       }
     };
   }, []);
+
 
   // Função para login
   const signIn = async (email, password) => {

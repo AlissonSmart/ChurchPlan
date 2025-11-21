@@ -6,7 +6,7 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
 // Telas
 import HomeScreen from '../screens/HomeScreen';
-import VideosScreen from '../screens/VideosScreen';
+import PlanningScreen from '../screens/PlanningScreen';
 import TeamsScreen from '../screens/TeamsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import MenuScreen from '../screens/MenuScreen';
@@ -23,6 +23,7 @@ const MainTabsNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           
@@ -48,25 +49,14 @@ const MainTabsNavigator = () => {
           
           return <FontAwesome name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#1877F2',
+        tabBarActiveTintColor: '#5E5CEC',
         tabBarInactiveTintColor: isDarkMode ? '#A0A0A5' : '#65676B',
         tabBarStyle: {
-          display: 'none', // Oculta a barra de navegação inferior do React Navigation
+          display: 'none', // Oculta a barra de navegação padrão, pois usamos o TabScreenWrapper
         },
-        tabBarBackground: () => (
-          Platform.OS === 'ios' ? (
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              blurType={isDarkMode ? 'materialDark' : 'materialLight'}
-              blurAmount={30}
-            />
-          ) : (
-            <View
-              style={isDarkMode ? styles.tabBarBackgroundDark : styles.tabBarBackgroundLight}
-            />
-          )
-        ),
-        headerShown: false,
+        tabBarLabelStyle: {
+          fontSize: 12,
+        },
       })}
     >
       <Tab.Screen 
@@ -76,7 +66,7 @@ const MainTabsNavigator = () => {
       />
       <Tab.Screen 
         name="Planejar" 
-        component={VideosScreen} 
+        component={PlanningScreen} 
         options={{ title: 'Planejar' }}
       />
       <Tab.Screen 

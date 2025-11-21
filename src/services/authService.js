@@ -301,16 +301,22 @@ const authService = {
   
   /**
    * Verifica e renova a sessão do usuário se necessário
+   * @param {boolean} skipRenewal - Se verdadeiro, pula a renovação e apenas retorna a sessão atual
    * @returns {Promise} - Sessão renovada ou atual
    */
-  refreshSession: async () => {
+  refreshSession: async (skipRenewal = false) => {
     try {
-      // Verificar sessão atual
+      // Verificar sessão atual (isso é rápido pois primeiro verifica o armazenamento local)
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData || !sessionData.session) {
         console.log('Nenhuma sessão encontrada para renovar');
         return null;
+      }
+      
+      // Se skipRenewal for verdadeiro, apenas retornar a sessão atual sem tentar renová-la
+      if (skipRenewal) {
+        return sessionData.session;
       }
       
       // Verificar se a sessão está próxima de expirar (menos de 7 dias)
@@ -341,6 +347,7 @@ const authService = {
       return null;
     }
   },
+  
 };
 
 export default authService;
