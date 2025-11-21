@@ -47,6 +47,8 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [isAddSongModalVisible, setIsAddSongModalVisible] = useState(false);
   const [isAddScheduleModalVisible, setIsAddScheduleModalVisible] = useState(false);
   const [isAddTeamMemberModalVisible, setIsAddTeamMemberModalVisible] = useState(false);
+  const [isAddHeaderModalVisible, setIsAddHeaderModalVisible] = useState(false);
+  const [activeHeaderTab, setActiveHeaderTab] = useState('details');
   // Estados para a aba Equipe
   const [teamMembers, setTeamMembers] = useState([
     {
@@ -201,6 +203,12 @@ const EventCreationScreen = ({ navigation, route }) => {
   const handleAddStep = () => {
     setCurrentStep(null);
     setIsStepEditorVisible(true);
+  };
+  
+  // Função para abrir o modal de adição de cabeçalho
+  const handleAddHeader = () => {
+    setIsAddHeaderModalVisible(true);
+    setActiveHeaderTab('details');
   };
   
   // Função para editar uma etapa
@@ -979,12 +987,29 @@ const EventCreationScreen = ({ navigation, route }) => {
         </View>
       </ScrollView>
       
-      {/* Botão para adicionar (visível em todas as abas) */}
+      {/* Botões flutuantes para a aba Etapas */}
       {activeTab === 'steps' && (
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={handleAddStep}
-        >
+        <View style={styles.fabContainer}>
+          {/* Botão para adicionar cabeçalho */}
+          <TouchableOpacity 
+            style={[styles.addButton, { bottom: 88 }]}
+            onPress={handleAddHeader}
+          >
+            <LinearGradient 
+              colors={['#5fccb3', '#58adf7']} 
+              start={{x: 0, y: 0}} 
+              end={{x: 1, y: 0}} 
+              style={styles.addButtonGradient}
+            >
+              <FontAwesome name="star" size={24} color="#FFFFFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+          
+          {/* Botão para adicionar etapa */}
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={handleAddStep}
+          >
           <LinearGradient 
             colors={['#5fccb3', '#58adf7']} 
             start={{x: 0, y: 0}} 
@@ -1230,6 +1255,91 @@ const EventCreationScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+      
+      {/* Modal para adicionar cabeçalho */}
+      <Modal
+        isVisible={isAddHeaderModalVisible}
+        onBackdropPress={() => setIsAddHeaderModalVisible(false)}
+        style={styles.modal}
+        backdropOpacity={0.5}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        useNativeDriver
+      >
+        <View style={[styles.modalContent, { backgroundColor: colors.background, height: 'auto' }]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Adicionar Cabeçalho</Text>
+            <TouchableOpacity onPress={() => setIsAddHeaderModalVisible(false)}>
+              <FontAwesome name="times" size={20} color="#000000" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Abas do modal */}
+          <View style={styles.headerModalTabs}>
+            <TouchableOpacity 
+              style={[styles.headerModalTab, activeHeaderTab === 'details' && styles.headerModalTabActive]}
+              onPress={() => setActiveHeaderTab('details')}
+            >
+              <FontAwesome name="pencil" size={16} color={activeHeaderTab === 'details' ? '#6C5CE7' : '#8E8E93'} />
+              <Text style={[styles.headerModalTabText, activeHeaderTab === 'details' && styles.headerModalTabTextActive]}>Detalhes</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.headerModalTab, activeHeaderTab === 'people' && styles.headerModalTabActive]}
+              onPress={() => setActiveHeaderTab('people')}
+            >
+              <FontAwesome name="users" size={16} color={activeHeaderTab === 'people' ? '#6C5CE7' : '#8E8E93'} />
+              <Text style={[styles.headerModalTabText, activeHeaderTab === 'people' && styles.headerModalTabTextActive]}>Pessoas</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {activeHeaderTab === 'details' && (
+            <ScrollView style={styles.modalScrollView}>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Horário *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="19:00"
+                  placeholderTextColor="#8E8E93"
+                />
+              </View>
+              
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Título do Cabeçalho *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Ex: Abertura, Louvor, Ministração..."
+                  placeholderTextColor="#8E8E93"
+                />
+              </View>
+              
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Observações</Text>
+                <TextInput
+                  style={[styles.formInput, styles.formTextarea]}
+                  placeholder="Informações adicionais..."
+                  placeholderTextColor="#8E8E93"
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.addHeaderButton}
+                onPress={() => setIsAddHeaderModalVisible(false)}
+              >
+                <Text style={styles.addHeaderButtonText}>Adicionar ao Cronograma</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          )}
+          
+          {activeHeaderTab === 'people' && (
+            <ScrollView style={styles.modalScrollView}>
+              <Text style={styles.headerPeopleText}>Conteúdo da aba Pessoas</Text>
+            </ScrollView>
+          )}
         </View>
       </Modal>
     </View>
@@ -2038,6 +2148,58 @@ const styles = StyleSheet.create({
   },
   teamMemberBlockedButton: {
     padding: 8,
+  },
+  // Estilos para o modal de adicionar cabeçalho
+  headerModalTabs: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  headerModalTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginRight: 16,
+  },
+  headerModalTabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#6C5CE7',
+  },
+  headerModalTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#8E8E93',
+    marginLeft: 8,
+  },
+  headerModalTabTextActive: {
+    color: '#6C5CE7',
+  },
+  headerPeopleText: {
+    padding: 16,
+    fontSize: 16,
+    color: '#8E8E93',
+    textAlign: 'center',
+  },
+  addHeaderButton: {
+    backgroundColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 30,
+    marginHorizontal: 16,
+  },
+  addHeaderButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    zIndex: 999,
   },
 });
 
