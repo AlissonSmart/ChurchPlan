@@ -31,7 +31,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   
   // Parâmetros da rota
-  const { templateId } = route.params || {};
+  const { templateId, eventData } = route.params || {};
   
   // Estados
   const [eventTitle, setEventTitle] = useState('');
@@ -95,16 +95,14 @@ const EventCreationScreen = ({ navigation, route }) => {
   // Referência para o input de título
   const titleInputRef = useRef(null);
   
-  // Efeito para focar no input de título ao montar o componente e carregar dados do template se necessário
+  // Efeito para focar no input de título ao montar o componente e carregar dados do formulário/template
   useEffect(() => {
-    setTimeout(() => {
-      if (titleInputRef.current) {
-        titleInputRef.current.focus();
-      }
-    }, 300);
-    
-    // Carregar dados do template se for fornecido
-    if (templateId) {
+    // Se temos dados do formulário, usar esses dados
+    if (eventData) {
+      setEventTitle(eventData.name || '');
+    }
+    // Senão, se temos um template, usar dados do template
+    else if (templateId) {
       // Aqui você carregaria os dados do template selecionado
       // Por enquanto, apenas definimos um título padrão baseado no templateId
       const templateTitles = {
@@ -116,7 +114,14 @@ const EventCreationScreen = ({ navigation, route }) => {
       
       setEventTitle(templateTitles[templateId] || 'Novo Evento');
     }
-  }, [templateId]);
+    
+    // Focar no input de título
+    setTimeout(() => {
+      if (titleInputRef.current) {
+        titleInputRef.current.focus();
+      }
+    }, 300);
+  }, [templateId, eventData]);
   
   // Função para voltar para a tela anterior
   const handleGoBack = () => {

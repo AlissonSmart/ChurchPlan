@@ -13,6 +13,7 @@ import theme from '../styles/theme';
 import StandardButton from '../components/StandardButton';
 import TabScreenWrapper from '../components/TabScreenWrapper';
 import AddEventModal from '../components/AddEventModal';
+import EventFormModal from '../components/EventFormModal';
 import EventCard from '../components/EventCard';
 import { HeaderContext } from '../contexts/HeaderContext';
 
@@ -57,8 +58,10 @@ const PlanningScreen = ({ navigation }) => {
   ]);
   
 
-  // Estado para controlar a visibilidade do modal de adicionar evento
+  // Estados para controlar a visibilidade dos modais
   const [isAddEventModalVisible, setIsAddEventModalVisible] = useState(false);
+  const [isEventFormModalVisible, setIsEventFormModalVisible] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
 
   // Função para abrir o modal de adicionar evento
   const handleCreateEvent = () => {
@@ -73,15 +76,27 @@ const PlanningScreen = ({ navigation }) => {
   // Função para criar um evento do zero
   const handleCreateFromScratch = () => {
     setIsAddEventModalVisible(false);
-    // Navegar para a tela de criação de evento
-    navigation.navigate('EventCreation');
+    // Mostrar o modal de formulário
+    setSelectedTemplateId(null);
+    setIsEventFormModalVisible(true);
   };
   
   // Função para usar um template
   const handleUseTemplate = (templateId) => {
     setIsAddEventModalVisible(false);
-    // Navegar para a tela de criação de evento com o template selecionado
-    navigation.navigate('EventCreation', { templateId });
+    // Mostrar o modal de formulário com o template selecionado
+    setSelectedTemplateId(templateId);
+    setIsEventFormModalVisible(true);
+  };
+  
+  // Função para continuar após preencher o formulário
+  const handleEventFormContinue = (eventData) => {
+    setIsEventFormModalVisible(false);
+    // Navegar para a tela de criação de evento com os dados do formulário
+    navigation.navigate('EventCreation', { 
+      templateId: selectedTemplateId,
+      eventData
+    });
   };
 
   // Função para editar um evento
@@ -130,6 +145,14 @@ const PlanningScreen = ({ navigation }) => {
             onClose={handleCloseAddEventModal}
             onCreateFromScratch={handleCreateFromScratch}
             onUseTemplate={handleUseTemplate}
+          />
+          
+          {/* Modal de formulário de evento */}
+          <EventFormModal
+            visible={isEventFormModalVisible}
+            onClose={() => setIsEventFormModalVisible(false)}
+            onContinue={handleEventFormContinue}
+            initialData={{}}
           />
         
         {/* Área de botões */}
