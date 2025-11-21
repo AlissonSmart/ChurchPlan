@@ -85,25 +85,19 @@ const AddEventModal = ({
             <ScrollView style={styles.scrollView}>
               {/* Opção Criar do Zero */}
               <TouchableOpacity 
+                style={[styles.templateCard, { backgroundColor: colors.card, borderColor: colors.border }]} 
                 onPress={onCreateFromScratch}
                 activeOpacity={0.7}
               >
-                <LinearGradient
-                  colors={['#5fccb3', '#58adf7']}
-                  start={{x: 0, y: 0}}
-                  end={{x: 1, y: 0}}
-                  style={[styles.templateCard, { borderWidth: 0 }]}
-                >
-                  <View style={[styles.templateIconContainer, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
-                    <FontAwesome name="plus" size={20} color="#FFFFFF" />
-                  </View>
-                  <View style={styles.templateContent}>
-                    <Text style={[styles.templateTitle, { color: '#FFFFFF' }]}>Criar do Zero</Text>
-                    <Text style={[styles.templateDescription, { color: '#FFFFFF', opacity: 0.9 }]}>
-                      Evento personalizado sem template
-                    </Text>
-                  </View>
-                </LinearGradient>
+                <View style={[styles.templateIconContainer, { backgroundColor: colors.primary + '20' }]}>
+                  <FontAwesome name="plus" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.templateContent}>
+                  <Text style={[styles.templateTitle, { color: colors.text }]}>Criar do Zero</Text>
+                  <Text style={[styles.templateDescription, { color: colors.textSecondary }]}>
+                    Evento personalizado sem template
+                  </Text>
+                </View>
               </TouchableOpacity>
               
               {/* Título Templates */}
@@ -222,6 +216,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     marginBottom: 12,
+  },
+  gradientButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   templateIconContainer: {
     width: 44,

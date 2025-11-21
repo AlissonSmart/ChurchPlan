@@ -11,15 +11,20 @@ import {
   useColorScheme,
   FlatList,
   Alert,
-  Dimensions
+  Dimensions,
+  ActivityIndicator,
+  Animated
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Modal from 'react-native-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import SortableList from 'react-native-sortable-list';
 import theme from '../styles/theme';
 import StepEditorModal from '../components/StepEditorModal';
 import StepItemEditorModal from '../components/StepItemEditorModal';
+import eventService from '../services/eventService';
+import supabase from '../services/supabase';
 
 /**
  * Tela de Criação/Edição de Evento
@@ -34,7 +39,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   
   // Parâmetros da rota
-  const { templateId, eventData } = route.params || {};
+  const { templateId, eventData, eventId, isEditing } = route.params || {};
   
   // Estados
   const [eventTitle, setEventTitle] = useState('');
@@ -179,25 +184,73 @@ const EventCreationScreen = ({ navigation, route }) => {
     }
   }, [templateId, eventData]);
   
+  // Função para salvar o evento
+  const handleSaveEvent = async () => {
+    try {
+      // Verificar se tem dados do evento
+      if (!eventData || !eventData.name || !eventData.date || !eventData.time) {
+        Alert.alert('Erro', 'Dados do evento incompletos');
+        return;
+      }
+
+      // Buscar usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Erro', 'Usuário não autenticado');
+        return;
+      }
+
+      // Converter Date para string no formato correto
+      const eventDate = eventData.date instanceof Date ? eventData.date : new Date(eventData.date);
+      const eventTime = eventData.time instanceof Date ? eventData.time : new Date(eventData.time);
+      
+      // Formatar data (YYYY-MM-DD)
+      const formattedDate = eventDate.toISOString().split('T')[0];
+      
+      // Formatar hora (HH:MM:SS)
+      const hours = String(eventTime.getHours()).padStart(2, '0');
+      const minutes = String(eventTime.getMinutes()).padStart(2, '0');
+      const formattedTime = `${hours}:${minutes}:00`;
+
+      const eventPayload = {
+        title: eventData.name,
+        description: eventData.description || '',
+        event_date: formattedDate,
+        event_time: formattedTime,
+        duration_minutes: eventData.duration || 60,
+        location: eventData.location || '',
+        template_id: templateId || null,
+        status: 'published',
+      };
+
+      let result;
+      if (isEditing && eventId) {
+        // Atualizar evento existente
+        result = await eventService.updateEvent(eventId, eventPayload);
+        console.log('Evento atualizado:', result);
+        Alert.alert('Sucesso', 'Evento atualizado com sucesso!');
+      } else {
+        // Criar novo evento
+        result = await eventService.createEvent({
+          ...eventPayload,
+          created_by: user.id
+        });
+        console.log('Evento criado:', result);
+        Alert.alert('Sucesso', 'Evento salvo com sucesso!');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Erro ao salvar evento:', error);
+      Alert.alert('Erro', 'Não foi possível salvar o evento');
+      return null;
+    }
+  };
+
   // Função para voltar para a tela anterior
   const handleGoBack = () => {
-    // Se o evento tiver sido modificado, perguntar se deseja descartar as alterações
-    if (eventTitle.trim() || steps.length > 0) {
-      Alert.alert(
-        'Descartar alterações?',
-        'Se você sair agora, todas as alterações serão perdidas.',
-        [
-          { text: 'Continuar editando', style: 'cancel' },
-          { 
-            text: 'Descartar', 
-            style: 'destructive',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
-    } else {
-      navigation.goBack();
-    }
+    // Voltar sem salvar (usuário deve clicar em Salvar explicitamente)
+    navigation.goBack();
   };
   
   // Função para abrir o modal de adição de etapa
@@ -367,11 +420,52 @@ const EventCreationScreen = ({ navigation, route }) => {
     );
   };
   
+  // Função para mover etapa para cima
+  const moveStepUp = (index) => {
+    if (index === 0) return;
+    const newSteps = [...steps];
+    [newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]];
+    setSteps(newSteps);
+  };
+
+  // Função para mover etapa para baixo
+  const moveStepDown = (index) => {
+    if (index === steps.length - 1) return;
+    const newSteps = [...steps];
+    [newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]];
+    setSteps(newSteps);
+  };
+
   // Função para renderizar uma etapa
   const renderStep = (step, index) => {
     return (
       <View key={step.id} style={styles.stepContainer}>
         <View style={styles.stepHeader}>
+          <View style={styles.reorderButtons}>
+            <TouchableOpacity 
+              onPress={() => moveStepUp(index)}
+              disabled={index === 0}
+              style={[styles.reorderButton, index === 0 && styles.reorderButtonDisabled]}
+            >
+              <FontAwesome 
+                name="chevron-up" 
+                size={14} 
+                color={index === 0 ? colors.textSecondary : colors.primary} 
+              />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => moveStepDown(index)}
+              disabled={index === steps.length - 1}
+              style={[styles.reorderButton, index === steps.length - 1 && styles.reorderButtonDisabled]}
+            >
+              <FontAwesome 
+                name="chevron-down" 
+                size={14} 
+                color={index === steps.length - 1 ? colors.textSecondary : colors.primary} 
+              />
+            </TouchableOpacity>
+          </View>
+          
           <TouchableOpacity 
             style={styles.stepTitleContainer}
             onPress={() => handleEditStep(step)}
@@ -423,16 +517,19 @@ const EventCreationScreen = ({ navigation, route }) => {
         >
           <FontAwesome name="arrow-left" size={20} color={colors.text} />
           <Text style={[styles.backButtonText, { color: colors.text }]}>
-            Voltar para eventos
+            {isEditing ? 'Editar Evento' : 'Voltar para eventos'}
           </Text>
         </TouchableOpacity>
         
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerButton}>
-            <FontAwesome name="download" size={22} color={colors.text} />
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={handleSaveEvent}
+          >
+            <FontAwesome name="save" size={22} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerButton}>
-            <FontAwesome name="trash" size={22} color={colors.text} />
+            <FontAwesome name="trash" size={22} color={colors.danger} />
           </TouchableOpacity>
         </View>
       </View>
@@ -1711,6 +1808,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
+  reorderButtons: {
+    flexDirection: 'column',
+    marginRight: 8,
+    gap: 2,
+  },
+  reorderButton: {
+    padding: 4,
+    borderRadius: 4,
+  },
+  reorderButtonDisabled: {
+    opacity: 0.3,
+  },
   stepActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1722,6 +1831,7 @@ const styles = StyleSheet.create({
   stepTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   stepIndicator: {
     width: 4,

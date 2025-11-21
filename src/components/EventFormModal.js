@@ -12,12 +12,15 @@ import {
   Easing,
   Keyboard,
   Platform,
+  Alert,
 } from 'react-native';
 import Modal from 'react-native-modal';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
+import eventService from '../services/eventService';
+import supabase from '../services/supabase';
 
 const { height } = Dimensions.get('window');
 
@@ -193,31 +196,67 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
   // Estado para controlar se os botões estão desabilitados (evita cliques múltiplos)
   const [isSaving, setIsSaving] = useState(false);
   
-  // Função para continuar para a próxima etapa
-  const handleContinue = () => {
+  // Função para salvar o evento
+  const handleSaveEvent = async () => {
     // Validar se o nome do evento foi preenchido
     if (!eventName.trim()) {
-      // Mostrar erro ou alerta
+      Alert.alert('Erro', 'Por favor, preencha o nome do evento');
       return;
     }
     
     // Marcar como salvando para evitar cliques múltiplos
     setIsSaving(true);
     
-    // Dados do evento
-    const eventData = {
-      name: eventName.trim(),
-      date: eventDate,
-      time: eventTime,
-      reminderDays
-    };
-    
-    onContinue(eventData);
-    
-    // Resetar o estado de salvamento após um tempo
-    setTimeout(() => {
+    try {
+      // Buscar usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Erro', 'Usuário não autenticado');
+        setIsSaving(false);
+        return;
+      }
+
+      // Formatar data (YYYY-MM-DD)
+      const formattedDate = eventDate.toISOString().split('T')[0];
+      
+      // Formatar hora (HH:MM:SS)
+      const hours = String(eventTime.getHours()).padStart(2, '0');
+      const minutes = String(eventTime.getMinutes()).padStart(2, '0');
+      const formattedTime = `${hours}:${minutes}:00`;
+
+      // Criar evento no banco
+      const newEvent = await eventService.createEvent({
+        title: eventName.trim(),
+        description: '',
+        event_date: formattedDate,
+        event_time: formattedTime,
+        duration_minutes: 60,
+        location: '',
+        template_id: null,
+        status: 'published',
+        created_by: user.id
+      });
+
+      console.log('Evento criado:', newEvent);
+      
+      // Fechar modal e chamar onContinue com os dados
+      const eventData = {
+        name: eventName.trim(),
+        date: eventDate,
+        time: eventTime,
+        reminderDays
+      };
+      
+      onContinue(eventData);
+      onClose();
+      
+      Alert.alert('Sucesso', 'Evento criado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar evento:', error);
+      Alert.alert('Erro', 'Não foi possível salvar o evento');
+    } finally {
       setIsSaving(false);
-    }, 1000);
+    }
   };
   
   // Transformar a animação em estilos
@@ -287,17 +326,17 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
           </TouchableOpacity>
           <Text style={[styles.modalTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>Novo Evento</Text>
           <TouchableOpacity 
-            onPress={handleContinue} 
+            onPress={handleSaveEvent} 
             disabled={!eventName.trim() || isSaving}
-            activeOpacity={0.7} // Reduz a opacidade ao tocar, dando feedback visual
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Aumenta a área de toque
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Text style={[
               styles.saveButton, 
               { color: isDarkMode ? '#0A84FF' : '#007AFF' },
               (!eventName.trim() || isSaving) && styles.disabledButton
             ]}>
-              {isSaving ? 'Salvando...' : 'Continuar'}
+              {isSaving ? 'Salvando...' : 'Salvar'}
             </Text>
           </TouchableOpacity>
         </View>

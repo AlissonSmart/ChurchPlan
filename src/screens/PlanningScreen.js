@@ -78,6 +78,15 @@ const PlanningScreen = ({ navigation }) => {
     loadEvents();
   }, []);
 
+  // Recarregar eventos quando a tela receber foco
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadEvents();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
   // Função para abrir o modal de adicionar evento
   const handleCreateEvent = () => {
     setIsAddEventModalVisible(true);
@@ -115,10 +124,33 @@ const PlanningScreen = ({ navigation }) => {
   };
 
   // Função para editar um evento
-  const handleEditEvent = (eventId) => {
-    // Navegar para a tela de detalhes do evento
-    // navigation.navigate('EventDetails', { eventId });
-    console.log('Editar evento:', eventId);
+  const handleEditEvent = async (eventId) => {
+    try {
+      // Buscar dados completos do evento
+      const eventData = await eventService.getEventById(eventId);
+      
+      if (!eventData) {
+        Alert.alert('Erro', 'Evento não encontrado');
+        return;
+      }
+
+      // Navegar para a tela de edição com os dados do evento
+      navigation.navigate('EventCreation', { 
+        eventId: eventId,
+        eventData: {
+          name: eventData.title,
+          date: new Date(eventData.event_date),
+          time: new Date(`2000-01-01T${eventData.event_time}`),
+          description: eventData.description,
+          location: eventData.location,
+          duration: eventData.duration_minutes,
+        },
+        isEditing: true
+      });
+    } catch (error) {
+      console.error('Erro ao carregar evento:', error);
+      Alert.alert('Erro', 'Não foi possível carregar o evento');
+    }
   };
 
   // Função para duplicar um evento
