@@ -14,7 +14,7 @@ import {
 import Modal from 'react-native-modal';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 
 /**
@@ -37,8 +37,8 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
   const [reminderDays, setReminderDays] = useState('1');
   
   // Estados para os pickers de data e hora
-  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
-  const [isTimePickerVisible, setTimePickerVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   
   // Referência para o input de nome
   const nameInputRef = useRef(null);
@@ -87,33 +87,29 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
   };
   
   // Funções para lidar com o picker de data
-  const showDatePicker = () => {
+  const handleOpenDatePicker = () => {
     Keyboard.dismiss();
-    setDatePickerVisible(true);
+    setShowDatePicker(true);
   };
   
-  const hideDatePicker = () => {
-    setDatePickerVisible(false);
-  };
-  
-  const handleConfirmDate = (date) => {
-    setEventDate(date);
-    hideDatePicker();
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setEventDate(selectedDate);
+    }
   };
   
   // Funções para lidar com o picker de hora
-  const showTimePicker = () => {
+  const handleOpenTimePicker = () => {
     Keyboard.dismiss();
-    setTimePickerVisible(true);
+    setShowTimePicker(true);
   };
   
-  const hideTimePicker = () => {
-    setTimePickerVisible(false);
-  };
-  
-  const handleConfirmTime = (time) => {
-    setEventTime(time);
-    hideTimePicker();
+  const handleTimeChange = (event, selectedTime) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      setEventTime(selectedTime);
+    }
   };
   
   // Função para continuar para a próxima etapa
@@ -193,13 +189,23 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
                     backgroundColor: colors.inputBackground,
                     borderColor: colors.border
                   }]}
-                  onPress={showDatePicker}
+                  onPress={handleOpenDatePicker}
                 >
                   <Text style={[styles.datePickerText, { color: colors.text }]}>
                     {formatDate(eventDate)}
                   </Text>
                   <FontAwesome name="calendar" size={20} color={colors.primary} />
                 </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={eventDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                    locale="pt-BR"
+                    style={styles.datePicker}
+                  />
+                )}
               </View>
               
               {/* Horário de Início */}
@@ -210,13 +216,23 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
                     backgroundColor: colors.inputBackground,
                     borderColor: colors.border
                   }]}
-                  onPress={showTimePicker}
+                  onPress={handleOpenTimePicker}
                 >
                   <Text style={[styles.datePickerText, { color: colors.text }]}>
                     {formatTime(eventTime)}
                   </Text>
                   <FontAwesome name="clock-o" size={20} color={colors.primary} />
                 </TouchableOpacity>
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={eventTime}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleTimeChange}
+                    locale="pt-BR"
+                    style={styles.datePicker}
+                  />
+                )}
               </View>
               
               {/* Lembrar Equipe */}
@@ -245,31 +261,7 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
               </View>
             </View>
             
-            {/* Date Picker Modal */}
-            <DateTimePickerModal
-              isVisible={isDatePickerVisible}
-              mode="date"
-              onConfirm={handleConfirmDate}
-              onCancel={hideDatePicker}
-              date={eventDate}
-              locale="pt-BR"
-              confirmTextIOS="Confirmar"
-              cancelTextIOS="Cancelar"
-              headerTextIOS="Selecione a Data"
-            />
-            
-            {/* Time Picker Modal */}
-            <DateTimePickerModal
-              isVisible={isTimePickerVisible}
-              mode="time"
-              onConfirm={handleConfirmTime}
-              onCancel={hideTimePicker}
-              date={eventTime}
-              locale="pt-BR"
-              confirmTextIOS="Confirmar"
-              cancelTextIOS="Cancelar"
-              headerTextIOS="Selecione o Horário"
-            />
+            {/* Os DatePickers agora estão diretamente nos campos */}
           </SafeAreaView>
         </View>
       </TouchableWithoutFeedback>
@@ -364,6 +356,11 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 48,
+  },
+  datePicker: {
+    width: '100%',
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'transparent',
+    marginTop: Platform.OS === 'ios' ? 10 : 0,
   },
 });
 
