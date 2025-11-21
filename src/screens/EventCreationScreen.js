@@ -576,49 +576,54 @@ const EventCreationScreen = ({ navigation, route }) => {
                 
                 {/* João Silva - Vocal - Confirmado */}
                 <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberContent}>
-                    <View style={styles.teamMemberNameContainer}>
-                      <Text style={[styles.teamMemberName, { color: colors.text }]}>João Silva</Text>
-                    </View>
+                  <View style={styles.teamMemberNameRole}>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>João</Text>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Silva</Text>
+                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Vocal</Text>
+                  </View>
+                  <View style={styles.statusContainer}>
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusText}>Confirmado</Text>
                     </View>
                   </View>
-                  <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Vocal</Text>
                 </View>
                 
                 {/* Maria Santos - Teclado - Confirmado */}
                 <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberContent}>
-                    <View style={styles.teamMemberNameContainer}>
-                      <Text style={[styles.teamMemberName, { color: colors.text }]}>Maria Santos</Text>
-                    </View>
+                  <View style={styles.teamMemberNameRole}>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Maria</Text>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Santos</Text>
+                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Teclado</Text>
+                  </View>
+                  <View style={styles.statusContainer}>
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusText}>Confirmado</Text>
                     </View>
                   </View>
-                  <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Teclado</Text>
                 </View>
                 
                 {/* Pedro Costa - Guitarra - Pendente */}
                 <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberContent}>
-                    <View style={styles.teamMemberNameContainer}>
-                      <Text style={[styles.teamMemberName, { color: colors.text }]}>Pedro Costa</Text>
-                    </View>
+                  <View style={styles.teamMemberNameRole}>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Pedro</Text>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Costa</Text>
+                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Guitarra</Text>
+                  </View>
+                  <View style={styles.statusContainer}>
                     <View style={[styles.statusBadge, styles.pendingBadge]}>
                       <Text style={styles.statusText}>Pendente</Text>
                     </View>
                   </View>
-                  <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Guitarra</Text>
                 </View>
                 
                 {/* Ana Lima - Bateria - Não Enviado */}
                 <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberContent}>
-                    <View style={styles.teamMemberNameContainer}>
-                      <Text style={[styles.teamMemberName, { color: colors.text }]}>Ana Lima</Text>
-                    </View>
+                  <View style={styles.teamMemberNameRole}>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Ana</Text>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Lima</Text>
+                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Bateria</Text>
+                  </View>
+                  <View style={styles.statusContainer}>
                     <View style={styles.notSentContainer}>
                       <View style={[styles.statusBadge, styles.notSentBadge]}>
                         <Text style={[styles.statusText, styles.notSentText]}>Não Enviado</Text>
@@ -628,15 +633,16 @@ const EventCreationScreen = ({ navigation, route }) => {
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Bateria</Text>
                 </View>
                 
                 {/* Carlos Mendes - Vocal - Não Enviado - Destacado */}
                 <View style={[styles.teamMemberCard, styles.highlightedCard]}>
-                  <View style={styles.teamMemberContent}>
-                    <View style={styles.teamMemberNameContainer}>
-                      <Text style={[styles.teamMemberName, { color: '#FF9800' }]}>Carlos Mendes</Text>
-                    </View>
+                  <View style={styles.teamMemberNameRole}>
+                    <Text style={[styles.teamMemberName, { color: '#FF9800' }]}>Carlos</Text>
+                    <Text style={[styles.teamMemberName, { color: '#FF9800' }]}>Mendes</Text>
+                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Vocal</Text>
+                  </View>
+                  <View style={styles.statusContainer}>
                     <View style={styles.notSentContainer}>
                       <View style={[styles.statusBadge, styles.notSentBadge]}>
                         <Text style={[styles.statusText, styles.notSentText]}>Não Enviado</Text>
@@ -646,7 +652,6 @@ const EventCreationScreen = ({ navigation, route }) => {
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Vocal</Text>
                 </View>
               </View>
               
@@ -656,36 +661,40 @@ const EventCreationScreen = ({ navigation, route }) => {
                 
                 {/* Roberto Silva - Som - Confirmado */}
                 <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberContent}>
-                    <View style={styles.teamMemberNameContainer}>
-                      <Text style={[styles.teamMemberName, { color: colors.text }]}>Roberto Silva</Text>
-                    </View>
+                  <View style={styles.teamMemberNameRole}>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Roberto</Text>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Silva</Text>
+                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Som</Text>
+                  </View>
+                  <View style={styles.statusContainer}>
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusText}>Confirmado</Text>
                     </View>
                   </View>
-                  <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Som</Text>
                 </View>
                 
                 {/* Fernanda Costa - Video - Confirmado */}
                 <View style={styles.teamMemberCard}>
-                  <View style={styles.teamMemberContent}>
-                    <View style={styles.teamMemberNameContainer}>
-                      <Text style={[styles.teamMemberName, { color: colors.text }]}>Fernanda Costa</Text>
-                    </View>
+                  <View style={styles.teamMemberNameRole}>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Fernanda</Text>
+                    <Text style={[styles.teamMemberName, { color: colors.text }]}>Costa</Text>
+                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Video</Text>
+                  </View>
+                  <View style={styles.statusContainer}>
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusText}>Confirmado</Text>
                     </View>
                   </View>
-                  <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Video</Text>
                 </View>
                 
                 {/* Paulo Santos - Iluminação - Não Enviado - Destacado */}
                 <View style={[styles.teamMemberCard, styles.highlightedCard]}>
-                  <View style={styles.teamMemberContent}>
-                    <View style={styles.teamMemberNameContainer}>
-                      <Text style={[styles.teamMemberName, { color: '#FF9800' }]}>Paulo Santos</Text>
-                    </View>
+                  <View style={styles.teamMemberNameRole}>
+                    <Text style={[styles.teamMemberName, { color: '#FF9800' }]}>Paulo</Text>
+                    <Text style={[styles.teamMemberName, { color: '#FF9800' }]}>Santos</Text>
+                    <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Iluminação</Text>
+                  </View>
+                  <View style={styles.statusContainer}>
                     <View style={styles.notSentContainer}>
                       <View style={[styles.statusBadge, styles.notSentBadge]}>
                         <Text style={[styles.statusText, styles.notSentText]}>Não Enviado</Text>
@@ -695,7 +704,6 @@ const EventCreationScreen = ({ navigation, route }) => {
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <Text style={[styles.teamMemberRole, { color: colors.textSecondary }]}>Iluminação</Text>
                 </View>
               </View>
               
@@ -1134,30 +1142,31 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   teamMemberCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
   highlightedCard: {
     backgroundColor: 'rgba(255, 152, 0, 0.1)',
   },
-  teamMemberContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  teamMemberNameContainer: {
+  teamMemberNameRole: {
     flex: 1,
   },
   teamMemberName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '500',
+    lineHeight: 26,
   },
   teamMemberRole: {
     fontSize: 16,
-    marginTop: 2,
+    marginTop: 4,
+  },
+  statusContainer: {
+    alignItems: 'flex-end',
   },
   statusBadge: {
     backgroundColor: '#00C853',
