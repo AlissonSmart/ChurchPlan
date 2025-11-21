@@ -426,12 +426,7 @@ const EventCreationScreen = ({ navigation, route }) => {
         </View>
       </View>
       
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={styles.container}>
         {/* Event Image/Banner */}
         <View style={[styles.bannerContainer, { backgroundColor: '#5E5CEC' }]}>
           <TouchableOpacity style={styles.addImageButton}>
@@ -537,7 +532,6 @@ const EventCreationScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
         
-        {/* Tab Content */}
         <View style={styles.tabContent}>
           {activeTab === 'steps' && (
             <View style={styles.stepsContainer}>
@@ -700,18 +694,6 @@ const EventCreationScreen = ({ navigation, route }) => {
                   <Text style={styles.blockedMessageText}>Ver bloqueados para esta data (2)</Text>
                 </TouchableOpacity>
               </View>
-              
-              {/* Botão Adicionar Membro */}
-              <TouchableOpacity style={styles.addButton}>
-                <LinearGradient 
-                  colors={['#5fccb3', '#58adf7']} 
-                  start={{x: 0, y: 0}} 
-                  end={{x: 1, y: 0}} 
-                  style={styles.addButtonGradient}
-                >
-                  <FontAwesome name="plus" size={24} color="#FFFFFF" />
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
           )}
           
@@ -782,32 +764,19 @@ const EventCreationScreen = ({ navigation, route }) => {
                 )}
                 style={styles.songsList}
               />
-              
-              {/* Botão Adicionar Música */}
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={() => setIsAddSongModalVisible(true)}
-              >
-                <LinearGradient 
-                  colors={['#5fccb3', '#58adf7']} 
-                  start={{x: 0, y: 0}} 
-                  end={{x: 1, y: 0}} 
-                  style={styles.addButtonGradient}
-                >
-                  <FontAwesome name="plus" size={24} color="#FFFFFF" />
-                </LinearGradient>
-              </TouchableOpacity>
-              
-              {/* Modal para adicionar música */}
-              <Modal
-                isVisible={isAddSongModalVisible}
-                onBackdropPress={() => setIsAddSongModalVisible(false)}
-                style={styles.modal}
-                backdropOpacity={0.5}
-                animationIn="slideInUp"
-                animationOut="slideOutDown"
-                useNativeDriver
-              >
+            </View>
+          )}
+          
+          {/* Modal para adicionar música */}
+          <Modal
+            isVisible={isAddSongModalVisible}
+            onBackdropPress={() => setIsAddSongModalVisible(false)}
+            style={styles.modal}
+            backdropOpacity={0.5}
+            animationIn="slideInUp"
+            animationOut="slideOutDown"
+            useNativeDriver
+          >
                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                   <View style={styles.modalHeader}>
                     <TouchableOpacity onPress={() => setIsAddSongModalVisible(false)}>
@@ -946,27 +915,49 @@ const EventCreationScreen = ({ navigation, route }) => {
             <View style={styles.scheduleContainer}>
               <Text style={{ color: colors.text }}>Conteúdo da aba Horários</Text>
               
-              {/* Botão Adicionar Horário */}
-              <TouchableOpacity style={styles.addButton}>
-                <LinearGradient 
-                  colors={['#5fccb3', '#58adf7']} 
-                  start={{x: 0, y: 0}} 
-                  end={{x: 1, y: 0}} 
-                  style={styles.addButtonGradient}
-                >
-                  <FontAwesome name="plus" size={24} color="#FFFFFF" />
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
           )}
         </View>
       </ScrollView>
       
-      {/* Botão para adicionar etapa (apenas visível na aba Etapas) */}
+      {/* Botão para adicionar (visível em todas as abas) */}
       {activeTab === 'steps' && (
         <TouchableOpacity 
           style={styles.addButton}
           onPress={handleAddStep}
+        >
+          <LinearGradient 
+            colors={['#5fccb3', '#58adf7']} 
+            start={{x: 0, y: 0}} 
+            end={{x: 1, y: 0}} 
+            style={styles.addButtonGradient}
+          >
+            <FontAwesome name="plus" size={24} color="#FFFFFF" />
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
+      
+      {/* Botão para adicionar membro à equipe */}
+      {activeTab === 'team' && (
+        <TouchableOpacity 
+          style={styles.addButton}
+        >
+          <LinearGradient 
+            colors={['#5fccb3', '#58adf7']} 
+            start={{x: 0, y: 0}} 
+            end={{x: 1, y: 0}} 
+            style={styles.addButtonGradient}
+          >
+            <FontAwesome name="plus" size={24} color="#FFFFFF" />
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
+      
+      {/* Botão para adicionar música */}
+      {activeTab === 'songs' && (
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => setIsAddSongModalVisible(true)}
         >
           <LinearGradient 
             colors={['#5fccb3', '#58adf7']} 
@@ -1495,6 +1486,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     overflow: 'hidden',
+    zIndex: 999,
   },
   addButtonGradient: {
     width: 56,
