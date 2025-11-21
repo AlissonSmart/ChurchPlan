@@ -829,7 +829,7 @@ const EventCreationScreen = ({ navigation, route }) => {
             <>
               {/* Botão para adicionar cabeçalho */}
               <TouchableOpacity 
-                style={[styles.subButton, { bottom: 220 }]}
+                style={[styles.subButton, { bottom: 190 }]}
                 onPress={() => {
                   handleAddHeader();
                   setIsFabOpen(false);
@@ -843,7 +843,7 @@ const EventCreationScreen = ({ navigation, route }) => {
               
               {/* Botão para adicionar etapa */}
               <TouchableOpacity 
-                style={[styles.subButton, { bottom: 150 }]}
+                style={[styles.subButton, { bottom: 135 }]}
                 onPress={() => {
                   handleAddStep();
                   setIsFabOpen(false);
@@ -882,7 +882,7 @@ const EventCreationScreen = ({ navigation, route }) => {
               end={{x: 1, y: 0}} 
               style={styles.addButtonGradient}
             >
-              <FontAwesome name={isFabOpen ? "times" : "plus"} size={24} color="#FFFFFF" />
+              <FontAwesome name={isFabOpen ? "close" : "plus"} size={24} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -1832,8 +1832,8 @@ const styles = StyleSheet.create({
   },
   addButton: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
+    bottom: 16,
+    right: 16,
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -1845,7 +1845,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     overflow: 'hidden',
-    zIndex: 999,
+    zIndex: 997,
   },
   addButtonGradient: {
     width: 56,
@@ -2271,13 +2271,13 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
+    bottom: 16,
+    right: 16,
     zIndex: 999,
   },
   subButton: {
     position: 'absolute',
-    right: 24,
+    right: 16,
     zIndex: 998,
   },
   subButtonContainer: {

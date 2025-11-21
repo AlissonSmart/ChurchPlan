@@ -6,7 +6,8 @@ import {
   FlatList,
   useColorScheme,
   ScrollView,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
@@ -16,6 +17,7 @@ import AddEventModal from '../components/AddEventModal';
 import EventFormModal from '../components/EventFormModal';
 import EventCard from '../components/EventCard';
 import { HeaderContext } from '../contexts/HeaderContext';
+import eventService from '../services/eventService';
 
 /**
  * Tela de Planejamento de Eventos
@@ -34,34 +36,47 @@ const PlanningScreen = ({ navigation }) => {
   }, [setShowLargeTitle]);
   
   // Estado para armazenar os eventos
-  const [events, setEvents] = useState([
-    {
-      id: '1',
-      name: 'Culto Dominical',
-      date: '06/09',
-      dayOfWeek: 'sáb.',
-      time: '19:00',
-      status: 'Planejado',
-      songsCount: 2,
-      membersCount: 4
-    },
-    {
-      id: '2',
-      name: 'Culto de Quarta',
-      date: '09/09',
-      dayOfWeek: 'ter.',
-      time: '20:00',
-      status: 'Planejado',
-      songsCount: 1,
-      membersCount: 2
-    }
-  ]);
-  
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Estados para controlar a visibilidade dos modais
   const [isAddEventModalVisible, setIsAddEventModalVisible] = useState(false);
   const [isEventFormModalVisible, setIsEventFormModalVisible] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+
+  // Carregar eventos do Supabase
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const eventsData = await eventService.getAllEvents();
+      const formattedEvents = eventsData.map(event => 
+        eventService.formatEventForDisplay(event)
+      );
+      setEvents(formattedEvents);
+    } catch (error) {
+      console.error('Erro ao carregar eventos:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível carregar os eventos. Tente novamente.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Recarregar eventos (pull to refresh)
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadEvents();
+    setRefreshing(false);
+  };
+
+  // Carregar eventos ao montar o componente
+  useEffect(() => {
+    loadEvents();
+  }, []);
 
   // Função para abrir o modal de adicionar evento
   const handleCreateEvent = () => {
@@ -186,24 +201,35 @@ const PlanningScreen = ({ navigation }) => {
         
         
         {/* Lista de eventos */}
-        <FlatList
-          data={events}
-          renderItem={renderEventItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <FontAwesome name="calendar" size={50} color={colors.textSecondary} style={styles.emptyIcon} />
-              <Text style={[styles.emptyText, { color: colors.text }]}>
-                Nenhum evento encontrado
-              </Text>
-              <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
-                Os eventos criados aparecerão aqui
-              </Text>
-            </View>
-          }
-        />
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              Carregando eventos...
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={events}
+            renderItem={renderEventItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <FontAwesome name="calendar-o" size={64} color={colors.textSecondary} style={styles.emptyIcon} />
+                <Text style={[styles.emptyText, { color: colors.text }]}>
+                  Nenhum evento cadastrado
+                </Text>
+                <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                  Toque em "Adicionar Evento" para criar seu primeiro evento
+                </Text>
+              </View>
+            }
+          />
+        )}
         
         </View>
       </ScrollView>
@@ -253,6 +279,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 80,
   },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
@@ -260,8 +296,8 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyIcon: {
-    marginBottom: 16,
-    opacity: 0.5,
+    marginBottom: 20,
+    opacity: 0.3,
   },
   emptyText: {
     fontSize: 18,
@@ -271,6 +307,7 @@ const styles = StyleSheet.create({
   emptySubText: {
     fontSize: 14,
     textAlign: 'center',
+    paddingHorizontal: 32,
   },
 });
 
