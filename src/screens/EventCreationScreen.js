@@ -13,6 +13,7 @@ import {
   Alert
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import ActionButton from 'react-native-action-button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
@@ -42,7 +43,6 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [currentStep, setCurrentStep] = useState(null);
   const [currentStepItem, setCurrentStepItem] = useState(null);
   const [currentStepId, setCurrentStepId] = useState(null);
-  const [isFabExpanded, setIsFabExpanded] = useState(false);
   const [steps, setSteps] = useState([
     {
       id: '1',
@@ -517,86 +517,86 @@ const EventCreationScreen = ({ navigation, route }) => {
       </ScrollView>
       
       {/* Floating Action Button */}
-      <View style={styles.fabContainer}>
-        {/* FAB Menu Items - Visible when expanded */}
-        {isFabExpanded && (
-          <View style={styles.fabMenu}>
-            <TouchableOpacity 
-              style={styles.fabMenuItem}
-              onPress={() => {
-                setIsFabExpanded(false);
-                // Adicionar Cabeçalho
-                // Lógica para adicionar cabeçalho aqui
-                Alert.alert('Adicionar Cabeçalho', 'Função a ser implementada');
-              }}
-            >
-              <LinearGradient 
-                colors={['#7F7FD5', '#86A8E7', '#91EAE4']} 
-                start={{x: 0, y: 0}} 
-                end={{x: 1, y: 0}} 
-                style={styles.fabMenuItemGradient}
-              >
-                <FontAwesome name="header" size={20} color="#FFFFFF" />
-                <Text style={styles.fabMenuItemText}>Cabeçalho</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.fabMenuItem}
-              onPress={() => {
-                setIsFabExpanded(false);
-                // Adicionar Etapa
-                handleAddStep();
-              }}
-            >
-              <LinearGradient 
-                colors={['#7F7FD5', '#86A8E7', '#91EAE4']} 
-                start={{x: 0, y: 0}} 
-                end={{x: 1, y: 0}} 
-                style={styles.fabMenuItemGradient}
-              >
-                <FontAwesome name="list" size={20} color="#FFFFFF" />
-                <Text style={styles.fabMenuItemText}>Etapa</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.fabMenuItem}
-              onPress={() => {
-                setIsFabExpanded(false);
-                // Adicionar Música
-                // Lógica para adicionar música aqui
-                Alert.alert('Adicionar Música', 'Função a ser implementada');
-              }}
-            >
-              <LinearGradient 
-                colors={['#7F7FD5', '#86A8E7', '#91EAE4']} 
-                start={{x: 0, y: 0}} 
-                end={{x: 1, y: 0}} 
-                style={styles.fabMenuItemGradient}
-              >
-                <FontAwesome name="music" size={20} color="#FFFFFF" />
-                <Text style={styles.fabMenuItemText}>Música</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        )}
-        
-        {/* Main FAB Button */}
-        <TouchableOpacity 
-          style={styles.fab}
-          onPress={() => setIsFabExpanded(!isFabExpanded)}
-        >
+      <ActionButton
+        buttonColor="transparent"
+        renderButtonContent={() => (
           <LinearGradient 
-            colors={['#7F7FD5', '#86A8E7', '#91EAE4']} 
+            colors={['#5fccb3', '#58adf7']} 
             start={{x: 0, y: 0}} 
             end={{x: 1, y: 0}} 
             style={styles.fabGradient}
           >
             <FontAwesome name="plus" size={24} color="#FFFFFF" />
           </LinearGradient>
-        </TouchableOpacity>
-      </View>
+        )}
+        position="right"
+        spacing={15}
+        offsetX={10}
+        offsetY={10}
+        buttonSize={56}
+        hideShadow={true}
+        useNativeFeedback={false}
+      >
+        <ActionButton.Item 
+          buttonColor="transparent"
+          title="Cabeçalho" 
+          textStyle={styles.actionButtonItemText}
+          textContainerStyle={styles.actionButtonItemTextContainer}
+          onPress={() => {
+            // Lógica para adicionar cabeçalho aqui
+            Alert.alert('Adicionar Cabeçalho', 'Função a ser implementada');
+          }}
+          renderBtnContent={() => (
+            <LinearGradient 
+              colors={['#5fccb3', '#58adf7']} 
+              start={{x: 0, y: 0}} 
+              end={{x: 1, y: 0}} 
+              style={styles.actionButtonItemGradient}
+            >
+              <FontAwesome name="header" size={20} color="#FFFFFF" />
+            </LinearGradient>
+          )}
+        />
+        
+        <ActionButton.Item 
+          buttonColor="transparent"
+          title="Etapa" 
+          textStyle={styles.actionButtonItemText}
+          textContainerStyle={styles.actionButtonItemTextContainer}
+          onPress={() => handleAddStep()}
+          renderBtnContent={() => (
+            <LinearGradient 
+              colors={['#5fccb3', '#58adf7']} 
+              start={{x: 0, y: 0}} 
+              end={{x: 1, y: 0}} 
+              style={styles.actionButtonItemGradient}
+            >
+              <FontAwesome name="list" size={20} color="#FFFFFF" />
+            </LinearGradient>
+          )}
+        />
+        
+        <ActionButton.Item 
+          buttonColor="transparent"
+          title="Música" 
+          textStyle={styles.actionButtonItemText}
+          textContainerStyle={styles.actionButtonItemTextContainer}
+          onPress={() => {
+            // Lógica para adicionar música aqui
+            Alert.alert('Adicionar Música', 'Função a ser implementada');
+          }}
+          renderBtnContent={() => (
+            <LinearGradient 
+              colors={['#5fccb3', '#58adf7']} 
+              start={{x: 0, y: 0}} 
+              end={{x: 1, y: 0}} 
+              style={styles.actionButtonItemGradient}
+            >
+              <FontAwesome name="music" size={20} color="#FFFFFF" />
+            </LinearGradient>
+          )}
+        />
+      </ActionButton>
       
       {/* Step Editor Modal */}
       <StepEditorModal 
@@ -849,56 +849,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  fabContainer: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    alignItems: 'center',
-  },
-  fabMenu: {
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  fabMenuItem: {
-    marginBottom: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  fabMenuItemGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    justifyContent: 'center',
-  },
-  fabMenuItemText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    marginLeft: 8,
-    fontSize: 14,
-  },
-  fab: {
+  fabGradient: {
     width: 56,
     height: 56,
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    overflow: 'hidden',
   },
-  fabGradient: {
-    width: '100%',
-    height: '100%',
+  actionButtonItemGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  actionButtonItemText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  actionButtonItemTextContainer: {
+    backgroundColor: '#58adf7',
+    borderRadius: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
   },
 });
 
