@@ -2,17 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  Modal,
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
   useColorScheme,
   TouchableWithoutFeedback,
   Keyboard,
-  ScrollView
+  SafeAreaView
 } from 'react-native';
+import Modal from 'react-native-modal';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
@@ -138,142 +137,140 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
   
   return (
     <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
+      isVisible={visible}
+      onBackdropPress={onClose}
+      onSwipeComplete={onClose}
+      swipeDirection={['down']}
+      propagateSwipe={true}
+      style={styles.modal}
+      backdropOpacity={0.5}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      animationInTiming={300}
+      animationOutTiming={300}
+      avoidKeyboard={true}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              style={styles.keyboardAvoidingContainer}
-            >
-              <View style={[styles.content, { backgroundColor: colors.card }]}>
-                <View style={styles.handle} />
-                
-                <View style={styles.header}>
-                  <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                    <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <Text style={[styles.title, { color: colors.text }]}>
-                    Novo Evento
-                  </Text>
-                  <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
-                    <Text style={[styles.continueButtonText, { color: colors.primary }]}>Continuar</Text>
-                  </TouchableOpacity>
-                </View>
-                
-                <ScrollView style={styles.scrollView}>
-                  <View style={styles.form}>
-                    {/* Nome do Evento */}
-                    <View style={styles.inputGroup}>
-                      <Text style={[styles.label, { color: colors.text }]}>Nome do Evento</Text>
-                      <TextInput
-                        ref={nameInputRef}
-                        style={[styles.input, { 
-                          color: colors.text, 
-                          backgroundColor: colors.inputBackground,
-                          borderColor: colors.border
-                        }]}
-                        placeholder="Ex: Culto Dominical"
-                        placeholderTextColor={colors.textSecondary}
-                        value={eventName}
-                        onChangeText={setEventName}
-                        maxLength={100}
-                      />
-                    </View>
-                    
-                    {/* Data do Evento */}
-                    <View style={styles.inputGroup}>
-                      <Text style={[styles.label, { color: colors.text }]}>Data</Text>
-                      <TouchableOpacity 
-                        style={[styles.datePickerButton, { 
-                          backgroundColor: colors.inputBackground,
-                          borderColor: colors.border
-                        }]}
-                        onPress={showDatePicker}
-                      >
-                        <Text style={[styles.datePickerText, { color: colors.text }]}>
-                          {formatDate(eventDate)}
-                        </Text>
-                        <FontAwesome name="calendar" size={20} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                    
-                    {/* Horário de Início */}
-                    <View style={styles.inputGroup}>
-                      <Text style={[styles.label, { color: colors.text }]}>Horário de Início</Text>
-                      <TouchableOpacity 
-                        style={[styles.datePickerButton, { 
-                          backgroundColor: colors.inputBackground,
-                          borderColor: colors.border
-                        }]}
-                        onPress={showTimePicker}
-                      >
-                        <Text style={[styles.datePickerText, { color: colors.text }]}>
-                          {formatTime(eventTime)}
-                        </Text>
-                        <FontAwesome name="clock-o" size={20} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                    
-                    {/* Lembrar Equipe */}
-                    <View style={styles.inputGroup}>
-                      <Text style={[styles.label, { color: colors.text }]}>Lembrar Equipe</Text>
-                      <View style={[styles.pickerContainer, { 
-                        backgroundColor: colors.inputBackground,
-                        borderColor: colors.border
-                      }]}>
-                        <Picker
-                          selectedValue={reminderDays}
-                          onValueChange={(itemValue) => setReminderDays(itemValue)}
-                          style={[styles.picker, { color: colors.text }]}
-                          dropdownIconColor={colors.primary}
-                        >
-                          {reminderOptions.map((option) => (
-                            <Picker.Item 
-                              key={option.value} 
-                              label={option.label} 
-                              value={option.value} 
-                              color={isDarkMode ? '#FFFFFF' : '#000000'}
-                            />
-                          ))}
-                        </Picker>
-                      </View>
-                    </View>
-                  </View>
-                </ScrollView>
-                
-                {/* Date Picker Modal */}
-                <DateTimePickerModal
-                  isVisible={isDatePickerVisible}
-                  mode="date"
-                  onConfirm={handleConfirmDate}
-                  onCancel={hideDatePicker}
-                  date={eventDate}
-                  locale="pt-BR"
-                  confirmTextIOS="Confirmar"
-                  cancelTextIOS="Cancelar"
-                  headerTextIOS="Selecione a Data"
-                />
-                
-                {/* Time Picker Modal */}
-                <DateTimePickerModal
-                  isVisible={isTimePickerVisible}
-                  mode="time"
-                  onConfirm={handleConfirmTime}
-                  onCancel={hideTimePicker}
-                  date={eventTime}
-                  locale="pt-BR"
-                  confirmTextIOS="Confirmar"
-                  cancelTextIOS="Cancelar"
-                  headerTextIOS="Selecione o Horário"
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={[styles.content, { backgroundColor: colors.card }]}>
+          <View style={styles.handle} />
+          
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.header}>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <Text style={[styles.title, { color: colors.text }]}>
+                Novo Evento
+              </Text>
+              <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
+                <Text style={[styles.continueButtonText, { color: colors.primary }]}>Continuar</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.form}>
+              {/* Nome do Evento */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Nome do Evento</Text>
+                <TextInput
+                  ref={nameInputRef}
+                  style={[styles.input, { 
+                    color: colors.text, 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.border
+                  }]}
+                  placeholder="Ex: Culto Dominical"
+                  placeholderTextColor={colors.textSecondary}
+                  value={eventName}
+                  onChangeText={setEventName}
+                  maxLength={100}
                 />
               </View>
-            </KeyboardAvoidingView>
-          </TouchableWithoutFeedback>
+              
+              {/* Data do Evento */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Data</Text>
+                <TouchableOpacity 
+                  style={[styles.datePickerButton, { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.border
+                  }]}
+                  onPress={showDatePicker}
+                >
+                  <Text style={[styles.datePickerText, { color: colors.text }]}>
+                    {formatDate(eventDate)}
+                  </Text>
+                  <FontAwesome name="calendar" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Horário de Início */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Horário de Início</Text>
+                <TouchableOpacity 
+                  style={[styles.datePickerButton, { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.border
+                  }]}
+                  onPress={showTimePicker}
+                >
+                  <Text style={[styles.datePickerText, { color: colors.text }]}>
+                    {formatTime(eventTime)}
+                  </Text>
+                  <FontAwesome name="clock-o" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Lembrar Equipe */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Lembrar Equipe</Text>
+                <View style={[styles.pickerContainer, { 
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border
+                }]}>
+                  <Picker
+                    selectedValue={reminderDays}
+                    onValueChange={(itemValue) => setReminderDays(itemValue)}
+                    style={[styles.picker, { color: colors.text }]}
+                    dropdownIconColor={colors.primary}
+                  >
+                    {reminderOptions.map((option) => (
+                      <Picker.Item 
+                        key={option.value} 
+                        label={option.label} 
+                        value={option.value} 
+                        color={isDarkMode ? '#FFFFFF' : '#000000'}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            </View>
+            
+            {/* Date Picker Modal */}
+            <DateTimePickerModal
+              isVisible={isDatePickerVisible}
+              mode="date"
+              onConfirm={handleConfirmDate}
+              onCancel={hideDatePicker}
+              date={eventDate}
+              locale="pt-BR"
+              confirmTextIOS="Confirmar"
+              cancelTextIOS="Cancelar"
+              headerTextIOS="Selecione a Data"
+            />
+            
+            {/* Time Picker Modal */}
+            <DateTimePickerModal
+              isVisible={isTimePickerVisible}
+              mode="time"
+              onConfirm={handleConfirmTime}
+              onCancel={hideTimePicker}
+              date={eventTime}
+              locale="pt-BR"
+              confirmTextIOS="Confirmar"
+              cancelTextIOS="Cancelar"
+              headerTextIOS="Selecione o Horário"
+            />
+          </SafeAreaView>
         </View>
       </TouchableWithoutFeedback>
     </Modal>
@@ -281,19 +278,17 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  modal: {
     justifyContent: 'flex-end',
-  },
-  keyboardAvoidingContainer: {
-    width: '100%',
+    margin: 0,
   },
   content: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-    maxHeight: '90%',
+  },
+  safeArea: {
+    flex: 1,
   },
   handle: {
     width: 36,
@@ -330,11 +325,9 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
   },
-  scrollView: {
-    maxHeight: '80%',
-  },
   form: {
     padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
   },
   inputGroup: {
     marginBottom: 20,
