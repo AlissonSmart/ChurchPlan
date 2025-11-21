@@ -45,6 +45,9 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showReminderPicker, setShowReminderPicker] = useState(false);
   
+  // Estado para controlar se estamos em ambiente web
+  const isWeb = Platform.OS === 'web';
+  
   // Referência para o input de nome
   const nameInputRef = useRef(null);
   
@@ -144,10 +147,22 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
   };
   
   const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(false);
+    if (Platform.OS !== 'web') {
+      setShowDatePicker(Platform.OS === 'ios'); // No iOS, mantém aberto até clicar em "Done"
+    }
+    
     if (selectedDate) {
       setEventDate(selectedDate);
     }
+  };
+  
+  const handleDateConfirm = (date) => {
+    setShowDatePicker(false);
+    setEventDate(date);
+  };
+  
+  const handleDateCancel = () => {
+    setShowDatePicker(false);
   };
   
   // Funções para lidar com o picker de hora
@@ -157,10 +172,22 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
   };
   
   const handleTimeChange = (event, selectedTime) => {
-    setShowTimePicker(false);
+    if (Platform.OS !== 'web') {
+      setShowTimePicker(Platform.OS === 'ios'); // No iOS, mantém aberto até clicar em "Done"
+    }
+    
     if (selectedTime) {
       setEventTime(selectedTime);
     }
+  };
+  
+  const handleTimeConfirm = (time) => {
+    setShowTimePicker(false);
+    setEventTime(time);
+  };
+  
+  const handleTimeCancel = () => {
+    setShowTimePicker(false);
   };
   
   // Estado para controlar se os botões estão desabilitados (evita cliques múltiplos)
@@ -307,7 +334,7 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
                 <FontAwesome name="calendar" size={20} color={colors.primary} style={styles.inputIcon} />
               </View>
             </TouchableOpacity>
-            {showDatePicker && (
+            {showDatePicker && Platform.OS !== 'web' && (
               <DateTimePicker
                 value={eventDate}
                 mode="date"
@@ -329,7 +356,7 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
                 <FontAwesome name="clock-o" size={20} color={colors.primary} style={styles.inputIcon} />
               </View>
             </TouchableOpacity>
-            {showTimePicker && (
+            {showTimePicker && Platform.OS !== 'web' && (
               <DateTimePicker
                 value={eventTime}
                 mode="time"
@@ -338,6 +365,66 @@ const EventFormModal = ({ visible, onClose, onContinue, initialData = {} }) => {
               />
             )}
           </View>
+          
+          {/* Modal para DatePicker na Web */}
+          <Modal
+            isVisible={showDatePicker && Platform.OS === 'web'}
+            onBackdropPress={handleDateCancel}
+            backdropOpacity={0.5}
+            style={styles.pickerModal}
+          >
+            <View style={[styles.pickerModalContent, { backgroundColor: isDarkMode ? '#333333' : '#FFFFFF' }]}>
+              <View style={styles.pickerHeader}>
+                <TouchableOpacity onPress={handleDateCancel}>
+                  <Text style={[styles.pickerHeaderButton, { color: colors.primary }]}>Cancelar</Text>
+                </TouchableOpacity>
+                <Text style={[styles.pickerHeaderTitle, { color: colors.text }]}>Selecionar Data</Text>
+                <TouchableOpacity onPress={() => handleDateConfirm(eventDate)}>
+                  <Text style={[styles.pickerHeaderButton, { color: colors.primary }]}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.webPickerContainer}>
+                <DateTimePicker
+                  value={eventDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDateChange}
+                  style={styles.webPicker}
+                />
+              </View>
+            </View>
+          </Modal>
+          
+          {/* Modal para TimePicker na Web */}
+          <Modal
+            isVisible={showTimePicker && Platform.OS === 'web'}
+            onBackdropPress={handleTimeCancel}
+            backdropOpacity={0.5}
+            style={styles.pickerModal}
+          >
+            <View style={[styles.pickerModalContent, { backgroundColor: isDarkMode ? '#333333' : '#FFFFFF' }]}>
+              <View style={styles.pickerHeader}>
+                <TouchableOpacity onPress={handleTimeCancel}>
+                  <Text style={[styles.pickerHeaderButton, { color: colors.primary }]}>Cancelar</Text>
+                </TouchableOpacity>
+                <Text style={[styles.pickerHeaderTitle, { color: colors.text }]}>Selecionar Horário</Text>
+                <TouchableOpacity onPress={() => handleTimeConfirm(eventTime)}>
+                  <Text style={[styles.pickerHeaderButton, { color: colors.primary }]}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.webPickerContainer}>
+                <DateTimePicker
+                  value={eventTime}
+                  mode="time"
+                  display="spinner"
+                  onChange={handleTimeChange}
+                  style={styles.webPicker}
+                />
+              </View>
+            </View>
+          </Modal>
           
           {/* Lembrar Equipe */}
           <View style={styles.inputGroup}>
@@ -539,6 +626,32 @@ const styles = StyleSheet.create({
   },
   pickerOptionText: {
     fontSize: 17,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  pickerHeaderTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  pickerHeaderButton: {
+    fontSize: 17,
+    fontWeight: '400',
+    padding: 4,
+  },
+  webPickerContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  webPicker: {
+    width: 300,
+    height: 200,
   },
 });
 
