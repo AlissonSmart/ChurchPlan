@@ -101,28 +101,36 @@ const PlanningScreen = ({ navigation }) => {
         style={[styles.container, { backgroundColor: colors.background }]}
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingHorizontal: 0 }]}>
         
         {/* Área de botões */}
-        <View style={styles.buttonRow}>
-          <StandardButton 
-            title="Planilha de Escalas"
-            icon="calendar-check-o"
-            onPress={handleOpenSchedule}
-            style={styles.actionButton}
-          />
-          
-          <StandardButton 
-            title="Adicionar Evento"
-            icon="plus"
-            onPress={handleCreateEvent}
-            style={styles.actionButton}
-            outlined={true}
-          />
+        <View style={styles.buttonsContainer}>
+          <View style={styles.buttonRow}>
+            <View style={[styles.buttonContainer, { paddingRight: 4 }]}>
+              <StandardButton 
+                title="Adicionar Evento"
+                icon="plus"
+                onPress={handleCreateEvent}
+                style={styles.actionButton}
+              />
+            </View>
+            
+            <View style={[styles.buttonContainer, { paddingLeft: 4 }]}>
+              <StandardButton 
+                title="Planilha de Escalas"
+                icon="calendar-check-o"
+                onPress={handleOpenSchedule}
+                style={styles.actionButton}
+                outlined={true}
+              />
+            </View>
+          </View>
         </View>
         
         {/* Título da seção */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Eventos Planejados</Text>
+        <View style={styles.sectionTitleContainer}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Eventos Planejados</Text>
+        </View>
         
         
         {/* Lista de eventos */}
@@ -157,11 +165,14 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
     paddingVertical: 20,
     width: '100%',
     maxWidth: 820,
     alignSelf: 'center',
+  },
+  buttonsContainer: {
+    width: '100%',
+    paddingHorizontal: 16,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -170,16 +181,24 @@ const styles = StyleSheet.create({
     marginTop: 8,
     width: '100%',
   },
+  buttonContainer: {
+    width: '50%', // Exatamente 50% da largura
+    padding: 0,
+  },
   actionButton: {
-    width: '48.5%', // Exatamente 50% menos a metade da margem (3%)
+    width: '100%', // Ocupa 100% do container
     maxHeight: 44, // Garantir altura máxima igual para todos os botões
+  },
+  sectionTitleContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 16,
   },
   listContent: {
+    paddingHorizontal: 16,
     paddingBottom: 80,
   },
   emptyContainer: {

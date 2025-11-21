@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   },
   gradient: {
     height: 44, // Altura fixa seguindo padrão iOS
-    paddingHorizontal: 20,
+    paddingHorizontal: 5, // Mínimo possível para texto caber
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 50, // Botão 100% arredondado (pill shape)
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '500', // Peso da fonte mais leve, como no iOS
-    marginLeft: 6,
+    marginLeft: 4,
   },
   icon: {
     // Sem margin-right para centralizar com o texto
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     borderColor: '#29a6f8',
     borderRadius: 50, // Botão 100% arredondado (pill shape)
     height: 44, // Altura fixa seguindo padrão iOS
-    paddingHorizontal: 20,
+    paddingHorizontal: 5, // Mínimo possível para texto caber
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     color: '#29a6f8',
     fontSize: 15,
     fontWeight: '500', // Peso da fonte mais leve, como no iOS
-    marginLeft: 6,
+    marginLeft: 4,
   },
 });
 
