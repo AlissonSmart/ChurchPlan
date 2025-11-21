@@ -10,9 +10,11 @@ import {
   Platform,
   useColorScheme,
   FlatList,
-  Alert
+  Alert,
+  Dimensions
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import Modal from 'react-native-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
@@ -42,6 +44,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [currentStep, setCurrentStep] = useState(null);
   const [currentStepItem, setCurrentStepItem] = useState(null);
   const [currentStepId, setCurrentStepId] = useState(null);
+  const [isAddSongModalVisible, setIsAddSongModalVisible] = useState(false);
   // Estados para a aba Equipe
   const [teamMembers, setTeamMembers] = useState([
     {
@@ -712,10 +715,77 @@ const EventCreationScreen = ({ navigation, route }) => {
           
           {activeTab === 'songs' && (
             <View style={styles.songsContainer}>
-              <Text style={{ color: colors.text }}>Conteúdo da aba Músicas</Text>
+              {/* Barra de pesquisa e filtro */}
+              <View style={styles.searchFilterContainer}>
+                <View style={styles.searchBarContainer}>
+                  <FontAwesome name="search" size={16} color="#8E8E93" style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Pesquisar"
+                    placeholderTextColor="#8E8E93"
+                  />
+                  <TouchableOpacity>
+                    <FontAwesome name="times" size={16} color="#8E8E93" />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.filterButton}>
+                  <FontAwesome name="sliders" size={16} color="#000000" />
+                  <Text style={styles.filterText}>Filtrar</Text>
+                </TouchableOpacity>
+              </View>
               
-              {/* Botão Adicionar Míia */}
-              <TouchableOpacity style={styles.addButton}>
+              {/* Abas de Músicas e Vídeos */}
+              <View style={styles.mediaTabsContainer}>
+                <TouchableOpacity 
+                  style={[styles.mediaTab, styles.mediaTabActive]}
+                >
+                  <Text style={[styles.mediaTabText, styles.mediaTabTextActive]}>Músicas</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.mediaTab}>
+                  <Text style={styles.mediaTabText}>Vídeos</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Lista de músicas */}
+              <FlatList
+                data={[
+                  { id: '1', title: '1000 Graus', artist: 'Renascer Praise' },
+                  { id: '2', title: '500 GRAUS', artist: 'Cassiane' },
+                  { id: '3', title: '500 GRAUS', artist: 'Cassiane' },
+                  { id: '4', title: 'A ALEGRIA ESTÁ NO CORAÇÃO', artist: 'Mateus Brito' },
+                  { id: '5', title: 'ABBA', artist: 'Laura Souguellis' },
+                  { id: '6', title: 'A bênção / The Blessing', artist: 'Gabriela Rocha / Elevation Worship & Kari Jobi' },
+                  { id: '7', title: 'Abra a Sua Boca e Profetiza', artist: 'Marcus Salles' },
+                  { id: '8', title: 'Abraça-em (Quero Ser Como Criança)', artist: 'David Quinlan' },
+                ]}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <View style={styles.songItem}>
+                    <View style={styles.songIconContainer}>
+                      <FontAwesome name="music" size={24} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.songInfo}>
+                      <Text style={styles.songTitle}>{item.title}</Text>
+                      <Text style={styles.songArtist}>{item.artist}</Text>
+                    </View>
+                    <View style={styles.songActions}>
+                      <TouchableOpacity style={styles.songActionButton}>
+                        <FontAwesome name="pencil" size={20} color="#000000" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.songActionButton}>
+                        <FontAwesome name="trash" size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+                style={styles.songsList}
+              />
+              
+              {/* Botão Adicionar Música */}
+              <TouchableOpacity 
+                style={styles.addButton}
+                onPress={() => setIsAddSongModalVisible(true)}
+              >
                 <LinearGradient 
                   colors={['#5fccb3', '#58adf7']} 
                   start={{x: 0, y: 0}} 
@@ -725,6 +795,148 @@ const EventCreationScreen = ({ navigation, route }) => {
                   <FontAwesome name="plus" size={24} color="#FFFFFF" />
                 </LinearGradient>
               </TouchableOpacity>
+              
+              {/* Modal para adicionar música */}
+              <Modal
+                isVisible={isAddSongModalVisible}
+                onBackdropPress={() => setIsAddSongModalVisible(false)}
+                style={styles.modal}
+                backdropOpacity={0.5}
+                animationIn="slideInUp"
+                animationOut="slideOutDown"
+                useNativeDriver
+              >
+                <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                  <View style={styles.modalHeader}>
+                    <TouchableOpacity onPress={() => setIsAddSongModalVisible(false)}>
+                      <Text style={styles.modalBackButton}>Voltar para mídias</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setIsAddSongModalVisible(false)}>
+                      <FontAwesome name="times" size={20} color="#000000" />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <ScrollView style={styles.modalScrollView}>
+                    {/* Seção de vídeo do YouTube */}
+                    <View style={styles.modalSection}>
+                      <View style={styles.modalSectionHeader}>
+                        <View style={[styles.modalSectionIcon, { backgroundColor: '#FF0000' }]}>
+                          <FontAwesome name="youtube-play" size={24} color="#FFFFFF" />
+                        </View>
+                        <Text style={styles.modalSectionTitle}>Adicionar Vídeo do YouTube</Text>
+                      </View>
+                      
+                      <View style={styles.searchVideoContainer}>
+                        <TextInput
+                          style={styles.searchVideoInput}
+                          placeholder="Pesquisar vídeo"
+                          placeholderTextColor="#8E8E93"
+                        />
+                        <TouchableOpacity style={styles.searchVideoButton}>
+                          <FontAwesome name="search" size={16} color="#000000" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    
+                    {/* Seção de informações da música */}
+                    <View style={styles.modalSection}>
+                      <View style={styles.modalSectionHeader}>
+                        <View style={[styles.modalSectionIcon, { backgroundColor: '#8A2BE2' }]}>
+                          <FontAwesome name="file-text" size={24} color="#FFFFFF" />
+                        </View>
+                        <Text style={styles.modalSectionTitle}>Informações - </Text>
+                        <View style={styles.musicBadge}>
+                          <Text style={styles.musicBadgeText}>Música</Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Título</Text>
+                        <TextInput
+                          style={styles.formInput}
+                          placeholder=""
+                          placeholderTextColor="#8E8E93"
+                        />
+                      </View>
+                      
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Artista</Text>
+                        <TextInput
+                          style={styles.formInput}
+                          placeholder=""
+                          placeholderTextColor="#8E8E93"
+                        />
+                      </View>
+                      
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>URL</Text>
+                        <TextInput
+                          style={styles.formInput}
+                          placeholder=""
+                          placeholderTextColor="#8E8E93"
+                        />
+                      </View>
+                      
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Observações</Text>
+                        <TextInput
+                          style={[styles.formInput, styles.formTextarea]}
+                          placeholder=""
+                          placeholderTextColor="#8E8E93"
+                          multiline
+                          numberOfLines={4}
+                        />
+                      </View>
+                    </View>
+                    
+                    {/* Seção de links externos */}
+                    <View style={styles.modalSection}>
+                      <View style={styles.modalSectionHeader}>
+                        <View style={[styles.modalSectionIcon, { backgroundColor: '#E5E5EA' }]}>
+                          <FontAwesome name="link" size={24} color="#000000" />
+                        </View>
+                        <Text style={styles.modalSectionTitle}>Links Externos</Text>
+                      </View>
+                      
+                      <TouchableOpacity style={styles.addLinkButton}>
+                        <Text style={styles.addLinkText}>Adicionar Link</Text>
+                        <FontAwesome name="plus" size={16} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                    
+                    {/* Seção de letra da música */}
+                    <View style={styles.modalSection}>
+                      <Text style={styles.formLabel}>Letra</Text>
+                      <TextInput
+                        style={[styles.formInput, styles.lyricsTextarea]}
+                        placeholder=""
+                        placeholderTextColor="#8E8E93"
+                        multiline
+                        numberOfLines={10}
+                      />
+                    </View>
+                    
+                    {/* Seção de arquivos */}
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalSectionTitle}>Arquivos</Text>
+                      <Text style={styles.noFilesText}>SEM ARQUIVOS</Text>
+                      <TouchableOpacity style={styles.addFilesButton}>
+                        <FontAwesome name="upload" size={16} color="#FFFFFF" />
+                        <Text style={styles.addFilesText}>Adicionar arquivos à mídia</Text>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    {/* Botão de salvar */}
+                    <TouchableOpacity 
+                      style={styles.saveSongButton}
+                      onPress={() => setIsAddSongModalVisible(false)}
+                    >
+                      <Text style={styles.saveSongButtonText}>Salvar Música</Text>
+                      <FontAwesome name="save" size={16} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
+              </Modal>
             </View>
           )}
           
@@ -879,15 +1091,267 @@ const styles = StyleSheet.create({
   },
   songsContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
   },
-  scheduleContainer: {
+  searchFilterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#F2F2F7',
+    alignItems: 'center',
+  },
+  searchBarContainer: {
     flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    height: 40,
+    marginRight: 10,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 16,
+    color: '#000000',
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+  },
+  filterText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  mediaTabsContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  mediaTab: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginRight: 16,
+  },
+  mediaTabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#8A2BE2',
+  },
+  mediaTabText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#8E8E93',
+  },
+  mediaTabTextActive: {
+    color: '#8A2BE2',
+  },
+  songsList: {
+    flex: 1,
+  },
+  songItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  songIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#8A2BE2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  songInfo: {
+    flex: 1,
+  },
+  songTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  songArtist: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  songActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  songActionButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  modal: {
+    margin: 0,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    height: Dimensions.get('window').height * 0.9,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  modalBackButton: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  modalScrollView: {
+    flex: 1,
+  },
+  modalSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  modalSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalSectionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  modalSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  musicBadge: {
+    backgroundColor: '#2C2C2E',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  musicBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  searchVideoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  searchVideoInput: {
+    flex: 1,
+    height: 40,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    color: '#000000',
+  },
+  searchVideoButton: {
+    padding: 12,
+    backgroundColor: '#F2F2F7',
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#000000',
+  },
+  formTextarea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  lyricsTextarea: {
+    height: 200,
+    textAlignVertical: 'top',
+  },
+  addLinkButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    backgroundColor: '#8A2BE2',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+  },
+  addLinkText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+    marginRight: 8,
+  },
+  noFilesText: {
+    textAlign: 'center',
+    color: '#8E8E93',
+    marginVertical: 16,
+  },
+  addFilesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8A2BE2',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+  },
+  addFilesText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  saveSongButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2C2C2E',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+    marginTop: 16,
+    marginBottom: 32,
+  },
+  saveSongButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+    marginRight: 8,
   },
   stepContainer: {
     marginBottom: 24,
