@@ -41,6 +41,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [currentStep, setCurrentStep] = useState(null);
   const [currentStepItem, setCurrentStepItem] = useState(null);
   const [currentStepId, setCurrentStepId] = useState(null);
+  const [isFabExpanded, setIsFabExpanded] = useState(false);
   const [steps, setSteps] = useState([
     {
       id: '1',
@@ -92,10 +93,7 @@ const EventCreationScreen = ({ navigation, route }) => {
     }
   ]);
   
-  // Referência para o input de título
-  const titleInputRef = useRef(null);
-  
-  // Efeito para focar no input de título ao montar o componente e carregar dados do formulário/template
+  // Efeito para carregar dados do formulário/template
   useEffect(() => {
     // Se temos dados do formulário, usar esses dados
     if (eventData) {
@@ -114,13 +112,6 @@ const EventCreationScreen = ({ navigation, route }) => {
       
       setEventTitle(templateTitles[templateId] || 'Novo Evento');
     }
-    
-    // Focar no input de título
-    setTimeout(() => {
-      if (titleInputRef.current) {
-        titleInputRef.current.focus();
-      }
-    }, 300);
   }, [templateId, eventData]);
   
   // Função para voltar para a tela anterior
@@ -390,15 +381,9 @@ const EventCreationScreen = ({ navigation, route }) => {
         
         {/* Event Title */}
         <View style={styles.titleContainer}>
-          <TextInput
-            ref={titleInputRef}
-            style={[styles.titleInput, { color: colors.text }]}
-            placeholder="Título do Evento"
-            placeholderTextColor={colors.textSecondary}
-            value={eventTitle}
-            onChangeText={setEventTitle}
-            maxLength={50}
-          />
+          <Text style={[styles.titleDisplay, { color: colors.text }]}>
+            {eventTitle || "Novo Evento"}
+          </Text>
         </View>
         
         {/* Tabs */}
@@ -531,30 +516,55 @@ const EventCreationScreen = ({ navigation, route }) => {
       </ScrollView>
       
       {/* Floating Action Button */}
-      <TouchableOpacity 
-        style={[styles.fab, { backgroundColor: colors.primary }]}
-        onPress={() => {
-          // Validar se o evento tem pelo menos um título
-          if (!eventTitle.trim()) {
-            Alert.alert('Atenção', 'Por favor, insira um título para o evento.');
-            return;
-          }
-          
-          // Aqui você salvaria o evento no banco de dados
-          Alert.alert(
-            'Sucesso',
-            'Evento salvo com sucesso!',
-            [
-              { 
-                text: 'OK', 
-                onPress: () => navigation.goBack()
-              }
-            ]
-          );
-        }}
-      >
-        <FontAwesome name="check" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+      <View style={styles.fabContainer}>
+        {/* FAB Menu Items - Visible when expanded */}
+        {isFabExpanded && (
+          <View style={styles.fabMenu}>
+            <TouchableOpacity 
+              style={[styles.fabMenuItem, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                setIsFabExpanded(false);
+                // Adicionar Cabeçalho
+                // Lógica para adicionar cabeçalho aqui
+                Alert.alert('Adicionar Cabeçalho', 'Função a ser implementada');
+              }}
+            >
+              <FontAwesome name="header" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.fabMenuItem, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                setIsFabExpanded(false);
+                // Adicionar Etapa
+                handleAddStep();
+              }}
+            >
+              <FontAwesome name="list" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.fabMenuItem, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                setIsFabExpanded(false);
+                // Adicionar Música
+                // Lógica para adicionar música aqui
+                Alert.alert('Adicionar Música', 'Função a ser implementada');
+              }}
+            >
+              <FontAwesome name="music" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* Main FAB Button */}
+        <TouchableOpacity 
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => setIsFabExpanded(!isFabExpanded)}
+        >
+          <FontAwesome name="plus" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
       
       {/* Step Editor Modal */}
       <StepEditorModal 
@@ -628,7 +638,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
-  titleInput: {
+  titleDisplay: {
     fontSize: 24,
     fontWeight: 'bold',
     padding: 0,
@@ -807,10 +817,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  fab: {
+  fabContainer: {
     position: 'absolute',
     bottom: 24,
     right: 24,
+    alignItems: 'center',
+  },
+  fabMenu: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  fabMenuItem: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
