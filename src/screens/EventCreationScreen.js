@@ -42,7 +42,6 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [currentStep, setCurrentStep] = useState(null);
   const [currentStepItem, setCurrentStepItem] = useState(null);
   const [currentStepId, setCurrentStepId] = useState(null);
-  const [isFabExpanded, setIsFabExpanded] = useState(false);
   // Estados para a aba Equipe
   const [teamMembers, setTeamMembers] = useState([
     {
@@ -691,6 +690,18 @@ const EventCreationScreen = ({ navigation, route }) => {
                 </View>
               </View>
               
+              {/* Botão Adicionar Membro */}
+              <TouchableOpacity style={styles.addButton}>
+                <LinearGradient 
+                  colors={['#5fccb3', '#58adf7']} 
+                  start={{x: 0, y: 0}} 
+                  end={{x: 1, y: 0}} 
+                  style={styles.addButtonGradient}
+                >
+                  <FontAwesome name="plus" size={24} color="#FFFFFF" />
+                </LinearGradient>
+              </TouchableOpacity>
+              
               {/* Mensagem de bloqueados */}
               <TouchableOpacity style={styles.blockedMessage}>
                 <FontAwesome name="ban" size={16} color="#F44336" />
@@ -702,80 +713,57 @@ const EventCreationScreen = ({ navigation, route }) => {
           {activeTab === 'songs' && (
             <View style={styles.songsContainer}>
               <Text style={{ color: colors.text }}>Conteúdo da aba Músicas</Text>
+              
+              {/* Botão Adicionar Míia */}
+              <TouchableOpacity style={styles.addButton}>
+                <LinearGradient 
+                  colors={['#5fccb3', '#58adf7']} 
+                  start={{x: 0, y: 0}} 
+                  end={{x: 1, y: 0}} 
+                  style={styles.addButtonGradient}
+                >
+                  <FontAwesome name="plus" size={24} color="#FFFFFF" />
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
           )}
           
           {activeTab === 'schedule' && (
             <View style={styles.scheduleContainer}>
               <Text style={{ color: colors.text }}>Conteúdo da aba Horários</Text>
+              
+              {/* Botão Adicionar Horário */}
+              <TouchableOpacity style={styles.addButton}>
+                <LinearGradient 
+                  colors={['#5fccb3', '#58adf7']} 
+                  start={{x: 0, y: 0}} 
+                  end={{x: 1, y: 0}} 
+                  style={styles.addButtonGradient}
+                >
+                  <FontAwesome name="plus" size={24} color="#FFFFFF" />
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
           )}
         </View>
       </ScrollView>
       
-      {/* Floating Action Button */}
-      <View style={styles.fabContainer}>
-        {/* FAB Menu Items - Visible when expanded */}
-        {isFabExpanded && (
-          <View style={styles.fabMenu}>
-            <TouchableOpacity 
-              style={[styles.fabMenuItem, { backgroundColor: isDarkMode ? '#3A3A3C' : '#FFFFFF' }]}
-              onPress={() => {
-                setIsFabExpanded(false);
-                // Adicionar Cabeçalho
-                Alert.alert('Adicionar Cabeçalho', 'Função a ser implementada');
-              }}
-            >
-              <View style={styles.fabMenuItemContent}>
-                <FontAwesome name="star" size={20} color={isDarkMode ? '#FFFFFF' : '#58adf7'} />
-                <Text style={[styles.fabMenuItemText, { color: isDarkMode ? '#FFFFFF' : '#58adf7' }]}>Cabeçalho</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.fabMenuItem, { backgroundColor: isDarkMode ? '#3A3A3C' : '#FFFFFF' }]}
-              onPress={() => {
-                setIsFabExpanded(false);
-                handleAddStep();
-              }}
-            >
-              <View style={styles.fabMenuItemContent}>
-                <FontAwesome name="list" size={20} color={isDarkMode ? '#FFFFFF' : '#58adf7'} />
-                <Text style={[styles.fabMenuItemText, { color: isDarkMode ? '#FFFFFF' : '#58adf7' }]}>Etapa</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.fabMenuItem, { backgroundColor: isDarkMode ? '#3A3A3C' : '#FFFFFF' }]}
-              onPress={() => {
-                setIsFabExpanded(false);
-                // Adicionar Música
-                Alert.alert('Adicionar Música', 'Função a ser implementada');
-              }}
-            >
-              <View style={styles.fabMenuItemContent}>
-                <FontAwesome name="music" size={20} color={isDarkMode ? '#FFFFFF' : '#58adf7'} />
-                <Text style={[styles.fabMenuItemText, { color: isDarkMode ? '#FFFFFF' : '#58adf7' }]}>Música</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
-        
-        {/* Main FAB Button */}
+      {/* Botão para adicionar etapa (apenas visível na aba Etapas) */}
+      {activeTab === 'steps' && (
         <TouchableOpacity 
-          style={styles.fab}
-          onPress={() => setIsFabExpanded(!isFabExpanded)}
+          style={styles.addButton}
+          onPress={handleAddStep}
         >
           <LinearGradient 
             colors={['#5fccb3', '#58adf7']} 
             start={{x: 0, y: 0}} 
             end={{x: 1, y: 0}} 
-            style={styles.fabGradient}
+            style={styles.addButtonGradient}
           >
             <FontAwesome name="plus" size={24} color="#FFFFFF" />
           </LinearGradient>
         </TouchableOpacity>
-      </View>
+      )}
       
       
       {/* Step Editor Modal */}
@@ -1029,45 +1017,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  fabGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fabContainer: {
+  addButton: {
     position: 'absolute',
     bottom: 24,
     right: 24,
-    alignItems: 'flex-end',
-  },
-  fabMenu: {
-    marginBottom: 16,
-    alignItems: 'flex-end',
-  },
-  fabMenuItem: {
-    marginBottom: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    borderRadius: 24,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  fabMenuItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabMenuItemText: {
-    fontWeight: '600',
-    marginLeft: 8,
-    fontSize: 14,
-  },
-  fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -1079,6 +1032,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     overflow: 'hidden',
+  },
+  addButtonGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   // Estilos para a aba Equipe
   searchContainer: {
