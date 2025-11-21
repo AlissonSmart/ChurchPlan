@@ -696,59 +696,44 @@ const EventCreationScreen = ({ navigation, route }) => {
         {isFabExpanded && (
           <View style={styles.fabMenu}>
             <TouchableOpacity 
-              style={styles.fabMenuItem}
+              style={[styles.fabMenuItem, { backgroundColor: isDarkMode ? '#3A3A3C' : '#FFFFFF' }]}
               onPress={() => {
                 setIsFabExpanded(false);
                 // Adicionar Cabeçalho
                 Alert.alert('Adicionar Cabeçalho', 'Função a ser implementada');
               }}
             >
-              <LinearGradient 
-                colors={['#5fccb3', '#58adf7']} 
-                start={{x: 0, y: 0}} 
-                end={{x: 1, y: 0}} 
-                style={styles.fabMenuItemGradient}
-              >
-                <FontAwesome name="header" size={20} color="#FFFFFF" />
-                <Text style={styles.fabMenuItemText}>Cabeçalho</Text>
-              </LinearGradient>
+              <View style={styles.fabMenuItemContent}>
+                <FontAwesome name="header" size={20} color={isDarkMode ? '#FFFFFF' : '#58adf7'} />
+                <Text style={[styles.fabMenuItemText, { color: isDarkMode ? '#FFFFFF' : '#58adf7' }]}>Cabeçalho</Text>
+              </View>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.fabMenuItem}
+              style={[styles.fabMenuItem, { backgroundColor: isDarkMode ? '#3A3A3C' : '#FFFFFF' }]}
               onPress={() => {
                 setIsFabExpanded(false);
                 handleAddStep();
               }}
             >
-              <LinearGradient 
-                colors={['#5fccb3', '#58adf7']} 
-                start={{x: 0, y: 0}} 
-                end={{x: 1, y: 0}} 
-                style={styles.fabMenuItemGradient}
-              >
-                <FontAwesome name="list" size={20} color="#FFFFFF" />
-                <Text style={styles.fabMenuItemText}>Etapa</Text>
-              </LinearGradient>
+              <View style={styles.fabMenuItemContent}>
+                <FontAwesome name="list" size={20} color={isDarkMode ? '#FFFFFF' : '#58adf7'} />
+                <Text style={[styles.fabMenuItemText, { color: isDarkMode ? '#FFFFFF' : '#58adf7' }]}>Etapa</Text>
+              </View>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.fabMenuItem}
+              style={[styles.fabMenuItem, { backgroundColor: isDarkMode ? '#3A3A3C' : '#FFFFFF' }]}
               onPress={() => {
                 setIsFabExpanded(false);
                 // Adicionar Música
                 Alert.alert('Adicionar Música', 'Função a ser implementada');
               }}
             >
-              <LinearGradient 
-                colors={['#5fccb3', '#58adf7']} 
-                start={{x: 0, y: 0}} 
-                end={{x: 1, y: 0}} 
-                style={styles.fabMenuItemGradient}
-              >
-                <FontAwesome name="music" size={20} color="#FFFFFF" />
-                <Text style={styles.fabMenuItemText}>Música</Text>
-              </LinearGradient>
+              <View style={styles.fabMenuItemContent}>
+                <FontAwesome name="music" size={20} color={isDarkMode ? '#FFFFFF' : '#58adf7'} />
+                <Text style={[styles.fabMenuItemText, { color: isDarkMode ? '#FFFFFF' : '#58adf7' }]}>Música</Text>
+              </View>
             </TouchableOpacity>
           </View>
         )}
@@ -1045,17 +1030,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-  },
-  fabMenuItemGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 24,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 24,
+  },
+  fabMenuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
   },
   fabMenuItemText: {
-    color: '#FFFFFF',
     fontWeight: '600',
     marginLeft: 8,
     fontSize: 14,
