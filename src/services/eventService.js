@@ -170,6 +170,83 @@ const eventService = {
       cancelled: 'Cancelado'
     };
     return statusLabels[status] || status;
+  },
+
+  /**
+   * Adicionar membro à equipe do evento
+   * @param {string} eventId - ID do evento
+   * @param {string} volunteerId - ID do voluntário
+   * @param {string} roleId - ID da função
+   * @param {string} ministryId - ID do ministério (opcional)
+   * @returns {Promise<Object>} Membro adicionado
+   */
+  async addTeamMember(eventId, volunteerId, roleId, ministryId = null) {
+    try {
+      const { data, error } = await supabase
+        .from('event_team')
+        .insert([{
+          event_id: eventId,
+          volunteer_id: volunteerId,
+          role_id: roleId,
+          ministry_id: ministryId,
+          status: 'not_sent'
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao adicionar membro à equipe:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Buscar membros da equipe do evento
+   * @param {string} eventId - ID do evento
+   * @returns {Promise<Array>} Lista de membros
+   */
+  async getEventTeamMembers(eventId) {
+    try {
+      const { data, error } = await supabase
+        .from('event_team')
+        .select(`
+          *,
+          volunteer:volunteers(*),
+          role:roles(*)
+        `)
+        .eq('event_id', eventId);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar membros da equipe:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Atualizar status de membro da equipe
+   * @param {string} eventTeamId - ID do registro event_team
+   * @param {string} status - Novo status
+   * @returns {Promise<Object>} Registro atualizado
+   */
+  async updateTeamMemberStatus(eventTeamId, status) {
+    try {
+      const { data, error } = await supabase
+        .from('event_team')
+        .update({ status })
+        .eq('id', eventTeamId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao atualizar status do membro:', error);
+      throw error;
+    }
   }
 };
 

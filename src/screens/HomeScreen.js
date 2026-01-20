@@ -43,16 +43,30 @@ const HomeScreen = ({ navigation, route }) => {
   const loadInvitations = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('Erro de autenticação:', authError);
+        setLoading(false);
+        return;
+      }
       
       if (!user) {
+        console.log('Nenhum usuário autenticado');
         setLoading(false);
         return;
       }
 
       // Buscar notificações de convite de evento
       const notifications = await notificationService.getUserNotifications(user.id);
-      const eventInvitations = notifications.filter(n => n.type === 'event_invitation');
+      
+      if (!notifications || notifications.length === 0) {
+        setInvitations([]);
+        setLoading(false);
+        return;
+      }
+      
+      const eventInvitations = notifications.filter(n => n && n.type === 'event_invitation');
       
       // Formatar para exibição
       const formattedInvitations = eventInvitations.map(inv => ({
@@ -68,6 +82,7 @@ const HomeScreen = ({ navigation, route }) => {
       setInvitations(formattedInvitations);
     } catch (error) {
       console.error('Erro ao carregar convites:', error);
+      setInvitations([]);
     } finally {
       setLoading(false);
     }

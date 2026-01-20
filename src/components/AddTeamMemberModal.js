@@ -8,10 +8,10 @@ import {
   useColorScheme,
   FlatList,
   ActivityIndicator,
-  Alert
+  Alert,
+  Modal
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import ModalPadrao from './ModalPadrao';
 import theme from '../styles/theme';
 import supabase from '../services/supabase';
 
@@ -26,35 +26,41 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [selectedRole, setSelectedRole] = useState('Membro');
+  const [selectedUser, setSelectedUser] = useState(null);
 
-  const roles = ['Líder', 'Vocal', 'Instrumento', 'Técnico', 'Membro'];
-
-  // Carregar usuários do banco
+  // Carregar usuários cadastrados no sistema
   const loadUsers = async () => {
     try {
       setLoading(true);
       
-      // Buscar voluntários cadastrados
+      // Buscar usuários cadastrados na tabela profiles
       const { data, error } = await supabase
-        .from('volunteers')
-        .select('id, user_id, first_name, last_name, email, phone, is_active')
-        .eq('is_active', true)
-        .order('first_name', { ascending: true });
+        .from('profiles')
+        .select('id, email, role')
+        .order('email', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao buscar profiles:', error);
+        throw error;
+      }
 
-      // Formatar dados com nome completo
+      console.log('Usuários carregados:', data);
+
+      // Formatar dados
       const formattedUsers = (data || []).map(user => ({
-        ...user,
-        name: `${user.first_name} ${user.last_name}`.trim()
+        id: user.id,
+        user_id: user.id,
+        name: user.email?.split('@')[0] || 'Usuário',
+        email: user.email,
+        role: user.role || 'Membro',
+        status: 'pending'
       }));
 
       setUsers(formattedUsers);
       setFilteredUsers(formattedUsers);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os usuários');
+      Alert.alert('Erro', `Não foi possível carregar os usuários: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -82,87 +88,95 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
   }, [searchQuery, users]);
 
   const handleSelectUser = (user) => {
-    // Adicionar membro à equipe
-    const member = {
-      id: user.id,
-      user_id: user.user_id, // ID do usuário autenticado para enviar notificação
-      name: user.name,
-      email: user.email,
-      role: selectedRole,
-      status: 'pending' // pending, confirmed, declined
-    };
+    setSelectedUser(user);
+  };
 
-    onAddMember(member);
+  const handleAddMember = () => {
+    if (!selectedUser) {
+      Alert.alert('Atenção', 'Selecione um membro para convidar');
+      return;
+    }
+
+    onAddMember(selectedUser);
     handleClose();
   };
 
+
   const handleClose = () => {
     setSearchQuery('');
-    setSelectedRole('Membro');
+    setSelectedUser(null);
     onClose();
   };
 
-  const renderUserItem = ({ item }) => (
-    <TouchableOpacity
-      style={[styles.userItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => handleSelectUser(item)}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.userAvatar, { backgroundColor: colors.primary + '20' }]}>
-        <Text style={[styles.userInitials, { color: colors.primary }]}>
-          {item.name.substring(0, 2).toUpperCase()}
-        </Text>
-      </View>
-      <View style={styles.userInfo}>
-        <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
-          {item.name}
-        </Text>
-        {item.email && (
-          <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.email}
+  const renderUserItem = ({ item }) => {
+    const isSelected = selectedUser?.id === item.id;
+    
+    return (
+      <TouchableOpacity
+        style={[
+          styles.userItem,
+          { backgroundColor: colors.card, borderColor: colors.border },
+          isSelected && { borderColor: colors.primary, borderWidth: 2 }
+        ]}
+        onPress={() => handleSelectUser(item)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.userAvatar, { backgroundColor: colors.primary + '20' }]}>
+          <Text style={[styles.userInitials, { color: colors.primary }]}>
+            {item.name.substring(0, 2).toUpperCase()}
           </Text>
+        </View>
+        <View style={styles.userInfo}>
+          <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={[styles.userRole, { color: colors.primary }]} numberOfLines={1}>
+            {item.role}
+          </Text>
+          {item.email && (
+            <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>
+              {item.email}
+            </Text>
+          )}
+        </View>
+        {isSelected && (
+          <FontAwesome name="check-circle" size={24} color={colors.primary} />
         )}
-      </View>
-      <FontAwesome name="plus-circle" size={24} color={colors.primary} />
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <ModalPadrao
-      isVisible={visible}
-      onClose={handleClose}
-      title="Adicionar Membro"
-      height="80%"
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={handleClose}
     >
-      <View style={styles.container}>
-        {/* Seleção de Função */}
-        <View style={styles.rolesSection}>
-          <Text style={[styles.sectionLabel, { color: colors.text }]}>
-            Função no Evento
-          </Text>
-          <View style={styles.rolesContainer}>
-            {roles.map((role) => (
-              <TouchableOpacity
-                key={role}
-                style={[
-                  styles.roleChip,
-                  { borderColor: colors.border },
-                  selectedRole === role && { backgroundColor: colors.primary, borderColor: colors.primary }
-                ]}
-                onPress={() => setSelectedRole(role)}
-              >
-                <Text style={[
-                  styles.roleText,
-                  { color: colors.text },
-                  selectedRole === role && { color: '#FFFFFF' }
-                ]}>
-                  {role}
-                </Text>
-              </TouchableOpacity>
-            ))}
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          {/* Header customizado */}
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={handleClose}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.cancelText, { color: colors.primary }]}>Cancelar</Text>
+            </TouchableOpacity>
+            
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Convidar</Text>
+            
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={handleAddMember}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.addText, { color: colors.primary }]}>Add</Text>
+            </TouchableOpacity>
           </View>
-        </View>
 
+          <View style={styles.container}>
         {/* Campo de Busca */}
         <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
           <FontAwesome name="search" size={16} color={colors.textSecondary} style={styles.searchIcon} />
@@ -185,17 +199,17 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Carregando usuários...
+              Carregando membros...
             </Text>
           </View>
         ) : filteredUsers.length === 0 ? (
           <View style={styles.emptyContainer}>
             <FontAwesome name="users" size={48} color={colors.textSecondary} style={styles.emptyIcon} />
             <Text style={[styles.emptyText, { color: colors.text }]}>
-              {searchQuery ? 'Nenhum usuário encontrado' : 'Nenhum voluntário cadastrado'}
+              {searchQuery ? 'Nenhum membro encontrado' : 'Nenhum membro cadastrado na equipe'}
             </Text>
             <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
-              {searchQuery ? 'Tente buscar com outros termos' : 'Cadastre voluntários primeiro'}
+              {searchQuery ? 'Tente buscar com outros termos' : 'Cadastre membros na equipe primeiro'}
             </Text>
           </View>
         ) : (
@@ -207,12 +221,49 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
             showsVerticalScrollIndicator={false}
           />
         )}
+          </View>
+        </View>
       </View>
-    </ModalPadrao>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    height: '80%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  headerButton: {
+    minWidth: 70,
+  },
+  cancelText: {
+    fontSize: 16,
+    fontWeight: '400',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  addText: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
   container: {
     flex: 1,
     padding: 20,
@@ -238,6 +289,20 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 14,
+    fontWeight: '600',
+  },
+  selfInviteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  selfInviteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
   searchContainer: {
@@ -285,6 +350,11 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
+    marginBottom: 2,
+  },
+  userRole: {
+    fontSize: 14,
+    fontWeight: '500',
     marginBottom: 2,
   },
   userEmail: {

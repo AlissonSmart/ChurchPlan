@@ -57,61 +57,9 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [activeHeaderTab, setActiveHeaderTab] = useState('details');
   const [isFabOpen, setIsFabOpen] = useState(false);
   // Estados para a aba Equipe
-  const [teamMembers, setTeamMembers] = useState([
-    {
-      id: '1',
-      name: 'João Silva',
-      role: 'Vocal',
-      status: 'confirmed'
-    },
-    {
-      id: '2',
-      name: 'Maria Santos',
-      role: 'Teclado',
-      status: 'confirmed'
-    },
-    {
-      id: '3',
-      name: 'Pedro Costa',
-      role: 'Guitarra',
-      status: 'pending'
-    },
-    {
-      id: '4',
-      name: 'Ana Lima',
-      role: 'Bateria',
-      status: 'not_sent'
-    },
-    {
-      id: '5',
-      name: 'Carlos Mendes',
-      role: 'Vocal',
-      status: 'not_sent',
-      highlighted: true
-    }
-  ]);
-  
-  const [technicalTeam, setTechnicalTeam] = useState([
-    {
-      id: '6',
-      name: 'Roberto Silva',
-      role: 'Som',
-      status: 'confirmed'
-    },
-    {
-      id: '7',
-      name: 'Fernanda Costa',
-      role: 'Video',
-      status: 'confirmed'
-    },
-    {
-      id: '8',
-      name: 'Paulo Santos',
-      role: 'Iluminação',
-      status: 'not_sent',
-      highlighted: true
-    }
-  ]);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [technicalTeam, setTechnicalTeam] = useState([]);
+  const [loadingTeam, setLoadingTeam] = useState(false);
   
   const [steps, setSteps] = useState([
     {
@@ -164,6 +112,57 @@ const EventCreationScreen = ({ navigation, route }) => {
     }
   ]);
   
+  // Carregar membros da equipe do evento
+  const loadEventTeam = async () => {
+    if (!eventId) {
+      setTeamMembers([]);
+      setTechnicalTeam([]);
+      return;
+    }
+
+    try {
+      setLoadingTeam(true);
+      
+      const { data, error } = await supabase
+        .from('event_team')
+        .select(`
+          id,
+          status,
+          invitation_sent_at,
+          response_at,
+          is_highlighted,
+          volunteers:volunteer_id (
+            id,
+            first_name,
+            last_name,
+            email
+          ),
+          roles:role_id (
+            name
+          )
+        `)
+        .eq('event_id', eventId);
+
+      if (error) throw error;
+
+      const formattedMembers = (data || []).map(member => ({
+        id: member.id,
+        name: `${member.volunteers?.first_name || ''} ${member.volunteers?.last_name || ''}`.trim() || 'Sem nome',
+        email: member.volunteers?.email,
+        role: member.roles?.name || 'Sem função',
+        status: member.status || 'not_sent',
+        highlighted: member.is_highlighted || false
+      }));
+
+      setTeamMembers(formattedMembers);
+      setTechnicalTeam([]);
+    } catch (error) {
+      console.error('Erro ao carregar equipe:', error);
+    } finally {
+      setLoadingTeam(false);
+    }
+  };
+
   // Efeito para carregar dados do formulário/template
   useEffect(() => {
     // Se temos dados do formulário, usar esses dados
@@ -184,6 +183,11 @@ const EventCreationScreen = ({ navigation, route }) => {
       setEventTitle(templateTitles[templateId] || 'Novo Evento');
     }
   }, [templateId, eventData]);
+
+  // Carregar equipe quando eventId mudar
+  useEffect(() => {
+    loadEventTeam();
+  }, [eventId]);
   
   // Função para salvar o evento
   const handleSaveEvent = async () => {
@@ -257,15 +261,35 @@ const EventCreationScreen = ({ navigation, route }) => {
   // Função para adicionar membro à equipe
   const handleAddTeamMember = async (member) => {
     try {
-      // Adicionar membro ao estado local
-      setTeamMembers(prev => [...prev, {
-        ...member,
-        status: 'pending'
-      }]);
-
-      // Se o evento já foi salvo, enviar convite
+      // Se o evento já foi salvo, adicionar ao banco de dados e enviar convite
       if (eventId && eventData && member.user_id) {
-        await sendEventInvitation(member.user_id, member.name);
+        // Buscar role_id baseado no nome da função
+        const { data: roleData, error: roleError } = await supabase
+          .from('roles')
+          .select('id')
+          .ilike('name', member.role)
+          .single();
+
+        if (roleError || !roleData) {
+          console.error('Erro ao buscar role:', roleError);
+          Alert.alert('Erro', 'Função não encontrada no sistema');
+          return;
+        }
+
+        // Adicionar membro à equipe do evento no banco de dados
+        const teamMember = await eventService.addTeamMember(
+          eventId,
+          member.id,
+          roleData.id
+        );
+
+        // Enviar convite
+        await sendEventInvitation(member.user_id, member.name, member.id, roleData.id);
+
+        // Recarregar lista de membros
+        await loadEventTeam();
+
+        Alert.alert('Sucesso', `Convite enviado para ${member.name}!`);
       } else if (!member.user_id) {
         Alert.alert(
           'Membro Adicionado', 
@@ -273,8 +297,8 @@ const EventCreationScreen = ({ navigation, route }) => {
         );
       } else {
         Alert.alert(
-          'Membro Adicionado', 
-          `${member.name} foi adicionado à equipe. O convite será enviado quando você salvar o evento.`
+          'Atenção', 
+          'Salve o evento primeiro para poder convidar membros.'
         );
       }
     } catch (error) {
@@ -284,7 +308,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   };
 
   // Função para enviar convite ao adicionar membro à equipe
-  const sendEventInvitation = async (userId, memberName) => {
+  const sendEventInvitation = async (userId, memberName, volunteerId, roleId) => {
     try {
       if (!eventId || !eventData) {
         console.log('Evento ainda não foi salvo, convite será enviado após salvar');
@@ -300,13 +324,30 @@ const EventCreationScreen = ({ navigation, route }) => {
       const formattedTime = `${hours}:${minutes}:00`;
 
       // Criar notificação de convite
-      await notificationService.createEventInvitation(
+      const notification = await notificationService.createEventInvitation(
         userId,
         eventId,
         eventData.name,
         formattedDate,
         formattedTime
       );
+
+      // Atualizar status em event_team
+      if (volunteerId && roleId) {
+        const { error: updateError } = await supabase
+          .from('event_team')
+          .update({
+            status: 'pending',
+            invitation_sent_at: new Date().toISOString()
+          })
+          .eq('event_id', eventId)
+          .eq('volunteer_id', volunteerId)
+          .eq('role_id', roleId);
+
+        if (updateError) {
+          console.error('Erro ao atualizar status em event_team:', updateError);
+        }
+      }
 
       console.log(`Convite enviado para ${memberName}`);
       Alert.alert('Sucesso', `Convite enviado para ${memberName}!`);
@@ -2140,184 +2181,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#000000',
-  },
-  teamMemberSelectRole: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginTop: 2,
-  },
-  teamMemberAddButton: {
-    padding: 8,
-  },
-  teamMemberUnavailableItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    backgroundColor: '#FFF9C4',
-  },
-  teamMemberUnavailableReason: {
-    fontSize: 12,
-    color: '#FF9800',
-    marginTop: 4,
-  },
-  teamMemberBlockedButton: {
-    padding: 8,
-  },
-  // Estilos para o modal de adicionar cabeçalho
-  headerModalTabs: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  headerModalTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginRight: 16,
-  },
-  headerModalTabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#6C5CE7',
-  },
-  headerModalTabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#8E8E93',
-    marginLeft: 8,
-  },
-  headerModalTabTextActive: {
-    color: '#6C5CE7',
-  },
-  headerPeopleText: {
-    padding: 16,
-    fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
-  },
-  addHeaderButton: {
-    backgroundColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 30,
-    marginHorizontal: 16,
-  },
-  addHeaderButtonText: {
-    color: '#000000',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Estilos para a pesquisa de músicas no modal
-  songSearchContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  songSearchInputContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F2F2F7',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    height: 40,
-  },
-  songSearchInput: {
-    flex: 1,
-    height: 40,
-    fontSize: 16,
-    color: '#000000',
-    marginLeft: 8,
-  },
-  songSearchList: {
-    flex: 1,
-  },
-  songSearchListContent: {
-    paddingBottom: 20,
-  },
-  songSearchItem: {
-    flexDirection: 'row',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  songSearchIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F0E6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  songSearchInfo: {
-    flex: 1,
-  },
-  songSearchTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  songSearchArtist: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginBottom: 8,
-  },
-  songSearchTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  songSearchTag: {
-    backgroundColor: '#F2F2F7',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 8,
-    marginBottom: 4,
-  },
-  songSearchTagText: {
-    fontSize: 12,
-    color: '#000000',
-  },
-  songSearchAddButton: {
-    padding: 8,
-    justifyContent: 'center',
-  },
-  fabContainer: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    zIndex: 999,
-  },
-  subButton: {
-    position: 'absolute',
-    right: 16,
-    zIndex: 998,
-  },
-  subButtonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    backgroundColor: '#8E8E93',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  subButtonLabel: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginRight: 8,
   },
 });
 
