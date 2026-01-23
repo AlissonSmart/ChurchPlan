@@ -78,9 +78,17 @@ const LoginScreen = ({ navigation }) => {
     } catch (error) {
       // Mantém o email, apenas limpa a senha em caso de erro
       setPassword('');
+      
+      // Tratamento específico de erros
+      let errorMessage = 'Verifique suas credenciais e tente novamente';
+      
+      if (error?.message === 'Invalid login credentials') {
+        errorMessage = 'Email ou senha incorretos, ou a conta ainda não foi criada. Se este é seu primeiro acesso, use a opção "Criar uma nova conta".';
+      }
+      
       Alert.alert(
         'Erro ao fazer login',
-        error.message || 'Verifique suas credenciais e tente novamente'
+        errorMessage
       );
     } finally {
       setIsLoading(false);

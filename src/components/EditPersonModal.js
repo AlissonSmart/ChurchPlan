@@ -24,13 +24,14 @@ import profileService from '../services/profileService';
 
 const { height } = Dimensions.get('window');
 
-const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData }) => {
+const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData, onReactivate }) => {
   // Estados para os campos do formulário
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [authStatus, setAuthStatus] = useState('pending');
+  const [isActive, setIsActive] = useState(true);
   const [selectedTeams, setSelectedTeams] = useState([]);
   const [teams, setTeams] = useState([]);
   const [expandedTeamId, setExpandedTeamId] = useState(null);
@@ -55,6 +56,7 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData }) => 
       setPhone(personData.phone || '');
       setIsAdmin(personData.is_admin || false);
       setAuthStatus(personData.auth_status || 'pending');
+      setIsActive(personData.is_active !== false);
       setUserId(personData.id || null);
       
       // Carregar equipes da pessoa
@@ -514,7 +516,22 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData }) => 
                 )}
               </View>
               
-              {/* Botão de Excluir */}
+              {/* Botão de Reativar (se inativo) */}
+              {!isActive && onReactivate && (
+                <TouchableOpacity
+                  style={[styles.reactivateButton, { 
+                    borderColor: '#34C759',
+                    backgroundColor: isDarkMode ? 'rgba(52, 199, 89, 0.1)' : 'rgba(52, 199, 89, 0.05)' 
+                  }]}
+                  onPress={() => onReactivate(userId)}
+                  activeOpacity={0.7}
+                >
+                  <FontAwesome name="refresh" size={16} color="#34C759" style={{ marginRight: 8 }} />
+                  <Text style={styles.reactivateButtonText}>Reativar</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Botão de Desativar/Excluir */}
               <TouchableOpacity
                 style={[styles.deleteButton, { 
                   borderColor: '#FF3B30',
@@ -524,7 +541,7 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData }) => 
                 activeOpacity={0.7}
               >
                 <FontAwesome name="trash-o" size={16} color="#FF3B30" style={{ marginRight: 8 }} />
-                <Text style={styles.deleteButtonText}>Excluir</Text>
+                <Text style={styles.deleteButtonText}>{isActive ? 'Desativar' : 'Excluir'}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -696,8 +713,23 @@ const styles = StyleSheet.create({
   removeSelectedTeam: {
     padding: 4,
   },
-  deleteButton: {
+  reactivateButton: {
     marginTop: 20,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  reactivateButtonText: {
+    color: '#34C759',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    marginTop: 0,
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 12,

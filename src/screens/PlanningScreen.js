@@ -178,93 +178,100 @@ const PlanningScreen = ({ navigation }) => {
     />
   );
 
+  // Renderizar header da lista
+  const renderListHeader = () => (
+    <>
+      {/* Modal de adicionar evento */}
+      <AddEventModal 
+        visible={isAddEventModalVisible}
+        onClose={handleCloseAddEventModal}
+        onCreateFromScratch={handleCreateFromScratch}
+        onUseTemplate={handleUseTemplate}
+      />
+      
+      {/* Modal de formulário de evento */}
+      <EventFormModal
+        visible={isEventFormModalVisible}
+        onClose={() => setIsEventFormModalVisible(false)}
+        onContinue={handleEventFormContinue}
+        initialData={{}}
+      />
+    
+      {/* Área de botões */}
+      <View style={styles.buttonsContainer}>
+        <View style={styles.buttonRow}>
+          <View style={[styles.buttonContainer, { paddingRight: 3 }]}>
+            <StandardButton 
+              title="Adicionar Evento"
+              icon="plus"
+              onPress={handleCreateEvent}
+              style={styles.actionButton}
+            />
+          </View>
+          
+          <View style={[styles.buttonContainer, { paddingLeft: 3 }]}>
+            <StandardButton 
+              title="Planilha de Escalas"
+              icon="calendar-check-o"
+              onPress={handleOpenSchedule}
+              style={styles.actionButton}
+              outlined={true}
+            />
+          </View>
+        </View>
+      </View>
+      
+      {/* Título da seção */}
+      <View style={styles.sectionTitleContainer}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Eventos Planejados</Text>
+      </View>
+    </>
+  );
+
+  // Renderizar loading ou lista vazia
+  const renderListContent = () => {
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Carregando eventos...
+          </Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
   return (
     <TabScreenWrapper activeTab="Planejar" navigation={navigation}>
-      <ScrollView 
+      <FlatList
         style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={[styles.content]}
+        data={loading ? [] : events}
+        renderItem={renderEventItem}
+        keyExtractor={item => item.id}
         contentInsetAdjustmentBehavior="automatic"
-      >
-        <View style={[styles.content, { paddingHorizontal: 0 }]}>
-          
-          {/* Modal de adicionar evento */}
-          <AddEventModal 
-            visible={isAddEventModalVisible}
-            onClose={handleCloseAddEventModal}
-            onCreateFromScratch={handleCreateFromScratch}
-            onUseTemplate={handleUseTemplate}
-          />
-          
-          {/* Modal de formulário de evento */}
-          <EventFormModal
-            visible={isEventFormModalVisible}
-            onClose={() => setIsEventFormModalVisible(false)}
-            onContinue={handleEventFormContinue}
-            initialData={{}}
-          />
-        
-        {/* Área de botões */}
-        <View style={styles.buttonsContainer}>
-          <View style={styles.buttonRow}>
-            <View style={[styles.buttonContainer, { paddingRight: 3 }]}>
-              <StandardButton 
-                title="Adicionar Evento"
-                icon="plus"
-                onPress={handleCreateEvent}
-                style={styles.actionButton}
-              />
+        showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        ListHeaderComponent={renderListHeader}
+        ListEmptyComponent={
+          !loading ? (
+            <View style={styles.emptyContainer}>
+              <FontAwesome name="calendar-o" size={64} color={colors.textSecondary} style={styles.emptyIcon} />
+              <Text style={[styles.emptyText, { color: colors.text }]}>
+                Nenhum evento cadastrado
+              </Text>
+              <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                Toque em "Adicionar Evento" para criar seu primeiro evento
+              </Text>
             </View>
-            
-            <View style={[styles.buttonContainer, { paddingLeft: 3 }]}>
-              <StandardButton 
-                title="Planilha de Escalas"
-                icon="calendar-check-o"
-                onPress={handleOpenSchedule}
-                style={styles.actionButton}
-                outlined={true}
-              />
-            </View>
-          </View>
-        </View>
-        
-        {/* Título da seção */}
-        <View style={styles.sectionTitleContainer}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Eventos Planejados</Text>
-        </View>
-        
-        
-        {/* Lista de eventos */}
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Carregando eventos...
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={events}
-            renderItem={renderEventItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <FontAwesome name="calendar-o" size={64} color={colors.textSecondary} style={styles.emptyIcon} />
-                <Text style={[styles.emptyText, { color: colors.text }]}>
-                  Nenhum evento cadastrado
-                </Text>
-                <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
-                  Toque em "Adicionar Evento" para criar seu primeiro evento
-                </Text>
-              </View>
-            }
-          />
-        )}
-        
-        </View>
-      </ScrollView>
+          ) : null
+        }
+        scrollEnabled={!loading}
+      />
+      {renderListContent()}
     </TabScreenWrapper>
   );
 };

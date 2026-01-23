@@ -384,14 +384,13 @@ const TeamsScreen = ({ navigation }) => {
       }
       
       setLoading(true);
-      console.log('Adicionando nova pessoa (sem Auth):', personData);
+      console.log('Adicionando ou reativando pessoa:', personData);
       
-      const newPerson = await profileService.createUser({
+      const newPerson = await profileService.createOrReactivateProfile({
         name: personData.name,
         email: personData.email,
         phone: personData.phone,
         is_admin: personData.is_admin || false,
-        teams: personData.teams || []
       });
     
       Alert.alert(
@@ -405,17 +404,10 @@ const TeamsScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Erro ao adicionar pessoa:', error);
       
-      let errorMessage = `Erro: ${error.message || 'Desconhecido'}`;
-      
-      if (error.details) {
-        errorMessage += `\n\nDetalhes: ${error.details}`;
-      }
-      
-      if (error.code) {
-        errorMessage += `\n\nCódigo: ${error.code}`;
-      }
-      
-      Alert.alert('Erro ao adicionar pessoa', errorMessage, [{ text: 'OK' }]);
+      Alert.alert(
+        'Erro ao adicionar pessoa',
+        error.message || 'Não foi possível salvar esta pessoa.'
+      );
     } finally {
       setLoading(false);
     }
@@ -460,52 +452,43 @@ const TeamsScreen = ({ navigation }) => {
     }
   };
   
-  // Função para excluir uma pessoa
+  // Função para desativar uma pessoa
   const handleDeletePerson = async (userId) => {
     try {
       // Verificar se o usuário está autenticado
       if (!user) {
         Alert.alert(
           'Erro de Autenticação', 
-          'Você precisa estar autenticado para excluir uma pessoa. Por favor, faça login novamente.',
+          'Você precisa estar autenticado para desativar uma pessoa. Por favor, faça login novamente.',
           [{ text: 'OK' }]
         );
         return;
       }
       
-      // Confirmar exclusão
+      // Confirmar desativação
       Alert.alert(
-        'Confirmar Exclusão',
-        'Tem certeza que deseja excluir esta pessoa? Esta ação não pode ser desfeita.',
+        'Confirmar Desativação',
+        'Tem certeza que deseja desativar esta pessoa? Ela não aparecerá mais nas listas, mas o histórico será mantido.',
         [
           { text: 'Cancelar', style: 'cancel' },
           { 
-            text: 'Excluir', 
+            text: 'Desativar', 
             style: 'destructive',
             onPress: async () => {
               setLoading(true);
-              console.log('Excluindo pessoa:', userId);
+              console.log('Desativando pessoa:', userId);
               
               try {
-                // Excluir a pessoa do banco de dados
-                const result = await profileService.deleteProfile(userId);
+                // Desativar a pessoa (soft delete)
+                await profileService.deactivateProfile(userId);
                 
-                // Verificar se foi uma exclusão parcial
-                if (result && result.partialDeletion) {
-                  Alert.alert(
-                    'Exclusão Parcial', 
-                    'O perfil foi removido do banco de dados, mas o usuário pode continuar na autenticação. Para uma exclusão completa, acesse o painel do Supabase.',
-                    [{ text: 'OK' }]
-                  );
-                } else {
-                  Alert.alert(
-                    'Sucesso', 
-                    'Pessoa excluída com sucesso!',
-                    [{ text: 'OK' }]
-                  );
-                }
+                Alert.alert(
+                  'Sucesso', 
+                  'Pessoa desativada com sucesso! Ela não aparecerá mais nas listas.',
+                  [{ text: 'OK' }]
+                );
                 
-                // Fechar o modal após excluir com sucesso
+                // Fechar o modal após desativar com sucesso
                 setIsEditPersonModalVisible(false);
                 setSelectedPerson(null);
                 
@@ -524,6 +507,44 @@ const TeamsScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Erro ao processar exclusão de pessoa:', error);
       Alert.alert('Erro', 'Ocorreu um erro ao processar a exclusão. Tente novamente.');
+      setLoading(false);
+    }
+  };
+
+  // Função para reativar uma pessoa
+  const handleReactivatePerson = async (userId) => {
+    try {
+      if (!user) {
+        Alert.alert(
+          'Erro de Autenticação', 
+          'Você precisa estar autenticado para reativar uma pessoa. Por favor, faça login novamente.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      setLoading(true);
+      console.log('Reativando pessoa:', userId);
+
+      // Reativar a pessoa
+      await profileService.reactivateProfile(userId);
+
+      Alert.alert(
+        'Sucesso', 
+        'Pessoa reativada com sucesso! Ela aparecerá novamente nas listas.',
+        [{ text: 'OK' }]
+      );
+
+      // Fechar o modal após reativar com sucesso
+      setIsEditPersonModalVisible(false);
+      setSelectedPerson(null);
+
+      // Recarregar a lista de usuários
+      loadUsers();
+    } catch (error) {
+      console.error('Erro ao reativar pessoa:', error);
+      Alert.alert('Erro', 'Não foi possível reativar a pessoa. Tente novamente.');
+    } finally {
       setLoading(false);
     }
   };
@@ -649,6 +670,7 @@ const TeamsScreen = ({ navigation }) => {
           }}
           onSave={handleUpdatePerson}
           onDelete={handleDeletePerson}
+          onReactivate={handleReactivatePerson}
           personData={selectedPerson}
         />
         

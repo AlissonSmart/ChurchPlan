@@ -147,7 +147,8 @@ const EventCreationScreen = ({ navigation, route }) => {
 
       const formattedMembers = (data || []).map(member => ({
         id: member.id,
-        name: `${member.volunteers?.first_name || ''} ${member.volunteers?.last_name || ''}`.trim() || 'Sem nome',
+        volunteer_id: member.volunteers?.id,
+        name: `${member.volunteers?.first_name || ''} ${member.volunteers?.last_name || ''}`.trim() || member.volunteers?.email || 'Usuário',
         email: member.volunteers?.email,
         role: member.roles?.name || 'Sem função',
         status: member.status || 'not_sent',
@@ -261,8 +262,8 @@ const EventCreationScreen = ({ navigation, route }) => {
   // Função para adicionar membro à equipe
   const handleAddTeamMember = async (member) => {
     try {
-      // Verificar se a pessoa já está na equipe
-      if (teamMembers.some(m => m.email === member.email)) {
+      // Verificar se a pessoa já está na equipe (comparar por volunteer_id)
+      if (teamMembers.some(m => m.volunteer_id === member.user_id)) {
         Alert.alert('Atenção', 'Essa pessoa já está na equipe desse evento.');
         return;
       }
@@ -370,8 +371,8 @@ const EventCreationScreen = ({ navigation, route }) => {
         if (!volunteerData) {
           const fullName = (member.name || member.email?.split('@')[0] || '').trim();
           const nameParts = fullName.split(' ').filter(Boolean);
-          const firstName = nameParts[0] || 'Sem';
-          const lastName = nameParts.slice(1).join(' ') || 'Nome';
+          const firstName = nameParts[0] || 'Usuário';
+          const lastName = nameParts.slice(1).join(' ') || '';
 
           const { data: createdVolunteer, error: createVolunteerError } = await supabase
             .from('volunteers')
@@ -516,7 +517,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   };
 
   // Função para remover membro da equipe
-  const handleRemoveTeamMember = (memberId) => {
+  const handleRemoveTeamMember = async (memberId) => {
     Alert.alert(
       'Remover Membro',
       'Deseja remover este membro da equipe?',
@@ -525,8 +526,26 @@ const EventCreationScreen = ({ navigation, route }) => {
         {
           text: 'Remover',
           style: 'destructive',
-          onPress: () => {
-            setTeamMembers(prev => prev.filter(m => m.id !== memberId));
+          onPress: async () => {
+            try {
+              // Deletar do banco de dados
+              const { error } = await supabase
+                .from('event_team')
+                .delete()
+                .eq('id', memberId);
+
+              if (error) {
+                console.error('Erro ao remover membro:', error);
+                Alert.alert('Erro', 'Não foi possível remover o membro');
+                return;
+              }
+
+              // Remover do estado local após sucesso no banco
+              setTeamMembers(prev => prev.filter(m => m.id !== memberId));
+            } catch (error) {
+              console.error('Erro ao remover membro:', error);
+              Alert.alert('Erro', 'Não foi possível remover o membro');
+            }
           }
         }
       ]

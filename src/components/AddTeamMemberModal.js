@@ -33,10 +33,11 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
     try {
       setLoading(true);
       
-      // Buscar usuários cadastrados na tabela profiles
+      // Buscar usuários ativos cadastrados na tabela profiles
       const { data, error } = await supabase
         .from('profiles')
         .select('id, email, role')
+        .eq('is_active', true)
         .order('email', { ascending: true });
 
       if (error) {

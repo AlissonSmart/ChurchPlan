@@ -282,10 +282,11 @@ const profileService = {
    */
   getAllProfiles: async () => {
     try {
-      // Buscar todos os perfis
+      // Buscar todos os perfis ativos
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
+        .eq('is_active', true)
         .order('name');
         
       if (error) {
@@ -346,10 +347,11 @@ const profileService = {
         return profileService.getAllProfiles();
       }
       
-      // Buscar perfis que correspondem ao texto de busca
+      // Buscar perfis ativos que correspondem ao texto de busca
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
+        .eq('is_active', true)
         .ilike('name', `%${searchText}%`)
         .order('name');
         
@@ -543,6 +545,150 @@ const profileService = {
       }
     } catch (error) {
       console.error('Erro ao excluir perfil:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Desativa um perfil (soft delete)
+   * @param {string} profileId - ID do perfil
+   * @returns {Promise<Object>} Perfil desativado
+   */
+  deactivateProfile: async (profileId) => {
+    try {
+      console.log('Desativando perfil:', profileId);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ is_active: false })
+        .eq('id', profileId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao desativar perfil:', error);
+        throw error;
+      }
+
+      console.log('Perfil desativado com sucesso:', data);
+      return data;
+    } catch (error) {
+      console.error('Erro ao desativar perfil:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reativa um perfil desativado
+   * @param {string} profileId - ID do perfil
+   * @returns {Promise<Object>} Perfil reativado
+   */
+  reactivateProfile: async (profileId) => {
+    try {
+      console.log('Reativando perfil:', profileId);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ is_active: true })
+        .eq('id', profileId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao reativar perfil:', error);
+        throw error;
+      }
+
+      console.log('Perfil reativado com sucesso:', data);
+      return data;
+    } catch (error) {
+      console.error('Erro ao reativar perfil:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Cria ou reativa um perfil baseado no email
+   * Se o email já existe e está inativo, reativa com novos dados
+   * Se o email já existe e está ativo, lança erro
+   * Se não existe, cria novo perfil
+   * @param {Object} profileData - Dados do perfil (name, email, phone, is_admin)
+   * @returns {Promise<Object>} Perfil criado ou reativado
+   */
+  createOrReactivateProfile: async (profileData) => {
+    try {
+      console.log('Criando ou reativando perfil com email:', profileData.email);
+
+      // 1. Verificar se já existe perfil com esse email
+      const { data: existing, error: selectError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', profileData.email)
+        .maybeSingle();
+
+      if (selectError) {
+        console.error('Erro ao buscar perfil existente:', selectError);
+        throw selectError;
+      }
+
+      // 2. Se já existe
+      if (existing) {
+        // 2a. Se já está ativo → erro amigável
+        if (existing.is_active) {
+          throw new Error('Já existe uma pessoa ativa com este email.');
+        }
+
+        // 2b. Se está inativo → reativar (UPDATE)
+        console.log('Reativando perfil existente:', existing.id);
+        const { data, error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            name: profileData.name,
+            phone: profileData.phone || null,
+            is_admin: profileData.is_admin || false,
+            is_active: true,
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('Erro ao reativar perfil:', updateError);
+          throw updateError;
+        }
+
+        console.log('Perfil reativado com sucesso:', data);
+        return data;
+      }
+
+      // 3. Se não existir → criar perfil novo (INSERT)
+      console.log('Criando novo perfil com email:', profileData.email);
+      const { data, error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          name: profileData.name,
+          email: profileData.email,
+          phone: profileData.phone || null,
+          is_admin: profileData.is_admin || false,
+          auth_status: 'pending',
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Erro ao criar perfil:', insertError);
+        // Tratamento específico para 23505 (unique constraint violation)
+        if (insertError.code === '23505') {
+          throw new Error('Já existe uma pessoa com este email.');
+        }
+        throw insertError;
+      }
+
+      console.log('Perfil criado com sucesso:', data);
+      return data;
+    } catch (error) {
+      console.error('Erro ao criar ou reativar perfil:', error);
       throw error;
     }
   },

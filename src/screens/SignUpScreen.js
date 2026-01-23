@@ -49,14 +49,25 @@ const SignUpScreen = ({ navigation }) => {
       setIsLoading(true);
       await signUp(email, password, { name });
       Alert.alert(
-        'Conta criada',
-        'Sua conta foi criada com sucesso! Verifique seu email para confirmar o cadastro.',
+        'Conta criada com sucesso!',
+        'Sua conta foi criada e você já pode fazer login. Se você foi convidado para um evento, sua conta será automaticamente vinculada ao seu perfil.',
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
     } catch (error) {
+      // Tratamento específico de erros
+      let errorMessage = 'Ocorreu um erro ao criar sua conta. Tente novamente.';
+      
+      if (error?.message?.includes('already registered')) {
+        errorMessage = 'Este email já está registrado. Use a opção "Entrar" para fazer login.';
+      } else if (error?.message?.includes('Invalid email')) {
+        errorMessage = 'Email inválido. Verifique e tente novamente.';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       Alert.alert(
         'Erro ao criar conta',
-        error.message || 'Ocorreu um erro ao criar sua conta. Tente novamente.'
+        errorMessage
       );
     } finally {
       setIsLoading(false);

@@ -25,6 +25,8 @@ const AuthInput = ({
   icon,
   onFocus,
   onBlur,
+  textContentType = 'none',
+  autoComplete = 'off',
   ...props 
 }) => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -105,6 +107,9 @@ const AuthInput = ({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         autoCorrect={autoCorrect}
+        textContentType={secureTextEntry ? 'password' : textContentType}
+        autoComplete={secureTextEntry ? 'password' : autoComplete}
+        importantForAutofill={secureTextEntry ? 'yes' : 'no'}
         onFocus={handleFocus}
         onBlur={handleBlur}
         {...props}
