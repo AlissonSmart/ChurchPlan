@@ -47,6 +47,7 @@ const profileService = {
         email: profileData.email,
         phone: profileData.phone || null,
         is_admin: profileData.is_admin || false,
+        auth_status: profileData.auth_status || 'pending',
         updated_at: new Date().toISOString()
       };
       
@@ -174,28 +175,22 @@ const profileService = {
     }
   },
   
-  /**
-   * Cria um novo perfil (sem autenticação no Supabase Auth)
-   * @param {Object} userData - Dados do usuário
-   * @returns {Promise<Object>} Perfil criado
-   */
   createUser: async (userData) => {
     try {
       console.log('Criando novo usuário (apenas perfil):', userData);
 
-      if (!userData.id) {
-        throw new Error('ID do usuário de autenticação não fornecido. Crie primeiro o usuário no Auth (backend) e passe o ID para createUser.');
-      }
-
       const profileToCreate = {
-        id: userData.id,
         name: userData.name,
         email: userData.email,
         phone: userData.phone || null,
         is_admin: userData.is_admin || false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        auth_status: 'pending',
       };
+
+      if (userData.id) {
+        profileToCreate.id = userData.id;
+        profileToCreate.auth_status = 'active';
+      }
 
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -210,8 +205,7 @@ const profileService = {
 
       console.log('Perfil criado com sucesso:', profileData);
 
-      // Processar associações de equipes
-      if (userData.teams && userData.teams.length > 0) {
+      if (profileData.auth_status === 'active' && userData.teams && userData.teams.length > 0 && profileData.id) {
         const teamMembers = userData.teams.map(team => ({
           team_id: team.teamId,
           user_id: profileData.id,
@@ -227,6 +221,8 @@ const profileService = {
         } else {
           console.log('Associações de equipe criadas com sucesso');
         }
+      } else if (profileData.auth_status === 'pending' && userData.teams && userData.teams.length > 0) {
+        console.log('Perfil pending: equipes serão associadas quando o usuário se cadastrar');
       }
 
       return {

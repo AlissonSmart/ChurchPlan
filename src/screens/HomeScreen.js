@@ -67,6 +67,40 @@ const HomeScreen = ({ navigation, route }) => {
       }
       
       const eventInvitations = notifications.filter(n => n && n.type === 'event_invitation');
+
+      const eventIds = eventInvitations
+        .map(inv => inv?.event_id)
+        .filter(Boolean);
+
+      let eventTeamByEventId = {};
+
+      if (eventIds.length > 0) {
+        const { data: volunteerRow, error: volunteerError } = await supabase
+          .from('volunteers')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (volunteerError && volunteerError.code !== 'PGRST116') {
+          console.error('Erro ao buscar volunteer do usuário:', volunteerError);
+        }
+
+        if (volunteerRow?.id) {
+          const { data: eventTeamRows, error: eventTeamError } = await supabase
+            .from('event_team')
+            .select('id, event_id, status, roles:role_id(name)')
+            .eq('volunteer_id', volunteerRow.id)
+            .in('event_id', eventIds);
+
+          if (eventTeamError) {
+            console.error('Erro ao buscar event_team para convites:', eventTeamError);
+          } else {
+            (eventTeamRows || []).forEach(row => {
+              eventTeamByEventId[row.event_id] = row;
+            });
+          }
+        }
+      }
       
       // Formatar para exibição
       const formattedInvitations = eventInvitations.map(inv => ({
@@ -76,7 +110,10 @@ const HomeScreen = ({ navigation, route }) => {
         eventDate: inv.event_date,
         eventTime: inv.event_time,
         isRead: inv.is_read,
-        createdAt: inv.created_at
+        createdAt: inv.created_at,
+        eventTeamId: eventTeamByEventId?.[inv.event_id]?.id || null,
+        teamStatus: eventTeamByEventId?.[inv.event_id]?.status || 'pending',
+        roleName: eventTeamByEventId?.[inv.event_id]?.roles?.name || null,
       }));
 
       setInvitations(formattedInvitations);
@@ -85,6 +122,26 @@ const HomeScreen = ({ navigation, route }) => {
       setInvitations([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleInvitationResponse = async (invitation, status) => {
+    try {
+      if (!invitation?.eventTeamId) {
+        Alert.alert('Erro', 'Convite não encontrado para este evento');
+        return;
+      }
+
+      await eventService.updateTeamMemberStatus(invitation.eventTeamId, status);
+
+      if (!invitation.isRead) {
+        await notificationService.markAsRead(invitation.id);
+      }
+
+      await loadInvitations();
+    } catch (error) {
+      console.error('Erro ao responder convite:', error);
+      Alert.alert('Erro', 'Não foi possível responder ao convite');
     }
   };
 
@@ -207,11 +264,48 @@ const HomeScreen = ({ navigation, route }) => {
                     <Text style={[styles.eventTitle, { color: colors.text }]}>
                       {invitation.eventName}
                     </Text>
-                    {!invitation.isRead && (
-                      <View style={[styles.newBadge, { backgroundColor: colors.primary }]}>
-                        <Text style={styles.newBadgeText}>NOVO</Text>
-                      </View>
-                    )}
+                    {(() => {
+                      const statusType = invitation.teamStatus === 'confirmed'
+                        ? 'success'
+                        : invitation.teamStatus === 'declined'
+                          ? 'danger'
+                          : 'warning';
+
+                      const statusText = !invitation.isRead
+                        ? 'NOVO'
+                        : invitation.teamStatus === 'confirmed'
+                          ? 'Confirmado'
+                          : invitation.teamStatus === 'declined'
+                            ? 'Recusado'
+                            : 'Pendente';
+
+                      return (
+                        <View
+                          style={[
+                            styles.statusPill,
+                            !invitation.isRead
+                              ? { backgroundColor: colors.primary }
+                              : statusType === 'success'
+                                ? styles.statusSuccess
+                                : statusType === 'danger'
+                                  ? styles.statusDanger
+                                  : styles.statusWarning,
+                          ]}
+                        >
+                          {!invitation.isRead ? (
+                            <Icon name="bolt" size={12} color="#FFFFFF" style={{ marginRight: 6 }} />
+                          ) : (
+                            <Icon
+                              name={statusType === 'success' ? 'check' : statusType === 'danger' ? 'close' : 'exclamation'}
+                              size={12}
+                              color="#FFFFFF"
+                              style={{ marginRight: 6 }}
+                            />
+                          )}
+                          <Text style={styles.statusText}>{statusText}</Text>
+                        </View>
+                      );
+                    })()}
                   </View>
                   <View style={styles.eventMetaRow}>
                     <Icon name="calendar" size={14} color={colors.primary} style={{ marginRight: 6 }} />
@@ -220,11 +314,37 @@ const HomeScreen = ({ navigation, route }) => {
                     </Text>
                   </View>
                   <View style={styles.eventMetaRow}>
-                    <Icon name="envelope" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+                    <Icon
+                      name={invitation.roleName ? 'user' : 'envelope'}
+                      size={14}
+                      color={colors.primary}
+                      style={{ marginRight: 6 }}
+                    />
                     <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
-                      Você foi convidado para este evento
+                      {invitation.roleName ? invitation.roleName : 'Você foi convidado para este evento'}
                     </Text>
                   </View>
+
+                  {invitation.teamStatus === 'pending' && (
+                    <View style={styles.buttonRow}>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.acceptButton]}
+                        onPress={() => handleInvitationResponse(invitation, 'confirmed')}
+                        activeOpacity={0.8}
+                      >
+                        <Icon name="check" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                        <Text style={styles.actionButtonText}>Aceitar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.declineButton]}
+                        onPress={() => handleInvitationResponse(invitation, 'declined')}
+                        activeOpacity={0.8}
+                      >
+                        <Icon name="close" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                        <Text style={styles.actionButtonText}>Recusar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </TouchableOpacity>
               ))
             )}
@@ -270,77 +390,6 @@ const HomeScreen = ({ navigation, route }) => {
           </>
         )}
 
-        {[
-          {
-            id: '1',
-            title: 'Culto Dominical',
-            date: '07/09/2024',
-            time: '19:00',
-            role: 'Guitarra',
-            status: 'Confirmado',
-            statusType: 'success',
-          },
-          {
-            id: '2',
-            title: 'Ensaio Geral',
-            date: '05/09/2024',
-            time: '19:30',
-            role: 'Guitarra',
-            status: 'Pendente',
-            statusType: 'warning',
-          },
-          {
-            id: '3',
-            title: 'Culto de Quarta',
-            date: '10/09/2024',
-            time: '20:00',
-            role: 'Backing Vocal',
-            status: 'Confirmado',
-            statusType: 'success',
-          },
-          {
-            id: '4',
-            title: 'Ensaio de Dança',
-            date: '12/09/2024',
-            time: '18:30',
-            role: 'Dança',
-            status: 'Pendente',
-            statusType: 'warning',
-          },
-        ].map((ev) => activeSegment === 'agenda' && (
-          <View key={ev.id} style={[styles.eventCard, isDarkMode && styles.eventCardDark]}>
-            <View style={styles.eventHeader}>
-              <View style={styles.eventIconCircle}>
-                <Icon name="music" size={18} color="#22A06B" />
-              </View>
-              <Text style={[styles.eventTitle, isDarkMode && styles.eventTitleDark]}>{ev.title}</Text>
-              <View style={[styles.statusPill, ev.statusType === 'success' ? styles.statusSuccess : styles.statusWarning]}>
-                <Icon name={ev.statusType === 'success' ? 'check' : 'exclamation'} size={12} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.statusText}>{ev.status}</Text>
-              </View>
-            </View>
-
-            <View style={styles.eventMetaRow}>
-              <Icon name="calendar" size={14} color="#1877F2" style={{ marginRight: 6 }} />
-              <Text style={[styles.eventMetaText, isDarkMode && styles.eventMetaTextDark]}>{ev.date} às {ev.time}</Text>
-            </View>
-            <View style={styles.eventMetaRow}>
-              <Icon name="user" size={14} color="#22A06B" style={{ marginRight: 6 }} />
-              <Text style={[styles.eventMetaText, isDarkMode && styles.eventMetaTextDark]}>{ev.role}</Text>
-            </View>
-
-            <View style={styles.buttonRow}>
-              <View style={[styles.actionButton, styles.acceptButton]}>
-                <Icon name="check" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.actionButtonText}>Aceitar</Text>
-              </View>
-              <View style={[styles.actionButton, styles.declineButton]}>
-                <Icon name="close" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.actionButtonText}>Recusar</Text>
-              </View>
-            </View>
-          </View>
-        ))}
       </View>
     </ScrollView>
     </TabScreenWrapper>
@@ -577,6 +626,7 @@ const styles = StyleSheet.create({
   },
   statusSuccess: { backgroundColor: '#22A06B' },
   statusWarning: { backgroundColor: '#F59E0B' },
+  statusDanger: { backgroundColor: '#E24C4C' },
   statusText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', fontFamily: 'Inter' },
   eventMetaRow: {
     flexDirection: 'row',

@@ -30,6 +30,7 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData }) => 
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [authStatus, setAuthStatus] = useState('pending');
   const [selectedTeams, setSelectedTeams] = useState([]);
   const [teams, setTeams] = useState([]);
   const [expandedTeamId, setExpandedTeamId] = useState(null);
@@ -53,6 +54,7 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData }) => 
       setEmail(personData.email || '');
       setPhone(personData.phone || '');
       setIsAdmin(personData.is_admin || false);
+      setAuthStatus(personData.auth_status || 'pending');
       setUserId(personData.id || null);
       
       // Carregar equipes da pessoa
@@ -167,6 +169,7 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData }) => 
     setEmail('');
     setPhone('');
     setIsAdmin(false);
+    setAuthStatus('pending');
     setSelectedTeams([]);
     setExpandedTeamId(null);
     setUserId(null);
@@ -226,6 +229,7 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData }) => 
         email: email.trim(),
         phone: phone.trim(),
         is_admin: isAdmin,
+        auth_status: authStatus,
         teams: selectedTeams
       };
       
@@ -360,6 +364,26 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData }) => 
                   onValueChange={setIsAdmin}
                   trackColor={{ false: '#767577', true: '#81b0ff' }}
                   thumbColor={isAdmin ? '#007AFF' : '#f4f3f4'}
+                  ios_backgroundColor="#3e3e3e"
+                />
+              </View>
+
+              {/* Toggle de Status de Ativação */}
+              <View style={styles.switchContainer}>
+                <View>
+                  <Text style={[styles.label, { color: colors.text }]}>Status</Text>
+                  <Text style={[styles.statusBadge, { 
+                    backgroundColor: authStatus === 'active' ? '#34C759' : '#FF9500',
+                    color: '#FFFFFF'
+                  }]}>
+                    {authStatus === 'active' ? 'Ativo' : 'Pendente'}
+                  </Text>
+                </View>
+                <Switch
+                  value={authStatus === 'active'}
+                  onValueChange={(value) => setAuthStatus(value ? 'active' : 'pending')}
+                  trackColor={{ false: '#FF9500', true: '#34C759' }}
+                  thumbColor="#f4f3f4"
                   ios_backgroundColor="#3e3e3e"
                 />
               </View>
@@ -591,6 +615,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+    alignSelf: 'flex-start',
   },
   teamsContainer: {
     marginTop: 8,

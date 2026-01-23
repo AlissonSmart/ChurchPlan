@@ -374,7 +374,6 @@ const TeamsScreen = ({ navigation }) => {
   
   const handleSavePerson = async (personData) => {
     try {
-      // Verificar novamente se o usuário está autenticado antes de salvar
       if (!user) {
         Alert.alert(
           'Erro de Autenticação', 
@@ -385,44 +384,33 @@ const TeamsScreen = ({ navigation }) => {
       }
       
       setLoading(true);
-      console.log('Adicionando nova pessoa:', personData);
+      console.log('Adicionando nova pessoa (sem Auth):', personData);
       
-      // 1. Primeiro criar o usuário no Auth
-      const authResult = await authService.createAuthUser(personData);
-      console.log('Usuário criado no Auth:', authResult.user.id);
-      
-      // 2. Adicionar o ID do usuário aos dados para criar o perfil
-      const profileData = {
-        ...personData,
-        id: authResult.user.id
-      };
-      
-      // 3. Criar o perfil usando o ID do usuário Auth
-      const newPerson = await profileService.createUser(profileData);
+      const newPerson = await profileService.createUser({
+        name: personData.name,
+        email: personData.email,
+        phone: personData.phone,
+        is_admin: personData.is_admin || false,
+        teams: personData.teams || []
+      });
     
       Alert.alert(
         'Sucesso', 
-        `Pessoa ${personData.name} adicionada com sucesso!`,
+        `Pessoa ${personData.name} adicionada com sucesso! Ela receberá um convite para se cadastrar.`,
         [{ text: 'OK' }]
       );
       
-      // Fechar o modal após salvar com sucesso
       setIsCreatePersonModalVisible(false);
-      
-      // Recarregar a lista de usuários
       loadUsers();
     } catch (error) {
       console.error('Erro ao adicionar pessoa:', error);
       
-      // Mostrar o erro real do banco de dados
       let errorMessage = `Erro: ${error.message || 'Desconhecido'}`;
       
-      // Adicionar detalhes do erro se disponíveis
       if (error.details) {
         errorMessage += `\n\nDetalhes: ${error.details}`;
       }
       
-      // Adicionar código do erro se disponível
       if (error.code) {
         errorMessage += `\n\nCódigo: ${error.code}`;
       }

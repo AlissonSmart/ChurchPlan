@@ -52,7 +52,8 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
         user_id: user.id,
         name: user.email?.split('@')[0] || 'Usuário',
         email: user.email,
-        role: user.role || 'Membro',
+        role: 'Membro',
+        profile_role: user.role || null,
         status: 'pending'
       }));
 
@@ -130,9 +131,11 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
           <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={[styles.userRole, { color: colors.primary }]} numberOfLines={1}>
-            {item.role}
-          </Text>
+          {!!item.profile_role && (
+            <Text style={[styles.userRole, { color: colors.primary }]} numberOfLines={1}>
+              {item.profile_role}
+            </Text>
+          )}
           {item.email && (
             <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>
               {item.email}

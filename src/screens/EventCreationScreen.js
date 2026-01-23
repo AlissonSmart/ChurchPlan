@@ -261,30 +261,147 @@ const EventCreationScreen = ({ navigation, route }) => {
   // Função para adicionar membro à equipe
   const handleAddTeamMember = async (member) => {
     try {
+      // Verificar se a pessoa já está na equipe
+      if (teamMembers.some(m => m.email === member.email)) {
+        Alert.alert('Atenção', 'Essa pessoa já está na equipe desse evento.');
+        return;
+      }
+
       // Se o evento já foi salvo, adicionar ao banco de dados e enviar convite
       if (eventId && eventData && member.user_id) {
-        // Buscar role_id baseado no nome da função
-        const { data: roleData, error: roleError } = await supabase
-          .from('roles')
-          .select('id')
-          .ilike('name', member.role)
-          .single();
+        // Resolver role automaticamente
+        let roleId = member.role_id || null;
 
-        if (roleError || !roleData) {
-          console.error('Erro ao buscar role:', roleError);
-          Alert.alert('Erro', 'Função não encontrada no sistema');
+        if (!roleId) {
+          const normalizedRole = (member?.role || '').trim();
+
+          const roleMap = {
+            'Membro': 'Vocal',
+            'Member': 'Vocal'
+          };
+
+          const resolvedRoleName = roleMap[normalizedRole] || normalizedRole;
+
+          const { data: rolesData, error: roleError } = await supabase
+            .from('roles')
+            .select('id')
+            .ilike('name', resolvedRoleName)
+            .order('created_at', { ascending: true })
+            .limit(1);
+
+          if (roleError) {
+            console.error('Erro ao buscar role:', roleError);
+            Alert.alert('Erro', 'Não foi possível buscar a função');
+            return;
+          }
+
+          if (!rolesData || rolesData.length === 0) {
+            console.error('Erro ao buscar role: nenhum resultado para', resolvedRoleName);
+
+            const { data: fallbackRoleData, error: fallbackRoleError } = await supabase
+              .from('roles')
+              .select('id')
+              .ilike('name', 'Vocal')
+              .order('created_at', { ascending: true })
+              .limit(1);
+
+            if (fallbackRoleError) {
+              console.error('Erro ao buscar role fallback:', fallbackRoleError);
+              Alert.alert('Erro', 'Não foi possível buscar uma função padrão');
+              return;
+            }
+
+            if (!fallbackRoleData || fallbackRoleData.length === 0) {
+              const { data: anyRoleData, error: anyRoleError } = await supabase
+                .from('roles')
+                .select('id')
+                .order('created_at', { ascending: true })
+                .limit(1);
+
+              if (anyRoleError || !anyRoleData || anyRoleData.length === 0) {
+                console.error('Nenhuma role disponível para fallback:', anyRoleError);
+                Alert.alert('Erro', 'Nenhuma função cadastrada no sistema');
+                return;
+              }
+
+              roleId = anyRoleData[0].id;
+            } else {
+              roleId = fallbackRoleData[0].id;
+            }
+
+            // Role resolvida via fallback
+          } else {
+            const roleData = rolesData[0];
+            roleId = roleData.id;
+          }
+        }
+
+        // Buscar voluntário pelo vínculo com o usuário
+        let { data: volunteerData, error: volunteerError } = await supabase
+          .from('volunteers')
+          .select('id')
+          .eq('user_id', member.user_id)
+          .maybeSingle();
+
+        if (volunteerError && volunteerError.code !== 'PGRST116') {
+          console.error('Erro ao buscar voluntário:', volunteerError);
+          Alert.alert('Erro', 'Não foi possível buscar o voluntário');
           return;
         }
 
-        // Adicionar membro à equipe do evento no banco de dados
-        const teamMember = await eventService.addTeamMember(
-          eventId,
-          member.id,
-          roleData.id
-        );
+        // Fallback: localizar por email
+        if (!volunteerData && member.email) {
+          const { data: volunteerByEmail, error: volunteerByEmailError } = await supabase
+            .from('volunteers')
+            .select('id')
+            .eq('email', member.email)
+            .maybeSingle();
+
+          if (volunteerByEmailError && volunteerByEmailError.code !== 'PGRST116') {
+            console.error('Erro ao buscar voluntário por email:', volunteerByEmailError);
+          }
+
+          if (!volunteerByEmailError && volunteerByEmail) {
+            volunteerData = volunteerByEmail;
+          }
+        }
+
+        // Se ainda não existe, criar automaticamente
+        if (!volunteerData) {
+          const fullName = (member.name || member.email?.split('@')[0] || '').trim();
+          const nameParts = fullName.split(' ').filter(Boolean);
+          const firstName = nameParts[0] || 'Sem';
+          const lastName = nameParts.slice(1).join(' ') || 'Nome';
+
+          const { data: createdVolunteer, error: createVolunteerError } = await supabase
+            .from('volunteers')
+            .insert([
+              {
+                user_id: member.user_id,
+                first_name: firstName,
+                last_name: lastName,
+                email: member.email || null,
+                is_active: true,
+              },
+            ])
+            .select('id')
+            .single();
+
+          if (createVolunteerError) {
+            console.error('Erro ao criar voluntário automaticamente:', createVolunteerError);
+            Alert.alert('Erro', 'Não foi possível cadastrar o voluntário automaticamente');
+            return;
+          }
+
+          volunteerData = createdVolunteer;
+        }
+
+        const volunteerId = volunteerData.id;
+
+        await eventService.addTeamMember(eventId, volunteerId, roleId);
 
         // Enviar convite
-        await sendEventInvitation(member.user_id, member.name, member.id, roleData.id);
+        await sendEventInvitation(member.user_id, member.name, volunteerId, roleId);
 
         // Recarregar lista de membros
         await loadEventTeam();
@@ -305,6 +422,47 @@ const EventCreationScreen = ({ navigation, route }) => {
       console.error('Erro ao adicionar membro:', error);
       Alert.alert('Erro', 'Não foi possível adicionar o membro');
     }
+  };
+
+  const handleChangeTeamMemberStatus = (member) => {
+    if (!member?.id) return;
+
+    Alert.alert(
+      'Status do convite',
+      'Selecione o novo status:',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Não Enviado',
+          onPress: async () => {
+            await eventService.updateTeamMemberStatus(member.id, 'not_sent');
+            await loadEventTeam();
+          },
+        },
+        {
+          text: 'Pendente',
+          onPress: async () => {
+            await eventService.updateTeamMemberStatus(member.id, 'pending');
+            await loadEventTeam();
+          },
+        },
+        {
+          text: 'Confirmado',
+          onPress: async () => {
+            await eventService.updateTeamMemberStatus(member.id, 'confirmed');
+            await loadEventTeam();
+          },
+        },
+        {
+          text: 'Recusado',
+          style: 'destructive',
+          onPress: async () => {
+            await eventService.updateTeamMemberStatus(member.id, 'declined');
+            await loadEventTeam();
+          },
+        },
+      ]
+    );
   };
 
   // Função para enviar convite ao adicionar membro à equipe
@@ -350,10 +508,10 @@ const EventCreationScreen = ({ navigation, route }) => {
       }
 
       console.log(`Convite enviado para ${memberName}`);
-      Alert.alert('Sucesso', `Convite enviado para ${memberName}!`);
     } catch (error) {
       console.error('Erro ao enviar convite:', error);
       Alert.alert('Erro', 'Não foi possível enviar o convite');
+      return;
     }
   };
 
@@ -781,9 +939,18 @@ const EventCreationScreen = ({ navigation, route }) => {
           
           {activeTab === 'team' && (
             <View style={styles.teamContainer}>
-              <View style={styles.teamContent}>
+              <View style={[styles.teamContent, { backgroundColor: colors.background }]}>
                 {teamMembers.length === 0 ? (
-                  <View style={styles.emptyTeamContainer}>
+                  <View
+                    style={[
+                      styles.emptyTeamContainer,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: colors.border,
+                        borderWidth: isDarkMode ? 1 : 0,
+                      },
+                    ]}
+                  >
                     <FontAwesome name="users" size={48} color={colors.textSecondary} style={{ opacity: 0.3, marginBottom: 16 }} />
                     <Text style={[styles.emptyTeamText, { color: colors.text }]}>Nenhum membro adicionado</Text>
                     <Text style={[styles.emptyTeamSubText, { color: colors.textSecondary }]}>Toque no botão + para adicionar membros à equipe</Text>
@@ -800,17 +967,24 @@ const EventCreationScreen = ({ navigation, route }) => {
                         </View>
                         
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                          <View style={[
-                            member.status === 'confirmed' ? styles.confirmBadge :
-                            member.status === 'pending' ? styles.pendingBadge :
-                            styles.notSentBadge
-                          ]}>
-                            <Text style={styles.badgeText}>
-                              {member.status === 'confirmed' ? 'Confirmado' :
-                               member.status === 'pending' ? 'Pendente' :
-                               'Não Enviado'}
-                            </Text>
-                          </View>
+                          <TouchableOpacity
+                            onPress={() => handleChangeTeamMemberStatus(member)}
+                            activeOpacity={0.7}
+                          >
+                            <View style={[
+                              member.status === 'confirmed' ? styles.confirmBadge :
+                              member.status === 'pending' ? styles.pendingBadge :
+                              member.status === 'declined' ? styles.declinedBadge :
+                              styles.notSentBadge
+                            ]}>
+                              <Text style={styles.badgeText}>
+                                {member.status === 'confirmed' ? 'Confirmado' :
+                                 member.status === 'pending' ? 'Pendente' :
+                                 member.status === 'declined' ? 'Recusado' :
+                                 'Não Enviado'}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
                           <TouchableOpacity onPress={() => handleRemoveTeamMember(member.id)}>
                             <FontAwesome name="trash-o" size={18} color={colors.danger} />
                           </TouchableOpacity>
@@ -1408,6 +1582,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
   },
   emptyTeamText: {
     fontSize: 18,
@@ -1953,7 +2130,7 @@ const styles = StyleSheet.create({
   },
   teamContent: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: 'transparent',
   },
   teamSection: {
     marginBottom: 20,
@@ -1995,6 +2172,12 @@ const styles = StyleSheet.create({
   },
   pendingBadge: {
     backgroundColor: '#FF9800',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  declinedBadge: {
+    backgroundColor: '#F44336',
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 4,

@@ -1,4 +1,4 @@
-import supabase from './supabase';
+import supabase, { SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase';
 import storage from '../utils/storage';
 
 /**
@@ -18,6 +18,7 @@ const authService = {
         throw new Error('Senha não fornecida para criar usuário');
       }
       console.log('Usando senha fornecida pelo usuário');
+
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -39,6 +40,9 @@ const authService = {
       console.log('Usuário criado com sucesso no Auth:', data.user.id);
       return data;
     } catch (error) {
+      if (typeof error?.message === 'string' && error.message.includes('Unexpected character: <')) {
+        throw new Error('Falha ao criar usuário: a resposta do servidor não é JSON (parece HTML). Verifique se o SUPABASE_URL está correto e se a rede/Wi‑Fi não está interceptando a conexão (portal/captive/proxy).');
+      }
       console.error('Erro ao criar usuário no Auth:', error);
       throw error;
     }
