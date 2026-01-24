@@ -39,7 +39,7 @@ const HomeScreen = ({ navigation, route }) => {
     };
   }, [setShowLargeTitle]);
 
-  // Carregar AGENDA (event_team com profiles.user_id)
+  // Carregar AGENDA (event_team com profile_id)
   const loadAgenda = async () => {
     try {
       setLoading(true);
@@ -54,7 +54,7 @@ const HomeScreen = ({ navigation, route }) => {
 
       console.log('[AGENDA] User ID:', user.id);
 
-      // 1) tenta achar profile pelo user_id
+      // 1) Buscar profile pelo user_id
       let { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -64,7 +64,7 @@ const HomeScreen = ({ navigation, route }) => {
       console.log('[AGENDA] Profile encontrado por user_id:', profile);
 
       if (!profile) {
-        // 2) se não achou, tenta achar pelo email (perfil pendente criado pelo admin)
+        // 2) Se não achou, tentar achar pelo email (perfil pendente criado pelo admin)
         const { data: profileByEmail, error: emailError } = await supabase
           .from('profiles')
           .select('*')
@@ -75,7 +75,7 @@ const HomeScreen = ({ navigation, route }) => {
 
         profile = profileByEmail;
 
-        // 3) se achou pelo email mas sem user_id, apenas ATUALIZA (não insere)
+        // 3) Se achou pelo email mas sem user_id, ATUALIZAR (não inserir)
         if (profile && !profile.user_id) {
           console.log('[AGENDA] Atualizando profile existente com user_id:', user.id);
           
@@ -99,7 +99,7 @@ const HomeScreen = ({ navigation, route }) => {
         }
       }
 
-      // 4) se ainda não existir profile nenhum, aí sim cria um novo
+      // 4) Se ainda não existir profile nenhum, criar um novo
       if (!profile) {
         console.log('[AGENDA] Criando profile automaticamente para user:', user.id);
 
@@ -134,18 +134,16 @@ const HomeScreen = ({ navigation, route }) => {
       const profileId = profile.id;
       console.log('[AGENDA] Profile ID final:', profileId);
 
-      // Buscar eventos da agenda via event_team.user_id
+      // Buscar eventos da agenda via event_team.profile_id
       const { data: eventTeamRows, error: eventTeamError } = await supabase
         .from('event_team')
         .select(`
           id,
           status,
-          event:events(id, title, event_date, event_time)
+          event:events(id, title, event_date, event_time, location)
         `)
-        .eq('user_id', profileId);
-
-      console.log('[AGENDA] Event_team rows (TODOS):', eventTeamRows);
-      console.log('[AGENDA] Total de registros em event_team:', eventTeamRows?.length || 0);
+        .eq('profile_id', profileId)
+        .in('status', ['pending', 'accepted', 'confirmed']);
 
       if (eventTeamError) {
         console.error('[AGENDA] Erro ao buscar agenda:', eventTeamError);
@@ -154,32 +152,22 @@ const HomeScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Filtrar pending e confirmed
-      const filteredRows = (eventTeamRows || []).filter(row => 
-        row.status === 'pending' || row.status === 'confirmed' || row.status === 'accepted'
-      );
+      console.log('[AGENDA] Event_team rows:', eventTeamRows || []);
+      console.log('[AGENDA] Total de registros em event_team:', eventTeamRows?.length || 0);
 
-      console.log('[AGENDA] Após filtrar pending/confirmed/accepted:', filteredRows);
-      console.log('[AGENDA] Total após filtro:', filteredRows.length);
-
-      // Dedupe por event.id
-      const uniqueEvents = filteredRows.filter(
-        (v, i, a) => a.findIndex(t => t.event?.id === v.event?.id) === i
-      );
-
-      console.log('[AGENDA] Após dedupe:', uniqueEvents);
-
-      // Formatar para exibição
-      const formattedItems = uniqueEvents.map(member => ({
-        id: member.id,
-        eventId: member.event?.id,
-        eventName: member.event?.title,
-        eventDate: member.event?.event_date,
-        eventTime: member.event?.event_time,
-        eventTeamId: member.id,
-        teamStatus: member.status,
-        isRead: true,
-      }));
+      // Formatar para exibição (filtro já aplicado na query)
+      const formattedItems = (eventTeamRows || [])
+        .filter(row => row.event) // Garantir que o evento existe
+        .map(row => ({
+          id: row.event.id,
+          eventTeamId: row.id,
+          eventName: row.event.title,
+          eventDate: row.event.event_date,
+          eventTime: row.event.event_time,
+          location: row.event.location,
+          teamStatus: row.status,
+          isRead: true,
+        }));
 
       console.log('[AGENDA] Items formatados:', formattedItems);
 

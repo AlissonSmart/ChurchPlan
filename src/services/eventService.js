@@ -183,6 +183,8 @@ const eventService = {
    */
   async addTeamMember({ eventId, profileId, roleId, ministryId, invitedBy }) {
     try {
+      console.log('[EVENT_TEAM] Adicionando membro:', { eventId, profileId, roleId, ministryId, invitedBy });
+      
       const { data, error } = await supabase
         .from('event_team')
         .insert({
@@ -191,20 +193,26 @@ const eventService = {
           role_id: roleId,
           ministry_id: ministryId ?? null,
           status: 'pending',
-          user_id: invitedBy || null,
+          user_id: invitedBy ?? null,
         })
         .select(`
           id,
           status,
+          profile:profiles(id, name, email, avatar_url),
           role:roles(id, name),
-          profile:profiles(id, name, email)
+          ministry:ministries(id, name)
         `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.log('[EVENT_TEAM] Erro ao adicionar membro:', error);
+        throw error;
+      }
+
+      console.log('[EVENT_TEAM] Membro adicionado com sucesso:', data);
       return data;
     } catch (error) {
-      console.error('Erro ao adicionar membro à equipe:', error);
+      console.error('[EVENT_TEAM] Erro ao adicionar membro à equipe:', error);
       throw error;
     }
   },

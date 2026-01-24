@@ -144,7 +144,7 @@ const EventCreationScreen = ({ navigation, route }) => {
 
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, name, email')
+        .select('id, name, email, avatar_url')
         .in('id', profileIds);
 
       const { data: roles } = await supabase
@@ -164,6 +164,7 @@ const EventCreationScreen = ({ navigation, route }) => {
           profile_id: member.profile_id,
           name: profile?.name || 'Usuário',
           email: profile?.email || '',
+          avatar_url: profile?.avatar_url || null,
           role: role?.name || 'Sem função',
           status: member.status || 'not_sent',
           highlighted: member.is_highlighted || false
@@ -277,14 +278,16 @@ const EventCreationScreen = ({ navigation, route }) => {
   // Função para adicionar membro à equipe
   const handleAddTeamMember = async (member) => {
     try {
-      // Verificar se a pessoa já está na equipe (comparar por user_id)
-      if (teamMembers.some(m => m.user_id === member.user_id)) {
+      console.log('[ADD_MEMBER] Membro recebido:', member);
+      
+      // Verificar se a pessoa já está na equipe (comparar por profile_id)
+      if (teamMembers.some(m => m.profile_id === member.id)) {
         Alert.alert('Atenção', 'Essa pessoa já está na equipe desse evento.');
         return;
       }
 
       // Se o evento já foi salvo, adicionar ao banco de dados e enviar convite
-      if (eventId && eventData && member.user_id) {
+      if (eventId && eventData && member.id) {
         // Resolver role automaticamente
         let roleId = member.role_id || null;
 
@@ -352,75 +355,12 @@ const EventCreationScreen = ({ navigation, route }) => {
           }
         }
 
-        // Buscar profile do usuário por user_id
-        let { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', member.user_id)
-          .maybeSingle();
-
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error('Erro ao buscar profile por user_id:', profileError);
-          Alert.alert('Erro', 'Não foi possível buscar o perfil do usuário');
-          return;
-        }
-
-        // Se não existe profile por user_id, tentar buscar por email
-        if (!profileData && member.email) {
-          console.log('Profile não encontrado por user_id, buscando por email:', member.email);
-          
-          const { data: profileByEmail, error: emailError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', member.email)
-            .maybeSingle();
-
-          if (emailError && emailError.code !== 'PGRST116') {
-            console.error('Erro ao buscar profile por email:', emailError);
-          }
-
-          if (profileByEmail) {
-            profileData = profileByEmail;
-            console.log('Profile encontrado por email com ID:', profileData.id);
-            
-            // Atualizar user_id se estiver vazio
-            if (!profileByEmail.user_id) {
-              await supabase
-                .from('profiles')
-                .update({ user_id: member.user_id })
-                .eq('id', profileByEmail.id);
-            }
-          }
-        }
-
-        // Se ainda não existe profile, criar automaticamente
-        if (!profileData) {
-          console.log('Criando profile automaticamente para user:', member.user_id);
-          
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              name: member.name || member.email?.split('@')[0] || 'Usuário',
-              email: member.email,
-              user_id: member.user_id,
-            })
-            .select('id')
-            .single();
-
-          if (createError) {
-            console.error('Erro ao criar profile:', createError);
-            Alert.alert('Erro', 'Não foi possível criar o perfil do usuário');
-            return;
-          }
-
-          profileData = newProfile;
-          console.log('Profile criado com ID:', profileData.id);
-        }
-
-        const profileId = profileData.id;
+        const profileId = member.id; // member.id já é o profiles.id do AddTeamMemberModal
+        console.log('[ADD_MEMBER] Profile ID:', profileId);
 
         // Buscar user atual para invitedBy
         const { data: { user }, error: authError } = await supabase.auth.getUser();
+        console.log('[ADD_MEMBER] User autenticado (invitedBy):', user?.id);
 
         // Inserir em event_team usando profile_id (OBRIGATÓRIO)
         const { error: insertError } = await supabase
@@ -434,13 +374,15 @@ const EventCreationScreen = ({ navigation, route }) => {
           }]);
 
         if (insertError) {
-          console.error('Erro ao adicionar membro:', insertError);
+          console.error('[ADD_MEMBER] Erro ao adicionar membro:', insertError);
           Alert.alert('Erro', 'Não foi possível adicionar o membro à equipe');
           return;
         }
 
-        // Enviar convite
-        await sendEventInvitation(member.user_id, member.name, profileId, roleId);
+        console.log('[ADD_MEMBER] Membro adicionado com sucesso em event_team');
+
+        // Enviar convite (notificação)
+        await sendEventInvitation(member.id, member.name, profileId, roleId);
 
         // Recarregar lista de membros
         await loadEventTeam();
@@ -1066,6 +1008,19 @@ const EventCreationScreen = ({ navigation, route }) => {
                       console.log('Renderizando membro:', { name: member.name, role: member.role });
                       return (
                         <View key={member.id} style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
+                          {member.avatar_url ? (
+                            <Image
+                              source={{ uri: member.avatar_url }}
+                              style={styles.memberAvatar}
+                            />
+                          ) : (
+                            <View style={[styles.memberAvatar, { backgroundColor: colors.primary + '20' }]}>
+                              <Text style={[styles.memberInitials, { color: colors.primary }]}>
+                                {member.name.substring(0, 2).toUpperCase()}
+                              </Text>
+                            </View>
+                          )}
+                          
                           <View style={styles.memberInfo}>
                             <Text style={[styles.memberName, { color: colors.text }]} numberOfLines={1}>{member.name || 'Sem nome'}</Text>
                             <Text style={[styles.memberRole, { color: colors.textSecondary }]} numberOfLines={1}>{member.role || 'Sem função'}</Text>
@@ -2257,6 +2212,18 @@ const styles = StyleSheet.create({
   },
   highlightedMember: {
     backgroundColor: 'rgba(255, 152, 0, 0.1)',
+  },
+  memberAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  memberInitials: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   memberInfo: {
     flex: 1,

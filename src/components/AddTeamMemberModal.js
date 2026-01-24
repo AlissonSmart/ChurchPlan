@@ -9,7 +9,8 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
-  Modal
+  Modal,
+  Image
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
@@ -36,9 +37,9 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
       // Buscar usuários ativos cadastrados na tabela profiles
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, role')
+        .select('id, name, email, avatar_url')
         .eq('is_active', true)
-        .order('email', { ascending: true });
+        .order('name', { ascending: true });
 
       if (error) {
         console.error('Erro ao buscar profiles:', error);
@@ -51,10 +52,10 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
       const formattedUsers = (data || []).map(user => ({
         id: user.id,
         user_id: user.id,
-        name: user.email?.split('@')[0] || 'Usuário',
+        name: user.name || user.email?.split('@')[0] || 'Usuário',
         email: user.email,
+        avatar_url: user.avatar_url,
         role: 'Membro',
-        profile_role: user.role || null,
         status: 'pending'
       }));
 
@@ -123,20 +124,22 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
         onPress={() => handleSelectUser(item)}
         activeOpacity={0.7}
       >
-        <View style={[styles.userAvatar, { backgroundColor: colors.primary + '20' }]}>
-          <Text style={[styles.userInitials, { color: colors.primary }]}>
-            {item.name.substring(0, 2).toUpperCase()}
-          </Text>
-        </View>
+        {item.avatar_url ? (
+          <Image
+            source={{ uri: item.avatar_url }}
+            style={styles.userAvatar}
+          />
+        ) : (
+          <View style={[styles.userAvatar, { backgroundColor: colors.primary + '20' }]}>
+            <Text style={[styles.userInitials, { color: colors.primary }]}>
+              {item.name.substring(0, 2).toUpperCase()}
+            </Text>
+          </View>
+        )}
         <View style={styles.userInfo}>
           <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
             {item.name}
           </Text>
-          {!!item.profile_role && (
-            <Text style={[styles.userRole, { color: colors.primary }]} numberOfLines={1}>
-              {item.profile_role}
-            </Text>
-          )}
           {item.email && (
             <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>
               {item.email}
