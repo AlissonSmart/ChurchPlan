@@ -133,7 +133,7 @@ const SelectSongModal = ({ visible, onClose, onSelect }) => {
 
         {/* Lista de Músicas */}
         {loading ? (
-          <View style={styles.loadingContainer}>
+          <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
               Carregando músicas...

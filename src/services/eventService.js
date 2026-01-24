@@ -42,7 +42,6 @@ const eventService = {
             step_items:step_items(*)
           ),
           event_team:event_team(*,
-            volunteer:volunteers(*),
             role:roles(*)
           ),
           event_songs:event_songs(*,
@@ -174,24 +173,32 @@ const eventService = {
 
   /**
    * Adicionar membro à equipe do evento
-   * @param {string} eventId - ID do evento
-   * @param {string} volunteerId - ID do voluntário
-   * @param {string} roleId - ID da função
-   * @param {string} ministryId - ID do ministério (opcional)
+   * @param {Object} params - Parâmetros
+   * @param {string} params.eventId - ID do evento
+   * @param {string} params.profileId - ID do profile (OBRIGATÓRIO)
+   * @param {string} params.roleId - ID da função
+   * @param {string} params.ministryId - ID do ministério (opcional)
+   * @param {string} params.invitedBy - ID do usuário que está criando o convite (opcional)
    * @returns {Promise<Object>} Membro adicionado
    */
-  async addTeamMember(eventId, volunteerId, roleId, ministryId = null) {
+  async addTeamMember({ eventId, profileId, roleId, ministryId, invitedBy }) {
     try {
       const { data, error } = await supabase
         .from('event_team')
-        .insert([{
+        .insert({
           event_id: eventId,
-          volunteer_id: volunteerId,
+          profile_id: profileId,
           role_id: roleId,
-          ministry_id: ministryId,
-          status: 'not_sent'
-        }])
-        .select()
+          ministry_id: ministryId ?? null,
+          status: 'pending',
+          user_id: invitedBy || null,
+        })
+        .select(`
+          id,
+          status,
+          role:roles(id, name),
+          profile:profiles(id, name, email)
+        `)
         .single();
 
       if (error) throw error;
@@ -213,7 +220,6 @@ const eventService = {
         .from('event_team')
         .select(`
           *,
-          volunteer:volunteers(*),
           role:roles(*)
         `)
         .eq('event_id', eventId);

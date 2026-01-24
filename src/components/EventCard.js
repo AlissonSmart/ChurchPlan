@@ -9,10 +9,10 @@ import theme from '../styles/theme';
  * @param {Object} props.event - Dados do evento
  * @param {Function} props.onEdit - Função chamada ao editar o evento
  * @param {Function} props.onDuplicate - Função chamada ao duplicar o evento
- * @param {Function} props.onSaveTemplate - Função chamada ao salvar o evento como template
+ * @param {Function} props.onDelete - Função chamada ao deletar o evento
  * @returns {React.ReactNode}
  */
-const EventCard = ({ event, onEdit, onDuplicate, onSaveTemplate }) => {
+const EventCard = ({ event, onEdit, onDuplicate, onDelete }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
   
@@ -38,18 +38,6 @@ const EventCard = ({ event, onEdit, onDuplicate, onSaveTemplate }) => {
         </View>
       </View>
       
-      <View style={styles.eventStats}>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{event.songsCount}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>músicas</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{event.membersCount}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>membros</Text>
-        </View>
-      </View>
-      
       <View style={styles.eventActions}>
         <TouchableOpacity 
           style={styles.actionButton} 
@@ -61,18 +49,18 @@ const EventCard = ({ event, onEdit, onDuplicate, onSaveTemplate }) => {
         
         <TouchableOpacity 
           style={styles.actionButton} 
-          onPress={() => onSaveTemplate(event.id)}
-        >
-          <FontAwesome name="save" size={16} color={colors.textSecondary} />
-          <Text style={[styles.actionText, { color: colors.textSecondary }]}>Salvar Template</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.actionButton} 
           onPress={() => onEdit(event.id)}
         >
           <FontAwesome name="pencil" size={16} color="#1877F2" />
           <Text style={[styles.actionText, { color: "#1877F2" }]}>Editar</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.actionButton} 
+          onPress={() => onDelete(event.id)}
+        >
+          <FontAwesome name="trash" size={16} color="#FF3B30" />
+          <Text style={[styles.actionText, { color: "#FF3B30" }]}>Deletar</Text>
         </TouchableOpacity>
       </View>
     </View>

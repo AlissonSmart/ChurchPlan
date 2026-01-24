@@ -156,6 +156,50 @@ const authService = {
   },
 
   /**
+   * Registra um novo usuário com email e senha (com logs de debug)
+   * @param {Object} params - { name, email, password }
+   * @returns {Promise} - Resultado da operação de registro
+   */
+  signUpWithEmailPtBr: async ({ name, email, password }) => {
+    const cleanEmail = email.trim().toLowerCase();
+    
+    console.log('=== SIGNUP DEBUG ===');
+    console.log('Email original:', email);
+    console.log('Email limpo:', cleanEmail);
+    console.log('Password length:', password.length);
+
+    const { data, error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: {
+        data: { name }
+      }
+    });
+
+    console.log('SIGNUP data:', JSON.stringify(data, null, 2));
+    console.log('SIGNUP error:', JSON.stringify(error, null, 2));
+
+    if (error) throw error;
+
+    // Criar profile
+    if (data?.user?.id) {
+      try {
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          email: cleanEmail,
+          name,
+          is_admin: false,
+          is_active: true,
+        });
+      } catch (e) {
+        console.warn('Profile error (não crítico):', e);
+      }
+    }
+
+    return data;
+  },
+
+  /**
    * Registra um novo usuário
    * @param {string} email - Email do usuário
    * @param {string} password - Senha do usuário
@@ -181,6 +225,34 @@ const authService = {
         throw new Error('Resposta inválida ao registrar usuário');
       }
       console.log('Usuário registrado com sucesso:', data.user.id);
+
+      // Sincronizar perfil em profiles após criar auth user
+      try {
+        console.log('Sincronizando perfil para email:', email);
+        const { error: upsertError } = await supabase
+          .from('profiles')
+          .upsert(
+            {
+              email: email,
+              name: userData.name || email.split('@')[0],
+              auth_status: 'active',
+              is_active: true,
+            },
+            { onConflict: 'email' }
+          );
+
+        if (upsertError) {
+          console.error('Erro ao sincronizar perfil:', upsertError);
+          throw upsertError;
+        }
+
+        console.log('Perfil sincronizado com sucesso para:', email);
+      } catch (upsertError) {
+        console.error('Erro ao sincronizar perfil após signUp:', upsertError);
+        // Não lançar erro aqui, pois o auth user já foi criado
+        // O perfil pode ser sincronizado depois se necessário
+      }
+
       return { user: data.user, session: data.session };
     } catch (error) {
       console.error('Erro ao registrar usuário:', error);

@@ -7,9 +7,9 @@ import {
   Alert,
   useColorScheme,
 } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import authService from '../services/authService';
 import KeyboardAvoidingWrapper from '../components/KeyboardAvoidingWrapper';
 import AuthInput from '../components/AuthInput';
 import GradientButton from '../components/GradientButton';
@@ -21,7 +21,6 @@ const SignUpScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signUp } = useAuth();
   const insets = useSafeAreaInsets();
   const isDarkMode = useColorScheme() === 'dark';
   
@@ -47,28 +46,15 @@ const SignUpScreen = ({ navigation }) => {
 
     try {
       setIsLoading(true);
-      await signUp(email, password, { name });
+      await authService.signUpWithEmailPtBr({ name, email, password });
       Alert.alert(
-        'Conta criada com sucesso!',
-        'Sua conta foi criada e você já pode fazer login. Se você foi convidado para um evento, sua conta será automaticamente vinculada ao seu perfil.',
+        'Conta criada',
+        'Sua conta foi criada com sucesso. Agora você já pode entrar.',
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
     } catch (error) {
-      // Tratamento específico de erros
-      let errorMessage = 'Ocorreu um erro ao criar sua conta. Tente novamente.';
-      
-      if (error?.message?.includes('already registered')) {
-        errorMessage = 'Este email já está registrado. Use a opção "Entrar" para fazer login.';
-      } else if (error?.message?.includes('Invalid email')) {
-        errorMessage = 'Email inválido. Verifique e tente novamente.';
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert(
-        'Erro ao criar conta',
-        errorMessage
-      );
+      console.error('SIGNUP ERROR NO SCREEN:', error);
+      Alert.alert('Erro ao criar conta', error.message || 'Erro desconhecido');
     } finally {
       setIsLoading(false);
     }
@@ -109,6 +95,8 @@ const SignUpScreen = ({ navigation }) => {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            textContentType="none"
+            autoComplete="off"
             icon="envelope"
           />
 

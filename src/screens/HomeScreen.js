@@ -26,7 +26,7 @@ const HomeScreen = ({ navigation, route }) => {
   const lastLargeTitleState = useRef(true);
 
   // Estados para convites/eventos
-  const [invitations, setInvitations] = useState([]);
+  const [allAgendaItems, setAllAgendaItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -39,87 +39,154 @@ const HomeScreen = ({ navigation, route }) => {
     };
   }, [setShowLargeTitle]);
 
-  // Carregar convites de eventos
-  const loadInvitations = async () => {
+  // Carregar AGENDA (event_team com profiles.user_id)
+  const loadAgenda = async () => {
     try {
       setLoading(true);
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
-      if (authError) {
-        console.error('Erro de autenticação:', authError);
-        setLoading(false);
-        return;
-      }
-      
-      if (!user) {
-        console.log('Nenhum usuário autenticado');
+      if (authError || !user) {
+        console.error('[AGENDA] Erro de autenticação:', authError);
+        setAllAgendaItems([]);
         setLoading(false);
         return;
       }
 
-      // Buscar notificações de convite de evento
-      const notifications = await notificationService.getUserNotifications(user.id);
-      
-      if (!notifications || notifications.length === 0) {
-        setInvitations([]);
-        setLoading(false);
-        return;
-      }
-      
-      const eventInvitations = notifications.filter(n => n && n.type === 'event_invitation');
+      console.log('[AGENDA] User ID:', user.id);
 
-      const eventIds = eventInvitations
-        .map(inv => inv?.event_id)
-        .filter(Boolean);
+      // 1) tenta achar profile pelo user_id
+      let { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      let eventTeamByEventId = {};
+      console.log('[AGENDA] Profile encontrado por user_id:', profile);
 
-      if (eventIds.length > 0) {
-        const { data: volunteerRow, error: volunteerError } = await supabase
-          .from('volunteers')
-          .select('id')
-          .eq('user_id', user.id)
+      if (!profile) {
+        // 2) se não achou, tenta achar pelo email (perfil pendente criado pelo admin)
+        const { data: profileByEmail, error: emailError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', user.email)
           .maybeSingle();
 
-        if (volunteerError && volunteerError.code !== 'PGRST116') {
-          console.error('Erro ao buscar volunteer do usuário:', volunteerError);
-        }
+        console.log('[AGENDA] Profile encontrado por email:', profileByEmail);
 
-        if (volunteerRow?.id) {
-          const { data: eventTeamRows, error: eventTeamError } = await supabase
-            .from('event_team')
-            .select('id, event_id, status, roles:role_id(name)')
-            .eq('volunteer_id', volunteerRow.id)
-            .in('event_id', eventIds);
+        profile = profileByEmail;
 
-          if (eventTeamError) {
-            console.error('Erro ao buscar event_team para convites:', eventTeamError);
+        // 3) se achou pelo email mas sem user_id, apenas ATUALIZA (não insere)
+        if (profile && !profile.user_id) {
+          console.log('[AGENDA] Atualizando profile existente com user_id:', user.id);
+          
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              user_id: user.id,
+              auth_status: 'active',
+              is_active: true,
+            })
+            .eq('id', profile.id)
+            .select()
+            .single();
+
+          if (!updateError) {
+            profile = updatedProfile;
+            console.log('[AGENDA] Profile atualizado com ID:', profile.id);
           } else {
-            (eventTeamRows || []).forEach(row => {
-              eventTeamByEventId[row.event_id] = row;
-            });
+            console.log('[AGENDA] Erro ao atualizar profile:', updateError);
           }
         }
       }
-      
+
+      // 4) se ainda não existir profile nenhum, aí sim cria um novo
+      if (!profile) {
+        console.log('[AGENDA] Criando profile automaticamente para user:', user.id);
+
+        const displayName =
+          user.user_metadata?.name ||
+          user.user_metadata?.full_name ||
+          (user.email ? user.email.split('@')[0] : 'Usuário');
+
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            name: displayName,
+            email: user.email,
+            user_id: user.id,
+            auth_status: 'active',
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (!insertError) {
+          profile = newProfile;
+          console.log('[AGENDA] Profile criado com ID:', profile.id);
+        } else {
+          console.log('[AGENDA] Erro ao criar profile:', insertError);
+          setAllAgendaItems([]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const profileId = profile.id;
+      console.log('[AGENDA] Profile ID final:', profileId);
+
+      // Buscar eventos da agenda via event_team.user_id
+      const { data: eventTeamRows, error: eventTeamError } = await supabase
+        .from('event_team')
+        .select(`
+          id,
+          status,
+          event:events(id, title, event_date, event_time)
+        `)
+        .eq('user_id', profileId);
+
+      console.log('[AGENDA] Event_team rows (TODOS):', eventTeamRows);
+      console.log('[AGENDA] Total de registros em event_team:', eventTeamRows?.length || 0);
+
+      if (eventTeamError) {
+        console.error('[AGENDA] Erro ao buscar agenda:', eventTeamError);
+        setAllAgendaItems([]);
+        setLoading(false);
+        return;
+      }
+
+      // Filtrar pending e confirmed
+      const filteredRows = (eventTeamRows || []).filter(row => 
+        row.status === 'pending' || row.status === 'confirmed' || row.status === 'accepted'
+      );
+
+      console.log('[AGENDA] Após filtrar pending/confirmed/accepted:', filteredRows);
+      console.log('[AGENDA] Total após filtro:', filteredRows.length);
+
+      // Dedupe por event.id
+      const uniqueEvents = filteredRows.filter(
+        (v, i, a) => a.findIndex(t => t.event?.id === v.event?.id) === i
+      );
+
+      console.log('[AGENDA] Após dedupe:', uniqueEvents);
+
       // Formatar para exibição
-      const formattedInvitations = eventInvitations.map(inv => ({
-        id: inv.id,
-        eventId: inv.event_id,
-        eventName: inv.event_name,
-        eventDate: inv.event_date,
-        eventTime: inv.event_time,
-        isRead: inv.is_read,
-        createdAt: inv.created_at,
-        eventTeamId: eventTeamByEventId?.[inv.event_id]?.id || null,
-        teamStatus: eventTeamByEventId?.[inv.event_id]?.status || 'pending',
-        roleName: eventTeamByEventId?.[inv.event_id]?.roles?.name || null,
+      const formattedItems = uniqueEvents.map(member => ({
+        id: member.id,
+        eventId: member.event?.id,
+        eventName: member.event?.title,
+        eventDate: member.event?.event_date,
+        eventTime: member.event?.event_time,
+        eventTeamId: member.id,
+        teamStatus: member.status,
+        isRead: true,
       }));
 
-      setInvitations(formattedInvitations);
+      console.log('[AGENDA] Items formatados:', formattedItems);
+
+      setAllAgendaItems(formattedItems);
     } catch (error) {
-      console.error('Erro ao carregar convites:', error);
-      setInvitations([]);
+      console.error('[AGENDA] Erro ao carregar agenda:', error);
+      setAllAgendaItems([]);
     } finally {
       setLoading(false);
     }
@@ -128,27 +195,30 @@ const HomeScreen = ({ navigation, route }) => {
   const handleInvitationResponse = async (invitation, status) => {
     try {
       if (!invitation?.eventTeamId) {
-        Alert.alert('Erro', 'Convite não encontrado para este evento');
+        Alert.alert('Erro', 'Convite não encontrado');
         return;
       }
 
-      await eventService.updateTeamMemberStatus(invitation.eventTeamId, status);
+      // UPDATE direto em event_team.id
+      const { error: updateError } = await supabase
+        .from('event_team')
+        .update({ status: status === 'declined' ? 'declined' : 'confirmed' })
+        .eq('id', invitation.eventTeamId);
 
-      if (!invitation.isRead) {
-        await notificationService.markAsRead(invitation.id);
-      }
+      if (updateError) throw updateError;
 
-      await loadInvitations();
+      await loadAgenda();
+      Alert.alert('Sucesso', status === 'declined' ? 'Convite recusado' : 'Convite confirmado');
     } catch (error) {
       console.error('Erro ao responder convite:', error);
       Alert.alert('Erro', 'Não foi possível responder ao convite');
     }
   };
 
-  // Recarregar convites (pull to refresh)
+  // Recarregar agenda (pull to refresh)
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadInvitations();
+    await loadAgenda();
     setRefreshing(false);
   };
 
@@ -173,13 +243,13 @@ const HomeScreen = ({ navigation, route }) => {
 
   // Carregar ao montar
   useEffect(() => {
-    loadInvitations();
+    loadAgenda();
   }, []);
 
   // Recarregar quando a tela receber foco
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadInvitations();
+      loadAgenda();
     });
     return unsubscribe;
   }, [navigation]);
@@ -223,30 +293,30 @@ const HomeScreen = ({ navigation, route }) => {
         </View>
         {activeSegment === 'agenda' ? (
           <>
-            {/* Agenda - Convites de Eventos */}
+            {/* Agenda - Convites e Eventos */}
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Seus Convites</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Agenda</Text>
             </View>
 
             {loading ? (
-              <View style={styles.loadingContainer}>
+              <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
                 <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-                  Carregando convites...
+                  Carregando agenda...
                 </Text>
               </View>
-            ) : invitations.length === 0 ? (
+            ) : allAgendaItems.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Icon name="calendar-o" size={48} color={colors.textSecondary} style={styles.emptyIcon} />
                 <Text style={[styles.emptyText, { color: colors.text }]}>
-                  Nenhum convite
+                  Nenhum evento
                 </Text>
                 <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
-                  Você não tem convites de eventos no momento
+                  Você não tem eventos na agenda no momento
                 </Text>
               </View>
             ) : (
-              invitations.map((invitation) => (
+              allAgendaItems.map((invitation) => (
                 <TouchableOpacity
                   key={invitation.id}
                   style={[

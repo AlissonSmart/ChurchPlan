@@ -131,29 +131,44 @@ const EventCreationScreen = ({ navigation, route }) => {
           invitation_sent_at,
           response_at,
           is_highlighted,
-          volunteers:volunteer_id (
-            id,
-            first_name,
-            last_name,
-            email
-          ),
-          roles:role_id (
-            name
-          )
+          profile_id,
+          role_id
         `)
         .eq('event_id', eventId);
 
       if (error) throw error;
 
-      const formattedMembers = (data || []).map(member => ({
-        id: member.id,
-        volunteer_id: member.volunteers?.id,
-        name: `${member.volunteers?.first_name || ''} ${member.volunteers?.last_name || ''}`.trim() || member.volunteers?.email || 'Usuário',
-        email: member.volunteers?.email,
-        role: member.roles?.name || 'Sem função',
-        status: member.status || 'not_sent',
-        highlighted: member.is_highlighted || false
-      }));
+      // Buscar profiles e roles separadamente
+      const profileIds = [...new Set(data.map(m => m.profile_id).filter(Boolean))];
+      const roleIds = [...new Set(data.map(m => m.role_id).filter(Boolean))];
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', profileIds);
+
+      const { data: roles } = await supabase
+        .from('roles')
+        .select('id, name')
+        .in('id', roleIds);
+
+      const profileMap = (profiles || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+      const roleMap = (roles || []).reduce((acc, r) => ({ ...acc, [r.id]: r }), {});
+
+      const formattedMembers = (data || []).map(member => {
+        const profile = profileMap[member.profile_id];
+        const role = roleMap[member.role_id];
+        
+        return {
+          id: member.id,
+          profile_id: member.profile_id,
+          name: profile?.name || 'Usuário',
+          email: profile?.email || '',
+          role: role?.name || 'Sem função',
+          status: member.status || 'not_sent',
+          highlighted: member.is_highlighted || false
+        };
+      });
 
       setTeamMembers(formattedMembers);
       setTechnicalTeam([]);
@@ -262,8 +277,8 @@ const EventCreationScreen = ({ navigation, route }) => {
   // Função para adicionar membro à equipe
   const handleAddTeamMember = async (member) => {
     try {
-      // Verificar se a pessoa já está na equipe (comparar por volunteer_id)
-      if (teamMembers.some(m => m.volunteer_id === member.user_id)) {
+      // Verificar se a pessoa já está na equipe (comparar por user_id)
+      if (teamMembers.some(m => m.user_id === member.user_id)) {
         Alert.alert('Atenção', 'Essa pessoa já está na equipe desse evento.');
         return;
       }
@@ -337,72 +352,95 @@ const EventCreationScreen = ({ navigation, route }) => {
           }
         }
 
-        // Buscar voluntário pelo vínculo com o usuário
-        let { data: volunteerData, error: volunteerError } = await supabase
-          .from('volunteers')
+        // Buscar profile do usuário por user_id
+        let { data: profileData, error: profileError } = await supabase
+          .from('profiles')
           .select('id')
           .eq('user_id', member.user_id)
           .maybeSingle();
 
-        if (volunteerError && volunteerError.code !== 'PGRST116') {
-          console.error('Erro ao buscar voluntário:', volunteerError);
-          Alert.alert('Erro', 'Não foi possível buscar o voluntário');
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error('Erro ao buscar profile por user_id:', profileError);
+          Alert.alert('Erro', 'Não foi possível buscar o perfil do usuário');
           return;
         }
 
-        // Fallback: localizar por email
-        if (!volunteerData && member.email) {
-          const { data: volunteerByEmail, error: volunteerByEmailError } = await supabase
-            .from('volunteers')
+        // Se não existe profile por user_id, tentar buscar por email
+        if (!profileData && member.email) {
+          console.log('Profile não encontrado por user_id, buscando por email:', member.email);
+          
+          const { data: profileByEmail, error: emailError } = await supabase
+            .from('profiles')
             .select('id')
             .eq('email', member.email)
             .maybeSingle();
 
-          if (volunteerByEmailError && volunteerByEmailError.code !== 'PGRST116') {
-            console.error('Erro ao buscar voluntário por email:', volunteerByEmailError);
+          if (emailError && emailError.code !== 'PGRST116') {
+            console.error('Erro ao buscar profile por email:', emailError);
           }
 
-          if (!volunteerByEmailError && volunteerByEmail) {
-            volunteerData = volunteerByEmail;
+          if (profileByEmail) {
+            profileData = profileByEmail;
+            console.log('Profile encontrado por email com ID:', profileData.id);
+            
+            // Atualizar user_id se estiver vazio
+            if (!profileByEmail.user_id) {
+              await supabase
+                .from('profiles')
+                .update({ user_id: member.user_id })
+                .eq('id', profileByEmail.id);
+            }
           }
         }
 
-        // Se ainda não existe, criar automaticamente
-        if (!volunteerData) {
-          const fullName = (member.name || member.email?.split('@')[0] || '').trim();
-          const nameParts = fullName.split(' ').filter(Boolean);
-          const firstName = nameParts[0] || 'Usuário';
-          const lastName = nameParts.slice(1).join(' ') || '';
-
-          const { data: createdVolunteer, error: createVolunteerError } = await supabase
-            .from('volunteers')
-            .insert([
-              {
-                user_id: member.user_id,
-                first_name: firstName,
-                last_name: lastName,
-                email: member.email || null,
-                is_active: true,
-              },
-            ])
+        // Se ainda não existe profile, criar automaticamente
+        if (!profileData) {
+          console.log('Criando profile automaticamente para user:', member.user_id);
+          
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              name: member.name || member.email?.split('@')[0] || 'Usuário',
+              email: member.email,
+              user_id: member.user_id,
+            })
             .select('id')
             .single();
 
-          if (createVolunteerError) {
-            console.error('Erro ao criar voluntário automaticamente:', createVolunteerError);
-            Alert.alert('Erro', 'Não foi possível cadastrar o voluntário automaticamente');
+          if (createError) {
+            console.error('Erro ao criar profile:', createError);
+            Alert.alert('Erro', 'Não foi possível criar o perfil do usuário');
             return;
           }
 
-          volunteerData = createdVolunteer;
+          profileData = newProfile;
+          console.log('Profile criado com ID:', profileData.id);
         }
 
-        const volunteerId = volunteerData.id;
+        const profileId = profileData.id;
 
-        await eventService.addTeamMember(eventId, volunteerId, roleId);
+        // Buscar user atual para invitedBy
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        // Inserir em event_team usando profile_id (OBRIGATÓRIO)
+        const { error: insertError } = await supabase
+          .from('event_team')
+          .insert([{
+            event_id: eventId,
+            profile_id: profileId,
+            role_id: roleId,
+            status: 'pending',
+            user_id: user?.id || null
+          }]);
+
+        if (insertError) {
+          console.error('Erro ao adicionar membro:', insertError);
+          Alert.alert('Erro', 'Não foi possível adicionar o membro à equipe');
+          return;
+        }
 
         // Enviar convite
-        await sendEventInvitation(member.user_id, member.name, volunteerId, roleId);
+        await sendEventInvitation(member.user_id, member.name, profileId, roleId);
 
         // Recarregar lista de membros
         await loadEventTeam();
@@ -467,7 +505,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   };
 
   // Função para enviar convite ao adicionar membro à equipe
-  const sendEventInvitation = async (userId, memberName, volunteerId, roleId) => {
+  const sendEventInvitation = async (userId, memberName, profileId, roleId) => {
     try {
       if (!eventId || !eventData) {
         console.log('Evento ainda não foi salvo, convite será enviado após salvar');
@@ -492,7 +530,7 @@ const EventCreationScreen = ({ navigation, route }) => {
       );
 
       // Atualizar status em event_team
-      if (volunteerId && roleId) {
+      if (profileId && roleId) {
         const { error: updateError } = await supabase
           .from('event_team')
           .update({
@@ -500,7 +538,7 @@ const EventCreationScreen = ({ navigation, route }) => {
             invitation_sent_at: new Date().toISOString()
           })
           .eq('event_id', eventId)
-          .eq('volunteer_id', volunteerId)
+          .eq('user_id', profileId)
           .eq('role_id', roleId);
 
         if (updateError) {
@@ -545,6 +583,53 @@ const EventCreationScreen = ({ navigation, route }) => {
             } catch (error) {
               console.error('Erro ao remover membro:', error);
               Alert.alert('Erro', 'Não foi possível remover o membro');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Função para deletar evento
+  const handleDeleteEvent = () => {
+    console.log('handleDeleteEvent chamado, eventId:', eventId);
+    
+    Alert.alert(
+      'Deletar Evento',
+      'Tem certeza que deseja deletar este evento? Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Deletar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('Deletando evento:', eventId);
+              
+              if (!eventId) {
+                Alert.alert('Erro', 'Evento não foi salvo ainda');
+                return;
+              }
+
+              const { error } = await supabase
+                .from('events')
+                .delete()
+                .eq('id', eventId);
+
+              console.log('Resultado delete:', { error });
+
+              if (error) {
+                console.error('Erro ao deletar evento:', error);
+                Alert.alert('Erro', 'Não foi possível deletar o evento');
+                return;
+              }
+
+              Alert.alert('Sucesso', 'Evento deletado com sucesso', [
+                { text: 'OK', onPress: () => navigation.goBack() }
+              ]);
+            } catch (error) {
+              console.error('Erro ao deletar evento:', error);
+              Alert.alert('Erro', 'Não foi possível deletar o evento');
             }
           }
         }
@@ -823,11 +908,10 @@ const EventCreationScreen = ({ navigation, route }) => {
         <View style={styles.headerActions}>
           <TouchableOpacity 
             style={styles.headerButton}
-            onPress={handleSaveEvent}
+            onPress={handleDeleteEvent}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <FontAwesome name="save" size={22} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton}>
             <FontAwesome name="trash" size={22} color={colors.danger} />
           </TouchableOpacity>
         </View>
@@ -978,38 +1062,41 @@ const EventCreationScreen = ({ navigation, route }) => {
                   <View style={[styles.teamSection, { backgroundColor: colors.card }]}>
                     <Text style={[styles.teamSectionTitle, { color: colors.text }]}>Membros da Equipe ({teamMembers.length})</Text>
                   
-                    {teamMembers.map((member) => (
-                      <View key={member.id} style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
-                        <View style={styles.memberInfo}>
-                          <Text style={[styles.memberName, { color: colors.text }]}>{member.name}</Text>
-                          <Text style={[styles.memberRole, { color: colors.textSecondary }]}>{member.role}</Text>
+                    {teamMembers.map((member) => {
+                      console.log('Renderizando membro:', { name: member.name, role: member.role });
+                      return (
+                        <View key={member.id} style={[styles.memberContainer, { borderBottomColor: colors.border }]}>
+                          <View style={styles.memberInfo}>
+                            <Text style={[styles.memberName, { color: colors.text }]} numberOfLines={1}>{member.name || 'Sem nome'}</Text>
+                            <Text style={[styles.memberRole, { color: colors.textSecondary }]} numberOfLines={1}>{member.role || 'Sem função'}</Text>
+                          </View>
+                          
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            <TouchableOpacity
+                              onPress={() => handleChangeTeamMemberStatus(member)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={[
+                                member.status === 'confirmed' ? styles.confirmBadge :
+                                member.status === 'pending' ? styles.pendingBadge :
+                                member.status === 'declined' ? styles.declinedBadge :
+                                styles.notSentBadge
+                              ]}>
+                                <Text style={styles.badgeText}>
+                                  {member.status === 'confirmed' ? 'Confirmado' :
+                                   member.status === 'pending' ? 'Pendente' :
+                                   member.status === 'declined' ? 'Recusado' :
+                                   'Não Enviado'}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleRemoveTeamMember(member.id)}>
+                              <FontAwesome name="trash-o" size={18} color={colors.danger} />
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                        
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                          <TouchableOpacity
-                            onPress={() => handleChangeTeamMemberStatus(member)}
-                            activeOpacity={0.7}
-                          >
-                            <View style={[
-                              member.status === 'confirmed' ? styles.confirmBadge :
-                              member.status === 'pending' ? styles.pendingBadge :
-                              member.status === 'declined' ? styles.declinedBadge :
-                              styles.notSentBadge
-                            ]}>
-                              <Text style={styles.badgeText}>
-                                {member.status === 'confirmed' ? 'Confirmado' :
-                                 member.status === 'pending' ? 'Pendente' :
-                                 member.status === 'declined' ? 'Recusado' :
-                                 'Não Enviado'}
-                              </Text>
-                            </View>
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => handleRemoveTeamMember(member.id)}>
-                            <FontAwesome name="trash-o" size={18} color={colors.danger} />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    ))}
+                      );
+                    })}
                   </View>
                 )}
               </View>
@@ -2175,13 +2262,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   memberName: {
-    fontSize: 20,
-    fontWeight: '500',
-    lineHeight: 24,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
   },
   memberRole: {
-    fontSize: 16,
-    marginTop: 4,
+    fontSize: 13,
+    marginTop: 2,
+    fontWeight: '400',
   },
   confirmBadge: {
     backgroundColor: '#00C853',

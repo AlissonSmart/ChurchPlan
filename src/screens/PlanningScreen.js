@@ -158,9 +158,39 @@ const PlanningScreen = ({ navigation }) => {
     console.log('Duplicar evento:', eventId);
   };
 
-  // Função para salvar um evento como template
-  const handleSaveAsTemplate = (eventId) => {
-    console.log('Salvar como template:', eventId);
+  // Função para deletar um evento
+  const handleDeleteEvent = async (eventId) => {
+    Alert.alert(
+      'Deletar Evento',
+      'Tem certeza que deseja deletar este evento? Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Deletar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const supabase = require('../services/supabase').default;
+              const { error } = await supabase
+                .from('events')
+                .delete()
+                .eq('id', eventId);
+
+              if (error) {
+                Alert.alert('Erro', 'Não foi possível deletar o evento');
+                return;
+              }
+
+              await loadEvents();
+              Alert.alert('Sucesso', 'Evento deletado com sucesso');
+            } catch (error) {
+              console.error('Erro ao deletar evento:', error);
+              Alert.alert('Erro', 'Não foi possível deletar o evento');
+            }
+          }
+        }
+      ]
+    );
   };
 
   // Função para abrir a planilha de escalas
@@ -174,7 +204,7 @@ const PlanningScreen = ({ navigation }) => {
       event={item} 
       onEdit={handleEditEvent}
       onDuplicate={handleDuplicateEvent}
-      onSaveTemplate={handleSaveAsTemplate}
+      onDelete={handleDeleteEvent}
     />
   );
 
@@ -232,7 +262,7 @@ const PlanningScreen = ({ navigation }) => {
   const renderListContent = () => {
     if (loading) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Carregando eventos...
