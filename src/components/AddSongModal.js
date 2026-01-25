@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   useColorScheme,
   ScrollView,
-  Alert
+  Alert,
+  Dimensions
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import ModalPadrao from './ModalPadrao';
 import theme from '../styles/theme';
@@ -17,7 +19,7 @@ import supabase from '../services/supabase';
 /**
  * Modal para adicionar música à biblioteca
  */
-const AddSongModal = ({ visible, onClose, onSave }) => {
+const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
 
@@ -25,21 +27,62 @@ const AddSongModal = ({ visible, onClose, onSave }) => {
   const [saving, setSaving] = useState(false);
 
   // Aba Informações
-  const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
-  const [observation, setObservation] = useState('');
-  const [category, setCategory] = useState('Louvor');
+  const [title, setTitle] = useState(editingSong?.title || '');
+  const [artist, setArtist] = useState(editingSong?.artist || '');
+  const [observation, setObservation] = useState(editingSong?.observation || '');
+  const [category, setCategory] = useState(editingSong?.category || 'Louvor');
+  const [youtubeUrl, setYoutubeUrl] = useState(editingSong?.youtube_url || '');
 
   // Aba Dados Musicais
-  const [bpm, setBpm] = useState('');
-  const [key, setKey] = useState('');
-  const [duration, setDuration] = useState('');
+  const [bpm, setBpm] = useState(editingSong?.bpm ? String(editingSong.bpm) : '');
+  const [key, setKey] = useState(editingSong?.key || '');
+  const [timeSignature, setTimeSignature] = useState(editingSong?.time_signature || '4/4');
+  const [duration, setDuration] = useState(editingSong?.duration_minutes ? String(editingSong.duration_minutes) : '');
 
   // Aba Letra/Cifra
-  const [lyrics, setLyrics] = useState('');
+  const [lyrics, setLyrics] = useState(editingSong?.lyrics || '');
 
   // Categorias disponíveis
-  const categories = ['Louvor', 'Adoração', 'Comunhão', 'Evangelística'];
+  const categories = ['Louvor', 'Adoração', 'Comunhão'];
+
+  // Assinaturas disponíveis
+  const timeSignatures = ['2/2', '2/4', '3/4', '4/4', '5/4', '6/4', '3/8', '6/8', '7/8', '9/8', '12/8'];
+
+  // Tons disponíveis
+  const musicalKeys = [
+    'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B',
+    'Cm', 'C#m', 'Dm', 'D#m', 'Ebm', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bbm', 'Bm'
+  ];
+
+  // Extrair ID do YouTube da URL
+  const getYoutubeVideoId = (url) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*$/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  // Normalizar URL do YouTube
+  const normalizeYoutubeUrl = (url) => {
+    if (!url) return null;
+    return url.trim() || null;
+  };
+
+  // Atualizar campos quando editingSong mudar
+  useEffect(() => {
+    if (editingSong) {
+      setTitle(editingSong.title || '');
+      setArtist(editingSong.artist || '');
+      setObservation(editingSong.observation || '');
+      setCategory(editingSong.category || 'Louvor');
+      setYoutubeUrl(editingSong.youtube_url || '');
+      setBpm(editingSong.bpm ? String(editingSong.bpm) : '');
+      setKey(editingSong.key || '');
+      setTimeSignature(editingSong.time_signature || '4/4');
+      setDuration(editingSong.duration_minutes ? String(editingSong.duration_minutes) : '');
+      setLyrics(editingSong.lyrics || '');
+    }
+  }, [editingSong]);
 
   const handleSave = async () => {
     // Validação
@@ -60,24 +103,52 @@ const AddSongModal = ({ visible, onClose, onSave }) => {
         title: title.trim(),
         artist: artist.trim(),
         bpm: bpm ? parseInt(bpm) : null,
-        key: key.trim() || null,
+        key: key || null,
+        time_signature: timeSignature || null,
         duration_minutes: duration ? parseInt(duration) : null,
         lyrics: lyrics.trim() || null,
         category: category,
         observation: observation.trim() || null,
-        created_at: new Date().toISOString()
+        youtube_url: normalizeYoutubeUrl(youtubeUrl),
       };
 
-      // Salvar no banco de dados
-      const { data, error } = await supabase
-        .from('songs')
-        .insert([songData])
-        .select()
-        .single();
+      let data;
+      let error;
+
+      if (editingSong) {
+        // Atualizar música existente
+        const result = await supabase
+          .from('songs')
+          .update(songData)
+          .eq('id', editingSong.id)
+          .select()
+          .single();
+        
+        data = result.data;
+        error = result.error;
+
+        if (!error) {
+          Alert.alert('Sucesso', 'Música atualizada com sucesso!');
+        }
+      } else {
+        // Criar nova música
+        songData.created_at = new Date().toISOString();
+        
+        const result = await supabase
+          .from('songs')
+          .insert([songData])
+          .select()
+          .single();
+        
+        data = result.data;
+        error = result.error;
+
+        if (!error) {
+          Alert.alert('Sucesso', 'Música adicionada com sucesso!');
+        }
+      }
 
       if (error) throw error;
-
-      Alert.alert('Sucesso', 'Música adicionada com sucesso!');
       
       if (onSave) {
         onSave(data);
@@ -98,19 +169,41 @@ const AddSongModal = ({ visible, onClose, onSave }) => {
     setArtist('');
     setObservation('');
     setCategory('Louvor');
+    setYoutubeUrl('');
     setBpm('');
     setKey('');
+    setTimeSignature('4/4');
     setDuration('');
     setLyrics('');
     onClose();
   };
 
+  const leftButton = (
+    <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
+      <Text style={[styles.cancelText, { color: colors.primary }]}>Cancelar</Text>
+    </TouchableOpacity>
+  );
+
+  const rightButton = (
+    <TouchableOpacity 
+      onPress={handleSave}
+      disabled={saving}
+      style={styles.headerButton}
+    >
+      <Text style={[styles.saveText, { color: colors.primary, opacity: saving ? 0.5 : 1 }]}>
+        {saving ? 'Salvando...' : 'Salvar'}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
     <ModalPadrao
       isVisible={visible}
       onClose={handleClose}
-      title="Adicionar Música"
+      title={editingSong ? 'Editar Música' : 'Adicionar Música'}
       height="90%"
+      leftButton={leftButton}
+      rightButton={rightButton}
     >
       <View style={styles.container}>
         {/* Tabs */}
@@ -118,7 +211,9 @@ const AddSongModal = ({ visible, onClose, onSave }) => {
           <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === 'info' && { backgroundColor: colors.primary }
+              activeTab === 'info' 
+                ? { backgroundColor: colors.primary } 
+                : { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
             ]}
             onPress={() => setActiveTab('info')}
           >
@@ -139,7 +234,9 @@ const AddSongModal = ({ visible, onClose, onSave }) => {
           <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === 'musical' && { backgroundColor: colors.primary }
+              activeTab === 'musical' 
+                ? { backgroundColor: colors.primary } 
+                : { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
             ]}
             onPress={() => setActiveTab('musical')}
           >
@@ -160,7 +257,9 @@ const AddSongModal = ({ visible, onClose, onSave }) => {
           <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === 'lyrics' && { backgroundColor: colors.primary }
+              activeTab === 'lyrics' 
+                ? { backgroundColor: colors.primary } 
+                : { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
             ]}
             onPress={() => setActiveTab('lyrics')}
           >
@@ -258,6 +357,67 @@ const AddSongModal = ({ visible, onClose, onSave }) => {
                   ))}
                 </View>
               </View>
+
+              {/* Vídeo do YouTube */}
+              <View style={styles.fieldContainer}>
+                <Text style={[styles.label, { color: colors.text }]}>Vídeo do YouTube</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  placeholderTextColor={colors.textSecondary}
+                  value={youtubeUrl}
+                  onChangeText={setYoutubeUrl}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
+                
+                {/* Preview do vídeo */}
+                {getYoutubeVideoId(youtubeUrl) && (
+                  <View style={[styles.videoPreview, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Text style={[styles.videoPreviewLabel, { color: colors.textSecondary }]}>
+                      Preview do vídeo:
+                    </Text>
+                    <View style={styles.videoEmbedContainer}>
+                      <WebView
+                        style={styles.videoEmbed}
+                        source={{
+                          html: `
+                            <!DOCTYPE html>
+                            <html>
+                              <head>
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                <style>
+                                  body { margin: 0; padding: 0; background-color: #000; }
+                                  .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; }
+                                  .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+                                </style>
+                              </head>
+                              <body>
+                                <div class="video-container">
+                                  <iframe
+                                    src="https://www.youtube.com/embed/${getYoutubeVideoId(youtubeUrl)}"
+                                    frameborder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowfullscreen
+                                  ></iframe>
+                                </div>
+                              </body>
+                            </html>
+                          `
+                        }}
+                        scrollEnabled={false}
+                        javaScriptEnabled={true}
+                        domStorageEnabled={true}
+                        allowsFullscreenVideo={true}
+                      />
+                    </View>
+                    <Text style={[styles.videoHint, { color: colors.textSecondary }]}>
+                      ✓ Vídeo carregado com sucesso
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           )}
 
@@ -270,31 +430,73 @@ const AddSongModal = ({ visible, onClose, onSave }) => {
                 Informações técnicas da música
               </Text>
 
-              <View style={styles.row}>
-                {/* BPM */}
-                <View style={[styles.fieldContainer, styles.halfWidth]}>
-                  <Text style={[styles.label, { color: colors.text }]}>BPM</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
-                    placeholder="Ex: 72, 120..."
-                    placeholderTextColor={colors.textSecondary}
-                    value={bpm}
-                    onChangeText={setBpm}
-                    keyboardType="numeric"
-                  />
-                </View>
+              {/* BPM */}
+              <View style={styles.fieldContainer}>
+                <Text style={[styles.label, { color: colors.text }]}>BPM</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                  placeholder="Ex: 72, 120..."
+                  placeholderTextColor={colors.textSecondary}
+                  value={bpm}
+                  onChangeText={setBpm}
+                  keyboardType="numeric"
+                />
+              </View>
 
-                {/* Tom */}
-                <View style={[styles.fieldContainer, styles.halfWidth]}>
-                  <Text style={[styles.label, { color: colors.text }]}>Tom</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
-                    placeholder="Ex: C, G, D, F#..."
-                    placeholderTextColor={colors.textSecondary}
-                    value={key}
-                    onChangeText={setKey}
-                  />
-                </View>
+              {/* Assinatura */}
+              <View style={styles.fieldContainer}>
+                <Text style={[styles.label, { color: colors.text }]}>Assinatura</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.chipsContainer}>
+                    {timeSignatures.map((sig) => (
+                      <TouchableOpacity
+                        key={sig}
+                        style={[
+                          styles.chip,
+                          { borderColor: colors.border },
+                          timeSignature === sig && { backgroundColor: colors.primary, borderColor: colors.primary }
+                        ]}
+                        onPress={() => setTimeSignature(sig)}
+                      >
+                        <Text style={[
+                          styles.chipText,
+                          { color: colors.text },
+                          timeSignature === sig && { color: '#FFFFFF' }
+                        ]}>
+                          {sig}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+
+              {/* Tom */}
+              <View style={styles.fieldContainer}>
+                <Text style={[styles.label, { color: colors.text }]}>Tom</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.chipsContainer}>
+                    {musicalKeys.map((k) => (
+                      <TouchableOpacity
+                        key={k}
+                        style={[
+                          styles.chip,
+                          { borderColor: colors.border },
+                          key === k && { backgroundColor: colors.primary, borderColor: colors.primary }
+                        ]}
+                        onPress={() => setKey(k)}
+                      >
+                        <Text style={[
+                          styles.chipText,
+                          { color: colors.text },
+                          key === k && { color: '#FFFFFF' }
+                        ]}>
+                          {k}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
               </View>
 
               {/* Duração */}
@@ -335,27 +537,6 @@ const AddSongModal = ({ visible, onClose, onSave }) => {
             </View>
           )}
         </ScrollView>
-
-        {/* Botões de Ação */}
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.button, styles.cancelButton, { borderColor: colors.border }]}
-            onPress={handleClose}
-          >
-            <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancelar</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.saveButton, { backgroundColor: colors.primary }]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            <FontAwesome name="save" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.saveButtonText}>
-              {saving ? 'Salvando...' : 'Salvar Música'}
-            </Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </ModalPadrao>
   );
@@ -364,6 +545,18 @@ const AddSongModal = ({ visible, onClose, onSave }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerButton: {
+    minWidth: 70,
+  },
+  cancelText: {
+    fontSize: 16,
+    fontWeight: '400',
+  },
+  saveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'right',
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -378,7 +571,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#F0F2F5',
   },
   tabIcon: {
     marginRight: 6,
@@ -449,43 +641,55 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  videoPreview: {
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  videoPreviewLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  videoEmbedContainer: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  videoEmbed: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  videoHint: {
+    fontSize: 12,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  chip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   row: {
     flexDirection: 'row',
     gap: 12,
   },
   halfWidth: {
     flex: 1,
-  },
-  footer: {
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  button: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 8,
-  },
-  cancelButton: {
-    borderWidth: 1,
-    backgroundColor: 'transparent',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButton: {
-    flexDirection: 'row',
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

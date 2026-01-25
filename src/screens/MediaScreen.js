@@ -29,6 +29,7 @@ const MediaScreen = ({ navigation }) => {
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [loading, setLoading] = useState(true);
   const [isAddSongModalVisible, setIsAddSongModalVisible] = useState(false);
+  const [editingSong, setEditingSong] = useState(null);
 
   const categories = ['Todas', 'Louvor', 'Adoração', 'Comunhão'];
 
@@ -113,8 +114,20 @@ const MediaScreen = ({ navigation }) => {
 
   // Editar música
   const handleEditSong = (song) => {
-    // TODO: Implementar edição
-    console.log('Editar música:', song);
+    setEditingSong(song);
+    setIsAddSongModalVisible(true);
+  };
+
+  // Fechar modal
+  const handleCloseModal = () => {
+    setIsAddSongModalVisible(false);
+    setEditingSong(null);
+  };
+
+  // Salvar música (criar ou atualizar)
+  const handleSaveSong = (savedSong) => {
+    loadSongs();
+    handleCloseModal();
   };
 
   // Renderizar item de música
@@ -282,11 +295,12 @@ const MediaScreen = ({ navigation }) => {
           <FontAwesome name="plus" size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* Modal Adicionar Música */}
+        {/* Modal Adicionar/Editar Música */}
         <AddSongModal
           visible={isAddSongModalVisible}
-          onClose={() => setIsAddSongModalVisible(false)}
-          onSave={() => loadSongs()}
+          onClose={handleCloseModal}
+          onSave={handleSaveSong}
+          editingSong={editingSong}
         />
       </View>
     </TabScreenWrapper>

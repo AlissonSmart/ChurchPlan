@@ -13,7 +13,9 @@ const ModalPadrao = ({
   onClose, 
   title, 
   children,
-  height = 'auto'
+  height = 'auto',
+  leftButton = null,
+  rightButton = null
 }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
@@ -29,11 +31,14 @@ const ModalPadrao = ({
       useNativeDriver
     >
       <View style={[styles.modalContent, { backgroundColor: colors.background, height }]}>
-        <View style={styles.modalHeader}>
+        <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerLeft}>
+            {leftButton}
+          </View>
           <Text style={[styles.modalTitle, { color: colors.text }]}>{title}</Text>
-          <TouchableOpacity onPress={onClose}>
-            <FontAwesome name="times" size={20} color={colors.text} />
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            {rightButton}
+          </View>
         </View>
         
         {children}
@@ -58,15 +63,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  headerLeft: {
+    width: 80,
+    alignItems: 'flex-start',
+  },
+  headerRight: {
+    width: 80,
+    alignItems: 'flex-end',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
+    flex: 1,
+    textAlign: 'center',
   },
 });
 
