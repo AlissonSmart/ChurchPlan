@@ -7,10 +7,8 @@ import {
   TouchableOpacity,
   useColorScheme,
   ScrollView,
-  Alert,
-  Dimensions
+  Alert
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import ModalPadrao from './ModalPadrao';
 import theme from '../styles/theme';
@@ -106,7 +104,7 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
         key: key || null,
         time_signature: timeSignature || null,
         duration_minutes: duration ? parseInt(duration) : null,
-        lyrics: lyrics.trim() || null,
+        lyrics_chords: lyrics.trim() || null,
         category: category,
         observation: observation.trim() || null,
         youtube_url: normalizeYoutubeUrl(youtubeUrl),
@@ -372,48 +370,12 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
                   keyboardType="url"
                 />
                 
-                {/* Preview do vídeo */}
+                {/* Validação da URL */}
                 {getYoutubeVideoId(youtubeUrl) && (
-                  <View style={[styles.videoPreview, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Text style={[styles.videoPreviewLabel, { color: colors.textSecondary }]}>
-                      Preview do vídeo:
-                    </Text>
-                    <View style={styles.videoEmbedContainer}>
-                      <WebView
-                        style={styles.videoEmbed}
-                        source={{
-                          html: `
-                            <!DOCTYPE html>
-                            <html>
-                              <head>
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                <style>
-                                  body { margin: 0; padding: 0; background-color: #000; }
-                                  .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; }
-                                  .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-                                </style>
-                              </head>
-                              <body>
-                                <div class="video-container">
-                                  <iframe
-                                    src="https://www.youtube.com/embed/${getYoutubeVideoId(youtubeUrl)}"
-                                    frameborder="0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowfullscreen
-                                  ></iframe>
-                                </div>
-                              </body>
-                            </html>
-                          `
-                        }}
-                        scrollEnabled={false}
-                        javaScriptEnabled={true}
-                        domStorageEnabled={true}
-                        allowsFullscreenVideo={true}
-                      />
-                    </View>
-                    <Text style={[styles.videoHint, { color: colors.textSecondary }]}>
-                      ✓ Vídeo carregado com sucesso
+                  <View style={[styles.urlValidation, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <FontAwesome name="check-circle" size={16} color="#4CAF50" />
+                    <Text style={[styles.urlValidationText, { color: colors.text }]}>
+                      URL válida do YouTube (ID: {getYoutubeVideoId(youtubeUrl)})
                     </Text>
                   </View>
                 )}
@@ -641,33 +603,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  videoPreview: {
+  urlValidation: {
     marginTop: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  videoPreviewLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-  },
-  videoEmbedContainer: {
-    width: '100%',
-    height: 200,
+    padding: 12,
     borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#000',
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  videoEmbed: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  videoHint: {
+  urlValidationText: {
     fontSize: 12,
-    marginTop: 12,
-    textAlign: 'center',
+    flex: 1,
   },
   chipsContainer: {
     flexDirection: 'row',
