@@ -276,28 +276,6 @@ const MediaScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Estatísticas */}
-        <View style={[styles.statsWrapper, { backgroundColor: colors.card }]}>
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.total}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Músicas</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withLyrics}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Letras</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withChords}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Cifras</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withAudio}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Áudio</Text>
-            </View>
-          </View>
-        </View>
-
         {/* Lista de Músicas */}
         {loading ? (
           <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -323,6 +301,28 @@ const MediaScreen = ({ navigation }) => {
             keyExtractor={item => item.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <View style={[styles.statsWrapper, { backgroundColor: colors.card }]}>
+                <View style={styles.statsContainer}>
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.total}</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Músicas</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withLyrics}</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Letras</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withChords}</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Cifras</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withAudio}</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Áudio</Text>
+                  </View>
+                </View>
+              </View>
+            }
           />
         )}
 
@@ -402,16 +402,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   statsWrapper: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderRadius: 12,
-    paddingVertical: 20,
-    paddingHorizontal: 8,
+    marginHorizontal: 0,
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    width: '100%',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -420,15 +422,16 @@ const styles = StyleSheet.create({
   statItem: {
     flex: 1,
     alignItems: 'center',
+    gap: 4,
   },
   statNumber: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: 12,
-    marginTop: 6,
+    fontSize: 11,
+    marginTop: 2,
     fontWeight: '500',
     textAlign: 'center',
   },

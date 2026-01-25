@@ -11,6 +11,7 @@ import {
   Image,
   Linking
 } from 'react-native';
+import DocumentPicker from 'react-native-document-picker';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import ModalPadrao from './ModalPadrao';
 import theme from '../styles/theme';
@@ -23,7 +24,7 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
 
-  const [activeTab, setActiveTab] = useState('info'); // info, musical, lyrics
+  const [activeTab, setActiveTab] = useState('info'); // info, musical, lyrics, attachments
   const [saving, setSaving] = useState(false);
 
   // Aba Informações
@@ -41,6 +42,14 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
 
   // Aba Letra/Cifra
   const [lyrics, setLyrics] = useState(editingSong?.lyrics || '');
+
+  // Aba Arquivo/Link
+  const [links, setLinks] = useState([]);
+  const [newLinkTitle, setNewLinkTitle] = useState('');
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [files, setFiles] = useState([]);
+  const [newFileTitle, setNewFileTitle] = useState('');
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   // Categorias disponíveis
   const categories = ['Louvor', 'Adoração', 'Comunhão'];
@@ -68,6 +77,32 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
     return url.trim() || null;
   };
 
+  // Carregar anexos (links e arquivos)
+  const loadAttachments = async (songId) => {
+    try {
+      const { data: linksData, error: linksError } = await supabase
+        .from('song_links')
+        .select('*')
+        .eq('song_id', songId)
+        .order('created_at', { ascending: true });
+
+      if (linksError) throw linksError;
+
+      const { data: filesData, error: filesError } = await supabase
+        .from('song_files')
+        .select('*')
+        .eq('song_id', songId)
+        .order('created_at', { ascending: true });
+
+      if (filesError) throw filesError;
+
+      setLinks(linksData || []);
+      setFiles(filesData || []);
+    } catch (err) {
+      console.error('Erro ao carregar anexos:', err);
+    }
+  };
+
   // Atualizar campos quando editingSong mudar
   useEffect(() => {
     if (editingSong) {
@@ -81,6 +116,10 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
       setTimeSignature(editingSong.time_signature || '4/4');
       setDuration(editingSong.duration_minutes ? String(editingSong.duration_minutes) : '');
       setLyrics(editingSong.lyrics || '');
+      loadAttachments(editingSong.id);
+    } else {
+      setLinks([]);
+      setFiles([]);
     }
   }, [editingSong]);
 
@@ -163,6 +202,153 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
     }
   };
 
+  // Handlers para Links
+  const handleAddLink = async () => {
+    if (!editingSong) {
+      Alert.alert('Atenção', 'Salve a música antes de adicionar links.');
+      return;
+    }
+
+    if (!newLinkTitle.trim() || !newLinkUrl.trim()) {
+      Alert.alert('Erro', 'Preencha título e URL.');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('song_links')
+        .insert([{
+          song_id: editingSong.id,
+          title: newLinkTitle.trim(),
+          url: newLinkUrl.trim(),
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setLinks([...links, data]);
+      setNewLinkTitle('');
+      setNewLinkUrl('');
+    } catch (err) {
+      console.error('Erro ao salvar link:', err);
+      Alert.alert('Erro', 'Não foi possível salvar o link.');
+    }
+  };
+
+  const handleRemoveLink = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('song_links')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setLinks(links.filter(l => l.id !== id));
+    } catch (err) {
+      console.error('Erro ao remover link:', err);
+      Alert.alert('Erro', 'Não foi possível remover o link.');
+    }
+  };
+
+  // Handlers para Arquivos
+  const handlePickFile = async () => {
+    if (!editingSong) {
+      Alert.alert('Atenção', 'Salve a música antes de anexar arquivos.');
+      return;
+    }
+
+    if (!newFileTitle.trim()) {
+      Alert.alert('Erro', 'Digite um título para o arquivo.');
+      return;
+    }
+
+    try {
+      setUploadingFile(true);
+
+      const res = await DocumentPicker.pickSingle({
+        type: [DocumentPicker.types.audio, DocumentPicker.types.pdf],
+      });
+
+      const path = `${editingSong.id}/${Date.now()}-${res.name}`;
+
+      const file = {
+        uri: res.uri,
+        name: res.name,
+        type: res.type || 'application/octet-stream',
+      };
+
+      const { error: uploadError } = await supabase
+        .storage
+        .from('song-files')
+        .upload(path, file, {
+          contentType: file.type,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const fileType = res.type && res.type.includes('audio') ? 'audio' : 'pdf';
+
+      const { data, error: insertError } = await supabase
+        .from('song_files')
+        .insert([{
+          song_id: editingSong.id,
+          title: newFileTitle.trim(),
+          file_path: path,
+          file_type: fileType,
+        }])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      setFiles([...files, data]);
+      setNewFileTitle('');
+    } catch (err) {
+      if (!DocumentPicker.isCancel(err)) {
+        console.error('Erro ao enviar arquivo:', err);
+        Alert.alert('Erro', 'Não foi possível enviar o arquivo.');
+      }
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleOpenFile = async (file) => {
+    try {
+      const { data } = supabase
+        .storage
+        .from('song-files')
+        .getPublicUrl(file.file_path);
+
+      if (data?.publicUrl) {
+        Linking.openURL(data.publicUrl);
+      } else {
+        Alert.alert('Erro', 'Arquivo não está público.');
+      }
+    } catch (err) {
+      console.error('Erro ao abrir arquivo:', err);
+      Alert.alert('Erro', 'Não foi possível abrir o arquivo.');
+    }
+  };
+
+  const handleRemoveFile = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('song_files')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setFiles(files.filter(f => f.id !== id));
+    } catch (err) {
+      console.error('Erro ao remover arquivo:', err);
+      Alert.alert('Erro', 'Não foi possível remover o arquivo.');
+    }
+  };
+
   const handleClose = () => {
     setActiveTab('info');
     setTitle('');
@@ -175,6 +361,11 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
     setTimeSignature('4/4');
     setDuration('');
     setLyrics('');
+    setLinks([]);
+    setFiles([]);
+    setNewLinkTitle('');
+    setNewLinkUrl('');
+    setNewFileTitle('');
     onClose();
   };
 
@@ -227,7 +418,7 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
               styles.tabText,
               { color: activeTab === 'info' ? '#FFFFFF' : colors.text }
             ]}>
-              Informações
+              Infos
             </Text>
           </TouchableOpacity>
 
@@ -250,7 +441,7 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
               styles.tabText,
               { color: activeTab === 'musical' ? '#FFFFFF' : colors.text }
             ]}>
-              Dados Musicais
+              Dados
             </Text>
           </TouchableOpacity>
 
@@ -273,7 +464,32 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
               styles.tabText,
               { color: activeTab === 'lyrics' ? '#FFFFFF' : colors.text }
             ]}>
-              Letra/Cifra
+              Cifra
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'attachments'
+                ? { backgroundColor: colors.primary }
+                : { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
+            ]}
+            onPress={() => setActiveTab('attachments')}
+          >
+            <FontAwesome
+              name="paperclip"
+              size={16}
+              color={activeTab === 'attachments' ? '#FFFFFF' : colors.text}
+              style={styles.tabIcon}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                { color: activeTab === 'attachments' ? '#FFFFFF' : colors.text }
+              ]}
+            >
+              Anexo
             </Text>
           </TouchableOpacity>
         </View>
@@ -515,6 +731,130 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
               </View>
             </View>
           )}
+
+          {activeTab === 'attachments' && (
+            <View style={styles.tabContent}>
+              {/* SEÇÃO PRINCIPAL: ENVIAR ARQUIVOS */}
+              <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+                Enviar Arquivos
+              </Text>
+
+              {!editingSong ? (
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginTop: 16 }]}>
+                  Salve a música primeiro para anexar arquivos.
+                </Text>
+              ) : (
+                <View style={styles.uploadBlock}>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, marginBottom: 8 }]}
+                    placeholder="Título do arquivo"
+                    placeholderTextColor={colors.textSecondary}
+                    value={newFileTitle}
+                    onChangeText={setNewFileTitle}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.uploadButton,
+                      { backgroundColor: colors.primary, opacity: uploadingFile ? 0.5 : 1 }
+                    ]}
+                    onPress={uploadingFile ? undefined : handlePickFile}
+                  >
+                    <FontAwesome name="cloud-upload" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                    <Text style={styles.uploadButtonText}>
+                      {uploadingFile ? 'Enviando...' : 'Selecionar e Enviar Arquivo'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* SEÇÃO: ARQUIVOS E LINKS */}
+              <View style={{ marginTop: 32 }}>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+                  Arquivos e Links
+                </Text>
+
+                {/* Arquivos */}
+                {files.length > 0 && (
+                  <View style={styles.fieldContainer}>
+                    <Text style={[styles.label, { color: colors.text }]}>Arquivos</Text>
+                    {files.map(file => (
+                      <TouchableOpacity
+                        key={file.id}
+                        style={styles.attachmentRow}
+                        onPress={() => handleOpenFile(file)}
+                      >
+                        <FontAwesome name="file" size={16} color={colors.primary} style={{ marginRight: 8 }} />
+                        <View style={styles.attachmentMain}>
+                          <Text style={[styles.attachmentTitle, { color: colors.text }]} numberOfLines={1}>
+                            {file.title}
+                          </Text>
+                          <Text style={[styles.attachmentSubtitle, { color: colors.textSecondary }]}>
+                            {file.file_type.toUpperCase()}
+                          </Text>
+                        </View>
+                        <TouchableOpacity onPress={() => handleRemoveFile(file.id)}>
+                          <FontAwesome name="trash" size={16} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Links */}
+                <View style={styles.fieldContainer}>
+                  <Text style={[styles.label, { color: colors.text }]}>Links</Text>
+
+                  {links.map(link => (
+                    <TouchableOpacity
+                      key={link.id}
+                      style={styles.attachmentRow}
+                      onPress={() => Linking.openURL(link.url)}
+                    >
+                      <FontAwesome name="link" size={16} color={colors.primary} style={{ marginRight: 8 }} />
+                      <View style={styles.attachmentMain}>
+                        <Text style={[styles.attachmentTitle, { color: colors.text }]} numberOfLines={1}>
+                          {link.title}
+                        </Text>
+                        <Text style={[styles.attachmentSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                          {link.url}
+                        </Text>
+                      </View>
+                      <TouchableOpacity onPress={() => handleRemoveLink(link.id)}>
+                        <FontAwesome name="trash" size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ))}
+
+                  <View style={styles.newAttachmentBlock}>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, marginBottom: 8 }]}
+                      placeholder="Título do link"
+                      placeholderTextColor={colors.textSecondary}
+                      value={newLinkTitle}
+                      onChangeText={setNewLinkTitle}
+                    />
+                    <TextInput
+                      style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, marginBottom: 8 }]}
+                      placeholder="https://..."
+                      placeholderTextColor={colors.textSecondary}
+                      value={newLinkUrl}
+                      onChangeText={setNewLinkUrl}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="url"
+                    />
+                    <TouchableOpacity
+                      style={[styles.uploadButton, { backgroundColor: colors.primary }]}
+                      onPress={handleAddLink}
+                    >
+                      <FontAwesome name="plus" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      <Text style={styles.uploadButtonText}>Adicionar Link</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
         </ScrollView>
       </View>
     </ModalPadrao>
@@ -677,6 +1017,60 @@ const styles = StyleSheet.create({
   },
   halfWidth: {
     flex: 1,
+  },
+  attachmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 8,
+  },
+  attachmentMain: {
+    flex: 1,
+  },
+  attachmentTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  attachmentSubtitle: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  newAttachmentBlock: {
+    marginTop: 8,
+  },
+  attachmentButton: {
+    marginTop: 4,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  attachmentButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  uploadSectionTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  uploadBlock: {
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  uploadButton: {
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  uploadButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
   },
 });
 
