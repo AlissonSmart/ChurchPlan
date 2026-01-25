@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   useColorScheme,
   ScrollView,
-  Alert
+  Alert,
+  Image,
+  Linking
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import ModalPadrao from './ModalPadrao';
@@ -370,12 +372,27 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
                   keyboardType="url"
                 />
                 
-                {/* Validação da URL */}
+                {/* Preview do vídeo */}
                 {getYoutubeVideoId(youtubeUrl) && (
-                  <View style={[styles.urlValidation, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <FontAwesome name="check-circle" size={16} color="#4CAF50" />
-                    <Text style={[styles.urlValidationText, { color: colors.text }]}>
-                      URL válida do YouTube (ID: {getYoutubeVideoId(youtubeUrl)})
+                  <View style={styles.videoPreviewContainer}>
+                    <Text style={[styles.videoPreviewLabel, { color: colors.textSecondary }]}>
+                      PREVIEW DO VÍDEO
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.thumbnailButton}
+                      onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${getYoutubeVideoId(youtubeUrl)}`)}
+                    >
+                      <Image
+                        style={styles.thumbnail}
+                        source={{ uri: `https://img.youtube.com/vi/${getYoutubeVideoId(youtubeUrl)}/hqdefault.jpg` }}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.playOverlay}>
+                        <FontAwesome name="play-circle" size={64} color="#FFFFFF" />
+                      </View>
+                    </TouchableOpacity>
+                    <Text style={[styles.videoHint, { color: colors.textSecondary }]}>
+                      Toque para assistir no YouTube
                     </Text>
                   </View>
                 )}
@@ -603,18 +620,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  urlValidation: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  videoPreviewContainer: {
+    marginTop: 16,
   },
-  urlValidationText: {
+  videoPreviewLabel: {
     fontSize: 12,
-    flex: 1,
+    fontWeight: '600',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  thumbnailButton: {
+    width: '100%',
+    height: 220,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  thumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  playOverlay: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  videoHint: {
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
   chipsContainer: {
     flexDirection: 'row',

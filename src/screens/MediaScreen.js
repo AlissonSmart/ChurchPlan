@@ -8,8 +8,11 @@ import {
   useColorScheme,
   FlatList,
   ActivityIndicator,
-  Alert
+  Alert,
+  Image,
+  ImageBackground
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import TabScreenWrapper from '../components/TabScreenWrapper';
 import AddSongModal from '../components/AddSongModal';
@@ -130,52 +133,88 @@ const MediaScreen = ({ navigation }) => {
     handleCloseModal();
   };
 
-  // Renderizar item de música
-  const renderSongItem = ({ item }) => (
-    <TouchableOpacity
-      style={[styles.songCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => handleEditSong(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.songHeader}>
-        <View style={[styles.songIcon, { backgroundColor: colors.primary + '20' }]}>
-          <FontAwesome name="music" size={18} color={colors.primary} />
-        </View>
-        <View style={styles.songInfo}>
-          <Text style={[styles.songTitle, { color: colors.text }]} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.artist}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={() => handleEditSong(item)}>
-          <FontAwesome name="pencil" size={18} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+  // Extrair ID do YouTube da URL
+  const getYoutubeVideoId = (url) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*$/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
 
-      <View style={styles.songMeta}>
-        <View style={styles.metaItem}>
-          <FontAwesome name="music" size={12} color={colors.textSecondary} />
-          <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-            Tom: {item.key || '-'}
-          </Text>
+  // Renderizar item de música
+  const renderSongItem = ({ item }) => {
+    const videoId = getYoutubeVideoId(item.youtube_url);
+    
+    return (
+      <TouchableOpacity
+        style={[styles.songCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        onPress={() => handleEditSong(item)}
+        activeOpacity={0.7}
+      >
+        {/* Background com thumbnail do YouTube */}
+        {videoId && (
+          <Image
+            source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
+            style={styles.songCardBackground}
+            resizeMode="cover"
+          />
+        )}
+        
+        {/* Gradiente diagonal (superior esquerda → inferior direita) */}
+        <LinearGradient
+          colors={[
+            colors.card + 'F0',
+            'transparent'
+          ]}
+          locations={[0, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.25, y: -2 }}   // ← isso cria o 45°
+          style={styles.songCardGradient}
+        />
+        
+        {/* Conteúdo do card */}
+        <View style={styles.songCardContent}>
+          <View style={styles.songHeader}>
+            <View style={[styles.songIcon, { backgroundColor: colors.primary + '20' }]}>
+              <FontAwesome name="music" size={18} color={colors.primary} />
+            </View>
+            <View style={styles.songInfo}>
+              <Text style={[styles.songTitle, { color: colors.text }]} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+                {item.artist}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => handleEditSong(item)}>
+              <FontAwesome name="pencil" size={18} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.songMeta}>
+            <View style={styles.metaItem}>
+              <FontAwesome name="music" size={12} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                Tom: {item.key || '-'}
+              </Text>
+            </View>
+            <View style={styles.metaItem}>
+              <FontAwesome name="tachometer" size={12} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                Tempo: {item.bpm ? `${item.bpm} BPM` : '-'}
+              </Text>
+            </View>
+            <View style={styles.metaItem}>
+              <FontAwesome name="clock-o" size={12} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                Duração: {item.duration_minutes ? `${item.duration_minutes}:30` : '-'}
+              </Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.metaItem}>
-          <FontAwesome name="tachometer" size={12} color={colors.textSecondary} />
-          <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-            Tempo: {item.bpm ? `${item.bpm} BPM` : '-'}
-          </Text>
-        </View>
-        <View style={styles.metaItem}>
-          <FontAwesome name="clock-o" size={12} color={colors.textSecondary} />
-          <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-            Duração: {item.duration_minutes ? `${item.duration_minutes}:30` : '-'}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <TabScreenWrapper activeTab="Mídias" navigation={navigation}>
@@ -400,13 +439,33 @@ const styles = StyleSheet.create({
   songCard: {
     borderWidth: 1,
     borderRadius: 16,
-    padding: 18,
     marginBottom: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 1,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  songCardBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  songCardGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  songCardContent: {
+    padding: 18,
+    position: 'relative',
+    zIndex: 1,
   },
   songHeader: {
     flexDirection: 'row',
