@@ -165,18 +165,15 @@ const MediaScreen = ({ navigation }) => {
   );
 
   return (
-    <TabScreenWrapper activeTab="Mídia" navigation={navigation}>
+    <TabScreenWrapper activeTab="Mídias" navigation={navigation}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.titleContainer}>
-            <FontAwesome name="folder-open" size={28} color={colors.primary} />
-            <View style={styles.titleTextContainer}>
-              <Text style={[styles.title, { color: colors.text }]}>Mídia</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                Biblioteca musical e materiais
-              </Text>
-            </View>
+          <View style={styles.titleTextContainer}>
+            <Text style={[styles.title, { color: colors.text }]}>Mídias</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              Biblioteca musical e materiais
+            </Text>
           </View>
         </View>
 
@@ -228,22 +225,24 @@ const MediaScreen = ({ navigation }) => {
         </View>
 
         {/* Estatísticas */}
-        <View style={styles.statsContainer}>
-          <View style={[styles.statCard, { backgroundColor: colors.card }]}>
-            <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.total}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Músicas</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: colors.card }]}>
-            <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withLyrics}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Letras</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: colors.card }]}>
-            <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withChords}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Cifras</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: colors.card }]}>
-            <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withAudio}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Áudio</Text>
+        <View style={[styles.statsWrapper, { backgroundColor: colors.card }]}>
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.total}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Músicas</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withLyrics}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Letras</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withChords}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Cifras</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.withAudio}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Com Áudio</Text>
+            </View>
           </View>
         </View>
 
@@ -299,24 +298,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 16,
-    paddingTop: 20,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    padding: 20,
+    paddingTop: 24,
   },
   titleTextContainer: {
     flex: 1,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
-    marginTop: 2,
+    fontSize: 15,
+    marginTop: 4,
+    opacity: 0.7,
   },
   searchSection: {
     paddingHorizontal: 16,
@@ -352,25 +348,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  statsWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
   statsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    gap: 8,
+    justifyContent: 'space-around',
   },
-  statCard: {
+  statItem: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
+    letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: 12,
+    marginTop: 6,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   listContent: {
     paddingHorizontal: 16,
@@ -378,45 +385,54 @@ const styles = StyleSheet.create({
   },
   songCard: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   songHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   songIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   songInfo: {
     flex: 1,
   },
   songTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 4,
+    letterSpacing: -0.3,
   },
   songArtist: {
-    fontSize: 14,
+    fontSize: 15,
+    opacity: 0.7,
   },
   songMeta: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 20,
+    paddingTop: 2,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   metaText: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '500',
   },
   loadingContainer: {
     flex: 1,

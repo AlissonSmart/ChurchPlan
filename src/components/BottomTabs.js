@@ -11,7 +11,7 @@ const BottomTabs = ({ activeTab, onTabChange }) => {
     { id: 'Planejar', icon: 'tasks', label: 'Planejar' },
     { id: 'Equipes', icon: 'users', label: 'Equipes' },
     { id: 'CheckIn', icon: 'map-marker', label: 'Check-in' },
-    { id: 'Midia', icon: 'play-circle', label: 'Mídia' },
+    { id: 'Mídias', icon: 'play-circle', label: 'Mídias' },
   ];
 
   return (

@@ -9,7 +9,7 @@ import HomeScreen from '../screens/HomeScreen';
 import PlanningScreen from '../screens/PlanningScreen';
 import TeamsScreen from '../screens/TeamsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
-import MenuScreen from '../screens/MenuScreen';
+import MediaScreen from '../screens/MediaScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -40,7 +40,7 @@ const MainTabsNavigator = () => {
             case 'CheckIn':
               iconName = 'map-marker';
               break;
-            case 'Midia':
+            case 'Mídias':
               iconName = 'play-circle';
               break;
             default:
@@ -80,9 +80,9 @@ const MainTabsNavigator = () => {
         options={{ title: 'Check-in' }}
       />
       <Tab.Screen 
-        name="Midia" 
-        component={MenuScreen} 
-        options={{ title: 'Mídia' }}
+        name="Mídias" 
+        component={MediaScreen} 
+        options={{ title: 'Mídias' }}
       />
     </Tab.Navigator>
   );
