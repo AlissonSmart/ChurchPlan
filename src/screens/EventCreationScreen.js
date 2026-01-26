@@ -19,6 +19,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Modal from 'react-native-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import theme from '../styles/theme';
 import StepEditorModal from '../components/StepEditorModal';
 import StepItemEditorModal from '../components/StepItemEditorModal';
@@ -60,6 +61,9 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [technicalTeam, setTechnicalTeam] = useState([]);
   const [loadingTeam, setLoadingTeam] = useState(false);
+  // Estados para foto de capa
+  const [coverImagePath, setCoverImagePath] = useState(eventData?.cover_image_path || null);
+  const [uploadingCover, setUploadingCover] = useState(false);
   
   const [steps, setSteps] = useState([
     {
@@ -243,6 +247,7 @@ const EventCreationScreen = ({ navigation, route }) => {
         location: eventData.location || '',
         template_id: templateId || null,
         status: 'published',
+        cover_image_path: coverImagePath || null,
       };
 
       let result;
@@ -267,6 +272,104 @@ const EventCreationScreen = ({ navigation, route }) => {
       Alert.alert('Erro', 'Não foi possível salvar o evento');
       return null;
     }
+  };
+
+  // Função para escolher origem da foto (galeria ou câmera)
+  const handleSelectCoverSource = () => {
+    if (!eventId && !eventData?.id) {
+      Alert.alert('Atenção', 'Salve o evento antes de adicionar a foto de capa.');
+      return;
+    }
+
+    Alert.alert(
+      'Foto do evento',
+      'Escolha de onde pegar a imagem',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Galeria', onPress: () => pickCoverImage('library') },
+        { text: 'Câmera', onPress: () => pickCoverImage('camera') },
+      ],
+    );
+  };
+
+  // Função que abre fototeca/câmera e faz upload pro Supabase
+  const pickCoverImage = async (source) => {
+    try {
+      // Segurança: se o native module não estiver ligado, evita crash e mostra alerta claro
+      if (!launchCamera || !launchImageLibrary) {
+        Alert.alert(
+          'Erro de configuração',
+          'O módulo de imagem não está configurado no iOS.\n\nRode no projeto:\n- yarn add react-native-image-picker\n- cd ios && pod install\n- Recompile o app (npx react-native run-ios).'
+        );
+        return;
+      }
+
+      setUploadingCover(true);
+
+      const options = {
+        mediaType: 'photo',
+        quality: 0.8,
+        includeBase64: false,
+      };
+
+      const result =
+        source === 'camera'
+          ? await launchCamera(options)
+          : await launchImageLibrary(options);
+
+      if (result.didCancel || !result.assets || !result.assets.length) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const currentEventId = eventId || eventData?.id;
+      const path = `${currentEventId}/${Date.now()}-${asset.fileName || 'cover.jpg'}`;
+
+      const file = {
+        uri: asset.uri,
+        name: asset.fileName || 'cover.jpg',
+        type: asset.type || 'image/jpeg',
+      };
+
+      const { error: uploadError } = await supabase
+        .storage
+        .from('event-images')
+        .upload(path, file, {
+          contentType: file.type,
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Atualizar o evento no banco com o novo caminho da foto
+      if (eventId) {
+        const { error: updateError } = await supabase
+          .from('events')
+          .update({ cover_image_path: path })
+          .eq('id', eventId);
+
+        if (updateError) throw updateError;
+      }
+
+      setCoverImagePath(path);
+      Alert.alert('Sucesso', 'Foto de capa atualizada!');
+    } catch (err) {
+      console.error('Erro ao enviar foto de capa:', err);
+      Alert.alert('Erro', 'Não foi possível enviar a foto de capa.');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
+  // Função para obter URL pública da foto de capa
+  const getEventCoverUrl = (path) => {
+    if (!path) return null;
+    const { data } = supabase
+      .storage
+      .from('event-images')
+      .getPublicUrl(path);
+
+    return data?.publicUrl || null;
   };
 
   // Função para voltar para a tela anterior
@@ -861,9 +964,25 @@ const EventCreationScreen = ({ navigation, route }) => {
       
       <ScrollView style={styles.container}>
         {/* Event Image/Banner */}
-        <View style={[styles.bannerContainer, { backgroundColor: '#5E5CEC' }]}>
-          <TouchableOpacity style={styles.addImageButton}>
-            <FontAwesome name="camera" size={24} color="#FFFFFF" />
+        <View style={[styles.bannerContainer, { backgroundColor: coverImagePath ? 'transparent' : '#5E5CEC' }]}>
+          {coverImagePath ? (
+            <Image
+              source={{ uri: getEventCoverUrl(coverImagePath) }}
+              style={styles.bannerImage}
+              resizeMode="cover"
+            />
+          ) : null}
+          <TouchableOpacity 
+            style={[
+              styles.addImageButton,
+              uploadingCover && { opacity: 0.6 }
+            ]}
+            onPress={uploadingCover ? undefined : handleSelectCoverSource}
+          >
+            <FontAwesome name={coverImagePath ? "pencil" : "camera"} size={24} color="#FFFFFF" />
+            {uploadingCover && (
+              <ActivityIndicator size="small" color="#FFFFFF" style={{ marginLeft: 8 }} />
+            )}
           </TouchableOpacity>
         </View>
         
@@ -1589,6 +1708,14 @@ const styles = StyleSheet.create({
     height: 180,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  bannerImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    top: 0,
+    left: 0,
   },
   addImageButton: {
     width: 60,
@@ -1597,6 +1724,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+    flexDirection: 'row',
   },
   titleContainer: {
     paddingHorizontal: 16,
