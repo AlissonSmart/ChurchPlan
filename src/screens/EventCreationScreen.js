@@ -72,17 +72,10 @@ const EventCreationScreen = ({ navigation, route }) => {
   // Animated value para parallax
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  // Header cresce quando puxa para baixo
+  // Header cresce quando puxa pra baixo, mas não encolhe quando rola pra cima
   const headerHeight = scrollY.interpolate({
     inputRange: [-HEADER_MAX_HEIGHT, 0],
     outputRange: [HEADER_MAX_HEIGHT * 2, HEADER_MAX_HEIGHT],
-    extrapolate: 'clamp',
-  });
-
-  // Compensa o bounce para o banner não "descolar" do topo
-  const bannerTranslateY = scrollY.interpolate({
-    inputRange: [-HEADER_MAX_HEIGHT, 0, HEADER_SCROLL_DISTANCE],
-    outputRange: [HEADER_MAX_HEIGHT, 0, -HEADER_SCROLL_DISTANCE],
     extrapolate: 'clamp',
   });
   
@@ -435,7 +428,7 @@ const EventCreationScreen = ({ navigation, route }) => {
       }
 
       // Se o evento já foi salvo, adicionar ao banco de dados e enviar convite
-      if (eventId && member.id) {
+      if (eventId && eventData && member.id) {
         // Resolver role automaticamente
         let roleId = member.role_id || null;
 
@@ -628,7 +621,7 @@ const EventCreationScreen = ({ navigation, route }) => {
             invitation_sent_at: new Date().toISOString()
           })
           .eq('event_id', eventId)
-          .eq('profile_id', profileId)
+          .eq('user_id', profileId)
           .eq('role_id', roleId);
 
         if (updateError) {
@@ -980,81 +973,23 @@ const EventCreationScreen = ({ navigation, route }) => {
   
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Banner parallax fixo */}
-      <Animated.View
-        style={[
-          styles.bannerContainer,
-          {
-            height: headerHeight,
-            transform: [{ translateY: bannerTranslateY }],
-            backgroundColor: coverImagePath ? 'transparent' : '#5E5CEC',
-          },
-        ]}
-      >
-        {coverImagePath ? (
-          <Image
-            source={{ uri: getEventCoverUrl(coverImagePath) }}
-            style={styles.bannerImage}
-            resizeMode="cover"
-          />
-        ) : null}
-
-        <Animated.View
-          style={{
-            opacity: scrollY.interpolate({
-              inputRange: [0, 120],
-              outputRange: [1, 0.2],
-              extrapolate: 'clamp',
-            }),
-          }}
+      {/* Header */}
+      <View style={[
+        styles.header, 
+        { backgroundColor: colors.card, paddingTop: insets.top }
+      ]}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={handleGoBack}
         >
-          <TouchableOpacity
-            style={[
-              styles.addImageButton,
-              uploadingCover && { opacity: 0.6 },
-            ]}
-            onPress={uploadingCover ? undefined : handleSelectCoverSource}
-          >
-            <FontAwesome
-              name={coverImagePath ? 'pencil' : 'camera'}
-              size={24}
-              color="#FFFFFF"
-            />
-            {uploadingCover && (
-              <ActivityIndicator
-                size="small"
-                color="#FFFFFF"
-                style={{ marginLeft: 8 }}
-              />
-            )}
-          </TouchableOpacity>
-        </Animated.View>
-      </Animated.View>
-
-      {/* Header fixo por cima do banner */}
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: insets.top,
-            backgroundColor: 'transparent',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 20,
-          },
-        ]}
-      >
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
           <FontAwesome name="arrow-left" size={20} color={colors.text} />
           <Text style={[styles.backButtonText, { color: colors.text }]}>
             {isEditing ? 'Editar Evento' : 'Voltar para eventos'}
           </Text>
         </TouchableOpacity>
-
+        
         <View style={styles.headerActions}>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={styles.headerButton}
             onPress={handleDeleteEvent}
             activeOpacity={0.7}
@@ -1064,27 +999,77 @@ const EventCreationScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Conteúdo rolável */}
+      
+      {/* Parallax Header Height and Animation */}
       <Animated.ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{
-          paddingTop: HEADER_MAX_HEIGHT + insets.top + 8,
-          paddingBottom: 80,
-        }}
-        scrollEventThrottle={16}
+        style={styles.container}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
         )}
+        scrollEventThrottle={16}
       >
+        {/* Event Image/Banner */}
+        <Animated.View
+          style={[
+            styles.bannerContainer,
+            {
+              backgroundColor: coverImagePath ? 'transparent' : '#5E5CEC',
+              height: headerHeight,
+            },
+          ]}
+        >
+          {coverImagePath ? (
+            <Animated.Image
+              source={{ uri: getEventCoverUrl(coverImagePath) }}
+              style={[
+                styles.bannerImage,
+                {
+                  transform: [
+                    {
+                      translateY: scrollY.interpolate({
+                        inputRange: [-HEADER_MAX_HEIGHT, 0, HEADER_SCROLL_DISTANCE],
+                        outputRange: [-HEADER_MAX_HEIGHT / 2, 0, HEADER_SCROLL_DISTANCE * 0.5],
+                        extrapolate: 'clamp',
+                      }),
+                    },
+                  ],
+                },
+              ]}
+              resizeMode="cover"
+            />
+          ) : null}
+          <Animated.View
+            style={{
+              opacity: scrollY.interpolate({
+                inputRange: [0, 100],
+                outputRange: [1, 0.3],
+                extrapolate: 'clamp',
+              }),
+            }}
+          >
+            <TouchableOpacity 
+              style={[
+                styles.addImageButton,
+                uploadingCover && { opacity: 0.6 }
+              ]}
+              onPress={uploadingCover ? undefined : handleSelectCoverSource}
+            >
+              <FontAwesome name={coverImagePath ? "pencil" : "camera"} size={24} color="#FFFFFF" />
+              {uploadingCover && (
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginLeft: 8 }} />
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
+        
         {/* Event Title */}
         <View style={styles.titleContainer}>
           <Text style={[styles.titleDisplay, { color: colors.text }]}>
-            {eventTitle || 'Novo Evento'}
+            {eventTitle || "Novo Evento"}
           </Text>
         </View>
-
+        
         {/* Tabs */}
         <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
           <TouchableOpacity 
@@ -1797,24 +1782,24 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   bannerContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    minHeight: HEADER_MIN_HEIGHT,
+    minHeight: 180,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
     overflow: 'hidden',
-    backgroundColor: '#5E5CEC',
   },
   bannerImage: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    top: 0,
+    left: 0,
   },
   addImageButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
