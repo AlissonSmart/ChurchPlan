@@ -36,6 +36,58 @@ const StepItemEditorModal = ({ visible, onClose, onSave, item, stepId }) => {
   const [newParticipant, setNewParticipant] = useState('');
   
   const titleInputRef = useRef(null);
+
+  // Função para extrair apenas HH:MM de um horário
+  const formatTimeDisplay = (timeStr) => {
+    if (!timeStr) return '';
+    // Se tiver formato HH:MM:SS, extrai apenas HH:MM
+    if (timeStr.includes(':')) {
+      const parts = timeStr.split(':');
+      return `${parts[0]}:${parts[1]}`;
+    }
+    return timeStr;
+  };
+
+  // Função para validar e formatar horário (HH:MM)
+  const handleTimeChange = (text) => {
+    // Remove caracteres não numéricos
+    const cleaned = text.replace(/[^\d]/g, '');
+    
+    // Limita a 4 dígitos (HHMM)
+    if (cleaned.length > 4) {
+      return;
+    }
+    
+    // Formata como HH:MM
+    let formatted = cleaned;
+    if (cleaned.length >= 3) {
+      formatted = cleaned.slice(0, 2) + ':' + cleaned.slice(2, 4);
+    }
+    
+    setTime(formatted);
+  };
+
+  // Função para validar duração (apenas números)
+  const handleDurationChange = (text) => {
+    // Remove caracteres não numéricos
+    const cleaned = text.replace(/[^\d]/g, '');
+    setDuration(cleaned);
+  };
+
+  // Função para adicionar um participante
+  const handleAddParticipant = () => {
+    if (newParticipant.trim() && !participants.includes(newParticipant.trim())) {
+      setParticipants([...participants, newParticipant.trim()]);
+      setNewParticipant('');
+    }
+  };
+  
+  // Função para remover um participante
+  const handleRemoveParticipant = (index) => {
+    const newParticipants = [...participants];
+    newParticipants.splice(index, 1);
+    setParticipants(newParticipants);
+  };
   
   // Atualizar os campos quando o item mudar
   useEffect(() => {
@@ -43,7 +95,7 @@ const StepItemEditorModal = ({ visible, onClose, onSave, item, stepId }) => {
       setTitle(item.title || '');
       setSubtitle(item.subtitle || '');
       setDuration(item.duration || '');
-      setTime(item.time || '');
+      setTime(formatTimeDisplay(item.time) || '');
       setParticipants(item.participants || []);
     } else {
       setTitle('');
@@ -62,21 +114,6 @@ const StepItemEditorModal = ({ visible, onClose, onSave, item, stepId }) => {
       }, 300);
     }
   }, [visible]);
-  
-  // Função para adicionar um participante
-  const handleAddParticipant = () => {
-    if (newParticipant.trim() && !participants.includes(newParticipant.trim())) {
-      setParticipants([...participants, newParticipant.trim()]);
-      setNewParticipant('');
-    }
-  };
-  
-  // Função para remover um participante
-  const handleRemoveParticipant = (index) => {
-    const newParticipants = [...participants];
-    newParticipants.splice(index, 1);
-    setParticipants(newParticipants);
-  };
   
   // Função para lidar com o salvamento
   const handleSave = () => {
@@ -112,7 +149,12 @@ const StepItemEditorModal = ({ visible, onClose, onSave, item, stepId }) => {
       >
         <View style={[styles.content, { backgroundColor: colors.card }]}>
           <View style={styles.handle} />
-          <View style={styles.header}>
+          <View style={[styles.header, { 
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(99, 102, 241, 0.05)',
+            borderRadius: 12,
+            marginHorizontal: 16,
+            marginTop: 8,
+          }]}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Cancelar</Text>
             </TouchableOpacity>
@@ -171,25 +213,26 @@ const StepItemEditorModal = ({ visible, onClose, onSave, item, stepId }) => {
                     placeholder="Ex: 19:05"
                     placeholderTextColor={colors.textSecondary}
                     value={time}
-                    onChangeText={setTime}
+                    onChangeText={handleTimeChange}
                     maxLength={5}
-                    keyboardType="numbers-and-punctuation"
+                    keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
                   />
                 </View>
                 
                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={[styles.label, { color: colors.text }]}>Duração</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>Duração (min)</Text>
                   <TextInput
                     style={[styles.input, { 
                       color: colors.text, 
                       backgroundColor: colors.inputBackground,
                       borderColor: colors.border
                     }]}
-                    placeholder="Ex: 5min"
+                    placeholder="Ex: 5"
                     placeholderTextColor={colors.textSecondary}
                     value={duration}
-                    onChangeText={setDuration}
-                    maxLength={10}
+                    onChangeText={handleDurationChange}
+                    maxLength={3}
+                    keyboardType="numeric"
                   />
                 </View>
               </View>

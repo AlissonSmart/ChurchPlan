@@ -83,6 +83,84 @@ const EventCreationScreen = ({ navigation, route }) => {
   
   const [steps, setSteps] = useState([]);
   
+  const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr || typeof timeStr !== 'string') return null;
+    const clean = timeStr.trim();
+    if (!clean) return null;
+
+    const parts = clean.split(':');
+    if (parts.length >= 2) {
+      const hours = parseInt(parts[0], 10);
+      const minutes = parseInt(parts[1], 10) || 0;
+      if (Number.isNaN(hours) || hours < 0) return null;
+      return hours * 60 + minutes;
+    }
+
+    if (clean.length === 4 && !Number.isNaN(parseInt(clean, 10))) {
+      const hours = parseInt(clean.slice(0, 2), 10);
+      const minutes = parseInt(clean.slice(2), 10);
+      return hours * 60 + minutes;
+    }
+
+    return null;
+  };
+
+  const minutesToTimeStr = (totalMinutes) => {
+    if (totalMinutes == null || Number.isNaN(totalMinutes)) return '00:00';
+    let m = Math.max(0, Math.floor(totalMinutes));
+    const hours = Math.floor(m / 60) % 24;
+    const minutes = m % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  };
+
+  const recalcItemTimes = (stepsArray) => {
+    if (!stepsArray || !stepsArray.length) return stepsArray;
+
+    let currentTimeMinutes = 0;
+
+    if (eventData?.time instanceof Date) {
+      currentTimeMinutes = eventData.time.getHours() * 60 + eventData.time.getMinutes();
+    } else if (typeof eventData?.time === 'string') {
+      const parsed = parseTimeToMinutes(eventData.time);
+      if (parsed !== null) currentTimeMinutes = parsed;
+    }
+
+    const newSteps = stepsArray.map(step => {
+      const newItems = (step.items || []).map(item => {
+        const explicit = item.hasExplicitTime && item.time;
+        let updatedItem = { ...item };
+
+        if (explicit) {
+          const parsed = parseTimeToMinutes(item.time);
+          if (parsed !== null) {
+            currentTimeMinutes = parsed;
+          } else if (!updatedItem.time) {
+            updatedItem.time = minutesToTimeStr(currentTimeMinutes);
+          }
+        } else {
+          updatedItem.time = minutesToTimeStr(currentTimeMinutes);
+        }
+
+        const dur =
+          updatedItem.duration !== undefined &&
+          updatedItem.duration !== null &&
+          updatedItem.duration !== ''
+            ? parseInt(updatedItem.duration, 10)
+            : 0;
+
+        if (!Number.isNaN(dur) && dur > 0) {
+          currentTimeMinutes += dur;
+        }
+
+        return updatedItem;
+      });
+
+      return { ...step, items: newItems };
+    });
+
+    return newSteps;
+  };
+  
   // Lista de músicas vinda do banco
   const [songs, setSongs] = useState([]);
   const [songSearch, setSongSearch] = useState('');
@@ -283,6 +361,7 @@ const EventCreationScreen = ({ navigation, route }) => {
               : '',
             time: item.item_time || '',
             participants: [],
+            hasExplicitTime: !!item.item_time,
           });
         });
 
@@ -293,7 +372,7 @@ const EventCreationScreen = ({ navigation, route }) => {
           items: itemsByStep[step.id] || [],
         }));
 
-        setSteps(formattedSteps);
+        setSteps(recalcItemTimes(formattedSteps));
       } catch (err) {
         console.error('Erro ao carregar etapas do evento:', err);
       }
@@ -878,8 +957,8 @@ const EventCreationScreen = ({ navigation, route }) => {
 
       if (!changed) return prevSteps;
 
-      updatedSteps = stepsCopy;
-      return stepsCopy;
+      updatedSteps = recalcItemTimes(stepsCopy);
+      return updatedSteps;
     });
 
     if (updatedSteps) {
@@ -913,7 +992,7 @@ const EventCreationScreen = ({ navigation, route }) => {
           ? { ...step, ...stepData }
           : step
       );
-      setSteps(updatedSteps);
+      setSteps(recalcItemTimes(updatedSteps));
 
       if (eventId) {
         try {
@@ -960,7 +1039,7 @@ const EventCreationScreen = ({ navigation, route }) => {
         }
       }
 
-      setSteps([...steps, newStep]);
+      setSteps(recalcItemTimes([...steps, newStep]));
     }
   };
   
@@ -991,7 +1070,7 @@ const EventCreationScreen = ({ navigation, route }) => {
             }
 
             const updatedSteps = steps.filter(step => step.id !== stepId);
-            setSteps(updatedSteps);
+            setSteps(recalcItemTimes(updatedSteps));
 
             if (eventId) {
               syncStepsOrderWithDb(updatedSteps);
@@ -1082,16 +1161,30 @@ const EventCreationScreen = ({ navigation, route }) => {
 
         if (existingIndex >= 0) {
           const updatedItems = [...step.items];
-          updatedItems[existingIndex] = { ...itemData, id: dbItemId || itemData.id };
+          updatedItems[existingIndex] = {
+            ...itemData,
+            id: dbItemId || itemData.id,
+            hasExplicitTime: !!itemData.time,
+          };
           return { ...step, items: updatedItems };
         } else {
-          return { ...step, items: [...step.items, { ...itemData, id: dbItemId || itemData.id }] };
+          return {
+            ...step,
+            items: [
+              ...step.items,
+              {
+                ...itemData,
+                id: dbItemId || itemData.id,
+                hasExplicitTime: !!itemData.time,
+              },
+            ],
+          };
         }
       }
       return step;
     });
 
-    setSteps(updatedSteps);
+    setSteps(recalcItemTimes(updatedSteps));
   };
   
   // Função para adicionar música do modal
@@ -1110,6 +1203,7 @@ const EventCreationScreen = ({ navigation, route }) => {
       duration: song.duration,
       participants: [],
       time: '',
+      hasExplicitTime: false,
     };
 
     handleSaveStepItem(targetStepId, newItem);
@@ -1147,7 +1241,7 @@ const EventCreationScreen = ({ navigation, route }) => {
               }
               return step;
             });
-            setSteps(updatedSteps);
+            setSteps(recalcItemTimes(updatedSteps));
           }
         }
       ]
@@ -1170,7 +1264,7 @@ const EventCreationScreen = ({ navigation, route }) => {
         step.id === stepId ? { ...step, items: newItems } : step
       );
       syncItemsOrderWithDb(updatedSteps);
-      return updatedSteps;
+      return recalcItemTimes(updatedSteps);
     });
   };
 
@@ -1195,29 +1289,28 @@ const EventCreationScreen = ({ navigation, route }) => {
         delayLongPress={150}
         activeOpacity={0.9}
       >
-        <View style={styles.timeColumn}>
-          <Text style={[styles.timeText, { color: colors.primary }]}>{item.time || ''}</Text>
-        </View>
-        <View style={styles.dotColumn}>
-          <View style={[styles.dot, { backgroundColor: indicatorColor }]} />
-        </View>
         <View style={styles.contentColumn}>
           <View style={styles.stepItemContent}>
             <View style={styles.stepItemHeader}>
               <View style={styles.stepItemHeaderLeft}>
-                <Text style={[styles.stepItemTitle, { color: colors.text }]}>
-                  {item.title}
+                <Text style={[styles.timeText, { color: colors.primary, marginRight: 12 }]}>
+                  {item.time || ''}
                 </Text>
-                {item.subtitle && (
-                  <Text style={[styles.stepItemSubtitle, { color: colors.textSecondary }]}>
-                    - {item.subtitle}
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.stepItemTitle, { color: colors.text }]}>
+                    {item.title}
                   </Text>
-                )}
-                {item.duration && (
-                  <Text style={[styles.stepItemDuration, { color: colors.textSecondary }]}>
-                    {item.duration}
-                  </Text>
-                )}
+                  {item.subtitle && (
+                    <Text style={[styles.stepItemSubtitle, { color: colors.textSecondary }]}>
+                      - {item.subtitle}
+                    </Text>
+                  )}
+                  {item.duration && (
+                    <Text style={[styles.stepItemDuration, { color: colors.textSecondary }]}>
+                      {item.duration}
+                    </Text>
+                  )}
+                </View>
               </View>
 
               <View style={styles.stepItemRightActions}>
@@ -1287,72 +1380,87 @@ const EventCreationScreen = ({ navigation, route }) => {
   // Função para renderizar uma etapa
   const renderStep = (step, index) => {
     return (
-      <View key={step.id} style={styles.stepContainer}>
-        <View style={styles.stepHeader}>
-          <View style={styles.reorderButtons}>
+      <View key={step.id} style={[styles.stepContainer, {
+        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(99, 102, 241, 0.05)',
+        borderRadius: 12,
+        marginBottom: 16,
+        overflow: 'hidden',
+      }]}>
+        <View style={[styles.stepHeaderWrapper, {
+          paddingHorizontal: 12,
+          paddingTop: 12,
+          paddingBottom: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(99, 102, 241, 0.1)',
+        }]}>
+          <View style={styles.stepHeader}>
+            <View style={styles.reorderButtons}>
+              <TouchableOpacity 
+                onPress={() => moveStepUp(index)}
+                disabled={index === 0}
+                style={[styles.reorderButton, index === 0 && styles.reorderButtonDisabled]}
+              >
+                <FontAwesome 
+                  name="chevron-up" 
+                  size={14} 
+                  color={index === 0 ? colors.textSecondary : colors.primary} 
+                />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => moveStepDown(index)}
+                disabled={index === steps.length - 1}
+                style={[styles.reorderButton, index === steps.length - 1 && styles.reorderButtonDisabled]}
+              >
+                <FontAwesome 
+                  name="chevron-down" 
+                  size={14} 
+                  color={index === steps.length - 1 ? colors.textSecondary : colors.primary} 
+                />
+              </TouchableOpacity>
+            </View>
+            
             <TouchableOpacity 
-              onPress={() => moveStepUp(index)}
-              disabled={index === 0}
-              style={[styles.reorderButton, index === 0 && styles.reorderButtonDisabled]}
+              style={styles.stepTitleContainer}
+              onPress={() => handleEditStep(step)}
+              activeOpacity={0.7}
             >
-              <FontAwesome 
-                name="chevron-up" 
-                size={14} 
-                color={index === 0 ? colors.textSecondary : colors.primary} 
-              />
+              <View style={[styles.stepIndicator, { backgroundColor: '#4CD964' }]} />
+              <Text style={[styles.stepTitle, { color: colors.text }]}>{step.title}</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={() => moveStepDown(index)}
-              disabled={index === steps.length - 1}
-              style={[styles.reorderButton, index === steps.length - 1 && styles.reorderButtonDisabled]}
-            >
-              <FontAwesome 
-                name="chevron-down" 
-                size={14} 
-                color={index === steps.length - 1 ? colors.textSecondary : colors.primary} 
-              />
-            </TouchableOpacity>
-          </View>
-          
-          <TouchableOpacity 
-            style={styles.stepTitleContainer}
-            onPress={() => handleEditStep(step)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.stepIndicator, { backgroundColor: '#4CD964' }]} />
-            <Text style={[styles.stepTitle, { color: colors.text }]}>{step.title}</Text>
-          </TouchableOpacity>
-          <View style={styles.stepActions}>
-            <TouchableOpacity 
-              style={styles.deleteStepButton}
-              onPress={() => handleDeleteStep(step.id)}
-            >
-              <FontAwesome name="trash-o" size={18} color={colors.danger} />
-            </TouchableOpacity>
+            <View style={styles.stepActions}>
+              <TouchableOpacity 
+                style={styles.deleteStepButton}
+                onPress={() => handleDeleteStep(step.id)}
+              >
+                <FontAwesome name="trash-o" size={18} color={colors.danger} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
-        {step.items.map((item, idx) => (
-          <View key={item.id} style={styles.stepItemWrapper}>
-            {renderStepItem({
-              item,
-              stepId: step.id,
-              index: idx,
-              drag: undefined,
-              isActive: false,
-            })}
-          </View>
-        ))}
-        
-        <TouchableOpacity 
-          style={styles.addItemButton}
-          onPress={() => handleAddItemToStep(step.id)}
-        >
-          <FontAwesome name="plus" size={14} color={colors.primary} />
-          <Text style={[styles.addItemText, { color: colors.primary }]}>
-            Adicionar etapa
-          </Text>
-        </TouchableOpacity>
+        <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+          {step.items.map((item, idx) => (
+            <View key={item.id} style={styles.stepItemWrapper}>
+              {renderStepItem({
+                item,
+                stepId: step.id,
+                index: idx,
+                drag: undefined,
+                isActive: false,
+              })}
+            </View>
+          ))}
+          
+          <TouchableOpacity 
+            style={styles.addItemButton}
+            onPress={() => handleAddItemToStep(step.id)}
+          >
+            <FontAwesome name="plus" size={14} color={colors.primary} />
+            <Text style={[styles.addItemText, { color: colors.primary }]}>
+              Adicionar etapa
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -2581,11 +2689,14 @@ const styles = StyleSheet.create({
   stepContainer: {
     marginBottom: 24,
   },
+  stepHeaderWrapper: {
+    overflow: 'hidden',
+  },
   stepHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 0,
   },
   reorderButtons: {
     flexDirection: 'column',
@@ -2630,7 +2741,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   stepItemContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'flex-start',
     paddingVertical: 8,
   },
@@ -2673,7 +2784,7 @@ const styles = StyleSheet.create({
   },
   contentColumn: {
     flex: 1,
-    paddingLeft: 8,
+    width: '100%',
   },
   stepItemContent: {
     paddingVertical: 4,
