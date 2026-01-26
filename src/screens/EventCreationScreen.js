@@ -65,6 +65,9 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [coverImagePath, setCoverImagePath] = useState(eventData?.cover_image_path || null);
   const [uploadingCover, setUploadingCover] = useState(false);
   
+  // Animated value para parallax
+  const scrollY = useRef(new Animated.Value(0)).current;
+  
   const [steps, setSteps] = useState([
     {
       id: '1',
@@ -189,6 +192,7 @@ const EventCreationScreen = ({ navigation, route }) => {
     // Se temos dados do formulário, usar esses dados
     if (eventData) {
       setEventTitle(eventData.name || '');
+      setCoverImagePath(eventData.cover_image_path || null);
     }
     // Senão, se temos um template, usar dados do template
     else if (templateId) {
@@ -205,10 +209,25 @@ const EventCreationScreen = ({ navigation, route }) => {
     }
   }, [templateId, eventData]);
 
-  // Carregar equipe quando eventId mudar
+  // Carregar dados completos do evento quando eventId mudar
   useEffect(() => {
+    const loadEventData = async () => {
+      if (eventId && isEditing) {
+        try {
+          const eventDetails = await eventService.getEventById(eventId);
+          if (eventDetails) {
+            setEventTitle(eventDetails.title || '');
+            setCoverImagePath(eventDetails.cover_image_path || null);
+          }
+        } catch (error) {
+          console.error('Erro ao carregar dados do evento:', error);
+        }
+      }
+    };
+
+    loadEventData();
     loadEventTeam();
-  }, [eventId]);
+  }, [eventId, isEditing]);
   
   // Função para salvar o evento
   const handleSaveEvent = async () => {
@@ -970,28 +989,65 @@ const EventCreationScreen = ({ navigation, route }) => {
         </View>
       </View>
       
-      <ScrollView style={styles.container}>
+      <Animated.ScrollView 
+        style={styles.container}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+      >
         {/* Event Image/Banner */}
         <View style={[styles.bannerContainer, { backgroundColor: coverImagePath ? 'transparent' : '#5E5CEC' }]}>
           {coverImagePath ? (
-            <Image
+            <Animated.Image
               source={{ uri: getEventCoverUrl(coverImagePath) }}
-              style={styles.bannerImage}
+              style={[
+                styles.bannerImage,
+                {
+                  transform: [
+                    {
+                      translateY: scrollY.interpolate({
+                        inputRange: [0, 180],
+                        outputRange: [0, 45],
+                        extrapolate: 'clamp',
+                      }),
+                    },
+                    {
+                      scale: scrollY.interpolate({
+                        inputRange: [-100, 0],
+                        outputRange: [1.3, 1],
+                        extrapolate: 'clamp',
+                      }),
+                    },
+                  ],
+                },
+              ]}
               resizeMode="cover"
             />
           ) : null}
-          <TouchableOpacity 
-            style={[
-              styles.addImageButton,
-              uploadingCover && { opacity: 0.6 }
-            ]}
-            onPress={uploadingCover ? undefined : handleSelectCoverSource}
+          <Animated.View
+            style={{
+              opacity: scrollY.interpolate({
+                inputRange: [0, 100],
+                outputRange: [1, 0.3],
+                extrapolate: 'clamp',
+              }),
+            }}
           >
-            <FontAwesome name={coverImagePath ? "pencil" : "camera"} size={24} color="#FFFFFF" />
-            {uploadingCover && (
-              <ActivityIndicator size="small" color="#FFFFFF" style={{ marginLeft: 8 }} />
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.addImageButton,
+                uploadingCover && { opacity: 0.6 }
+              ]}
+              onPress={uploadingCover ? undefined : handleSelectCoverSource}
+            >
+              <FontAwesome name={coverImagePath ? "pencil" : "camera"} size={24} color="#FFFFFF" />
+              {uploadingCover && (
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginLeft: 8 }} />
+              )}
+            </TouchableOpacity>
+          </Animated.View>
         </View>
         
         {/* Event Title */}
@@ -1296,7 +1352,7 @@ const EventCreationScreen = ({ navigation, route }) => {
             </View>
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
       
       {/* Botões flutuantes para a aba Etapas */}
       {activeTab === 'steps' && (
@@ -1717,6 +1773,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    overflow: 'hidden',
   },
   bannerImage: {
     position: 'absolute',
