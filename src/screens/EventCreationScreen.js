@@ -13,7 +13,8 @@ import {
   Alert,
   Dimensions,
   ActivityIndicator,
-  Animated
+  Animated,
+  PanResponder
 } from 'react-native';
 
 const HEADER_MAX_HEIGHT = 240;
@@ -69,6 +70,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   const [coverImagePath, setCoverImagePath] = useState(eventData?.cover_image_path || null);
   const [uploadingCover, setUploadingCover] = useState(false);
   
+  
   // Animated value para parallax
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -79,56 +81,53 @@ const EventCreationScreen = ({ navigation, route }) => {
     extrapolate: 'clamp',
   });
   
-  const [steps, setSteps] = useState([
-    {
-      id: '1',
-      title: 'Início',
-      time: '19:00',
-      items: [
-        {
-          id: '1-1',
-          title: 'Video Teaser',
-          duration: '3min',
-          participants: ['João']
+  const [steps, setSteps] = useState([]);
+  
+  // Lista de músicas vinda do banco
+  const [songs, setSongs] = useState([]);
+  const [songSearch, setSongSearch] = useState('');
+  // Carregar lista de músicas do banco
+  useEffect(() => {
+    const loadSongs = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('songs')
+          .select('id, title, artist, category, duration_minutes')
+          .order('title', { ascending: true });
+
+        if (error) {
+          console.error('Erro ao carregar músicas:', error);
+          return;
         }
-      ]
-    },
-    {
-      id: '2',
-      title: 'Louvor',
-      time: '19:03',
-      items: [
-        {
-          id: '2-1',
-          title: 'Se Aperfeiçoa Em Mim',
-          subtitle: 'Ministério Zoe',
-          duration: '5min',
-          participants: ['João', 'Maria']
-        },
-        {
-          id: '2-2',
-          title: 'TUDO É PERDA',
-          subtitle: 'Morada',
-          duration: '5min',
-          participants: ['João']
-        },
-        {
-          id: '2-3',
-          title: 'LINDO MOMENTO',
-          subtitle: 'Ministério Zoe',
-          duration: '5min',
-          participants: ['Maria']
-        },
-        {
-          id: '2-4',
-          title: 'Vitorioso És / Victory is Yours',
-          subtitle: 'Elevation Worship',
-          duration: '7min',
-          participants: ['João', 'Maria']
-        }
-      ]
-    }
-  ]);
+
+        const mapped = (data || []).map(song => ({
+          id: song.id,
+          title: song.title,
+          artist: song.artist || '',
+          time: '',
+          duration: song.duration_minutes !== null && song.duration_minutes !== undefined
+            ? String(song.duration_minutes)
+            : '',
+          tags: song.category ? [song.category] : []
+        }));
+
+        setSongs(mapped);
+      } catch (err) {
+        console.error('Erro inesperado ao carregar músicas:', err);
+      }
+    };
+
+    loadSongs();
+  }, []);
+  const filteredSongs = songs.filter((song) => {
+    if (!songSearch.trim()) return true;
+    const q = songSearch.trim().toLowerCase();
+    return (
+      (song.title || '').toLowerCase().includes(q) ||
+      (song.artist || '').toLowerCase().includes(q) ||
+      (song.tags || []).some(tag => (tag || '').toLowerCase().includes(q))
+    );
+  });
   
   // Carregar membros da equipe do evento
   const loadEventTeam = async () => {
@@ -239,6 +238,69 @@ const EventCreationScreen = ({ navigation, route }) => {
     loadEventData();
     loadEventTeam();
   }, [eventId, isEditing]);
+
+  // Carregar etapas e itens do evento
+  useEffect(() => {
+    const loadEventStructure = async () => {
+      if (!eventId) {
+        setSteps([]);
+        return;
+      }
+
+      try {
+        const { data: stepsData, error: stepsError } = await supabase
+          .from('event_steps')
+          .select('id, title, step_order')
+          .eq('event_id', eventId)
+          .order('step_order', { ascending: true });
+
+        if (stepsError) throw stepsError;
+
+        if (!stepsData || stepsData.length === 0) {
+          setSteps([]);
+          return;
+        }
+
+        const stepIds = stepsData.map(s => s.id);
+
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('step_items')
+          .select('id, step_id, title, subtitle, item_time, item_order, duration_minutes')
+          .in('step_id', stepIds)
+          .order('item_order', { ascending: true });
+
+        if (itemsError) throw itemsError;
+
+        const itemsByStep = {};
+        (itemsData || []).forEach(item => {
+          if (!itemsByStep[item.step_id]) itemsByStep[item.step_id] = [];
+          itemsByStep[item.step_id].push({
+            id: item.id,
+            title: item.title,
+            subtitle: item.subtitle,
+            duration: item.duration_minutes !== null && item.duration_minutes !== undefined
+              ? String(item.duration_minutes)
+              : '',
+            time: item.item_time || '',
+            participants: [],
+          });
+        });
+
+        const formattedSteps = stepsData.map(step => ({
+          id: step.id,
+          title: step.title,
+          time: '',
+          items: itemsByStep[step.id] || [],
+        }));
+
+        setSteps(formattedSteps);
+      } catch (err) {
+        console.error('Erro ao carregar etapas do evento:', err);
+      }
+    };
+
+    loadEventStructure();
+  }, [eventId]);
   
   // Função para salvar o evento
   const handleSaveEvent = async () => {
@@ -720,6 +782,111 @@ const EventCreationScreen = ({ navigation, route }) => {
     );
   };
   
+  // Sincronizar ordem das etapas com o banco
+  const syncStepsOrderWithDb = async (updatedSteps) => {
+    if (!eventId) return;
+
+    try {
+      const updates = updatedSteps.map((step, index) =>
+        supabase
+          .from('event_steps')
+          .update({ step_order: index })
+          .eq('id', step.id)
+      );
+
+      await Promise.all(updates);
+    } catch (error) {
+      console.error('Erro ao sincronizar ordem das etapas:', error);
+    }
+  };
+
+  // Sincronizar ordem dos itens com o banco
+  const syncItemsOrderWithDb = async (updatedSteps) => {
+    if (!eventId) return;
+
+    try {
+      const updates = [];
+      updatedSteps.forEach(step => {
+        (step.items || []).forEach((item, index) => {
+          if (!item.id) return;
+          updates.push(
+            supabase
+              .from('step_items')
+              .update({
+                item_order: index,
+                step_id: step.id,
+              })
+              .eq('id', item.id)
+          );
+        });
+      });
+
+      if (updates.length) {
+        await Promise.all(updates);
+      }
+    } catch (error) {
+      console.error('Erro ao sincronizar ordem dos itens:', error);
+    }
+  };
+
+  // Função para mover item (para cima/baixo e entre cabeçalhos)
+  const moveStepItem = (stepId, itemIndex, direction) => {
+    let updatedSteps = null;
+
+    setSteps(prevSteps => {
+      const stepsCopy = prevSteps.map(step => ({
+        ...step,
+        items: [...(step.items || [])],
+      }));
+
+      const stepIndex = stepsCopy.findIndex(s => s.id === stepId);
+      if (stepIndex === -1) return prevSteps;
+
+      const currentStep = stepsCopy[stepIndex];
+      const items = currentStep.items;
+      if (!items || items.length === 0) return prevSteps;
+
+      let changed = false;
+
+      if (direction === 'up') {
+        if (itemIndex > 0) {
+          [items[itemIndex - 1], items[itemIndex]] =
+            [items[itemIndex], items[itemIndex - 1]];
+          changed = true;
+        } else if (itemIndex === 0 && stepIndex > 0) {
+          // sobe para o cabeçalho anterior
+          const [moved] = items.splice(itemIndex, 1);
+          stepsCopy[stepIndex - 1].items = [
+            ...(stepsCopy[stepIndex - 1].items || []),
+            moved,
+          ];
+          changed = true;
+        }
+      } else if (direction === 'down') {
+        if (itemIndex < items.length - 1) {
+          [items[itemIndex + 1], items[itemIndex]] =
+            [items[itemIndex], items[itemIndex + 1]];
+          changed = true;
+        } else if (itemIndex === items.length - 1 && stepIndex < stepsCopy.length - 1) {
+          // desce para o próximo cabeçalho
+          const [moved] = items.splice(itemIndex, 1);
+          const nextItems = stepsCopy[stepIndex + 1].items || [];
+          stepsCopy[stepIndex + 1].items = [moved, ...nextItems];
+          changed = true;
+        }
+      }
+
+      if (!changed) return prevSteps;
+
+      updatedSteps = stepsCopy;
+      return stepsCopy;
+    });
+
+    if (updatedSteps) {
+      syncItemsOrderWithDb(updatedSteps);
+    }
+  };
+
   // Função para abrir o modal de adição de etapa
   const handleAddStep = () => {
     setCurrentStep(null);
@@ -738,21 +905,66 @@ const EventCreationScreen = ({ navigation, route }) => {
     setIsStepEditorVisible(true);
   };
   
-  // Função para salvar uma etapa
-  const handleSaveStep = (stepData) => {
+  // Função para salvar uma etapa (com persistência no banco)
+  const handleSaveStep = async (stepData) => {
     if (currentStep) {
-      // Editar etapa existente
-      const updatedSteps = steps.map(step => 
-        step.id === stepData.id ? stepData : step
+      const updatedSteps = steps.map(step =>
+        step.id === stepData.id
+          ? { ...step, ...stepData }
+          : step
       );
       setSteps(updatedSteps);
+
+      if (eventId) {
+        try {
+          await supabase
+            .from('event_steps')
+            .update({
+              title: stepData.title,
+            })
+            .eq('id', stepData.id);
+        } catch (error) {
+          console.error('Erro ao atualizar etapa:', error);
+        }
+      }
     } else {
-      // Adicionar nova etapa
-      setSteps([...steps, stepData]);
+      const stepOrder = steps.length;
+
+      let newStep = {
+        ...stepData,
+        items: [],
+        step_order: stepOrder,
+      };
+
+      if (eventId) {
+        try {
+          const { data, error } = await supabase
+            .from('event_steps')
+            .insert([
+              {
+                event_id: eventId,
+                title: newStep.title,
+                step_order: stepOrder,
+              },
+            ])
+            .select()
+            .single();
+
+          if (!error && data) {
+            newStep = { ...newStep, id: data.id };
+          } else if (error) {
+            console.error('Erro ao inserir etapa:', error);
+          }
+        } catch (error) {
+          console.error('Erro ao inserir etapa:', error);
+        }
+      }
+
+      setSteps([...steps, newStep]);
     }
   };
   
-  // Função para excluir uma etapa
+  // Função para excluir uma etapa (com persistência no banco)
   const handleDeleteStep = (stepId) => {
     Alert.alert(
       'Excluir Etapa',
@@ -762,9 +974,28 @@ const EventCreationScreen = ({ navigation, route }) => {
         { 
           text: 'Excluir', 
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            try {
+              if (eventId) {
+                await supabase
+                  .from('event_steps')
+                  .delete()
+                  .eq('id', stepId);
+                await supabase
+                  .from('step_items')
+                  .delete()
+                  .eq('step_id', stepId);
+              }
+            } catch (error) {
+              console.error('Erro ao excluir etapa no banco:', error);
+            }
+
             const updatedSteps = steps.filter(step => step.id !== stepId);
             setSteps(updatedSteps);
+
+            if (eventId) {
+              syncStepsOrderWithDb(updatedSteps);
+            }
           }
         }
       ]
@@ -785,29 +1016,107 @@ const EventCreationScreen = ({ navigation, route }) => {
     setIsStepItemEditorVisible(true);
   };
   
-  // Função para salvar um item
-  const handleSaveStepItem = (stepId, itemData) => {
+  // Função para salvar um item (com persistência no banco)
+  const handleSaveStepItem = async (stepId, itemData) => {
+    const durationMinutes =
+      itemData.duration !== undefined &&
+      itemData.duration !== null &&
+      itemData.duration !== ''
+        ? parseInt(itemData.duration, 10)
+        : null;
+    
+    const itemTime =
+      itemData.time !== undefined &&
+      itemData.time !== null &&
+      itemData.time !== ''
+        ? itemData.time
+        : null;
+    
+    let dbItemId = itemData.id;
+
+    const targetStep = steps.find(step => step.id === stepId);
+    const existingItemIndex = targetStep ? targetStep.items.findIndex(item => item.id === itemData.id) : -1;
+
+    if (eventId) {
+      try {
+        if (existingItemIndex >= 0 && dbItemId) {
+          await supabase
+            .from('step_items')
+            .update({
+              title: itemData.title,
+              subtitle: itemData.subtitle,
+              duration_minutes: durationMinutes,
+              item_time: itemTime,
+              item_order: existingItemIndex,
+            })
+            .eq('id', dbItemId);
+        } else {
+          const orderIndex = targetStep ? targetStep.items.length : 0;
+          const { data, error } = await supabase
+            .from('step_items')
+            .insert([{
+              step_id: stepId,
+              title: itemData.title,
+              subtitle: itemData.subtitle,
+              duration_minutes: durationMinutes,
+              item_time: itemTime,
+              item_order: orderIndex,
+            }])
+            .select()
+            .single();
+
+          if (!error && data) {
+            dbItemId = data.id;
+          } else if (error) {
+            console.error('Erro ao inserir item de etapa:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao salvar item de etapa no banco:', error);
+      }
+    }
+
     const updatedSteps = steps.map(step => {
       if (step.id === stepId) {
-        const existingItemIndex = step.items.findIndex(item => item.id === itemData.id);
-        
-        if (existingItemIndex >= 0) {
-          // Atualizar item existente
+        const existingIndex = step.items.findIndex(item => item.id === itemData.id);
+
+        if (existingIndex >= 0) {
           const updatedItems = [...step.items];
-          updatedItems[existingItemIndex] = itemData;
+          updatedItems[existingIndex] = { ...itemData, id: dbItemId || itemData.id };
           return { ...step, items: updatedItems };
         } else {
-          // Adicionar novo item
-          return { ...step, items: [...step.items, itemData] };
+          return { ...step, items: [...step.items, { ...itemData, id: dbItemId || itemData.id }] };
         }
       }
       return step;
     });
-    
+
     setSteps(updatedSteps);
   };
   
-  // Função para excluir um item
+  // Função para adicionar música do modal
+  const handleAddSongFromModal = (song) => {
+    if (!steps.length) {
+      Alert.alert('Crie uma etapa', 'Você precisa ter pelo menos uma etapa para adicionar músicas.');
+      return;
+    }
+
+    const targetStepId = steps[steps.length - 1].id;
+
+    const newItem = {
+      id: `${targetStepId}-${Date.now()}`,
+      title: song.title,
+      subtitle: song.artist,
+      duration: song.duration,
+      participants: [],
+      time: '',
+    };
+
+    handleSaveStepItem(targetStepId, newItem);
+    setIsAddSongModalVisible(false);
+  };
+
+  // Função para excluir um item (com persistência no banco)
   const handleDeleteStepItem = (stepId, itemId) => {
     Alert.alert(
       'Excluir Item',
@@ -817,12 +1126,23 @@ const EventCreationScreen = ({ navigation, route }) => {
         { 
           text: 'Excluir', 
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            try {
+              if (eventId) {
+                await supabase
+                  .from('step_items')
+                  .delete()
+                  .eq('id', itemId);
+              }
+            } catch (error) {
+              console.error('Erro ao excluir item no banco:', error);
+            }
+
             const updatedSteps = steps.map(step => {
               if (step.id === stepId) {
                 return {
                   ...step,
-                  items: step.items.filter(item => item.id !== itemId)
+                  items: step.items.filter(item => item.id !== itemId),
                 };
               }
               return step;
@@ -837,44 +1157,103 @@ const EventCreationScreen = ({ navigation, route }) => {
   // Função para renderizar um participante
   const renderParticipant = (name) => {
     return (
-      <View key={name} style={styles.participantTag}>
+      <View style={styles.participantTag}>
         <Text style={styles.participantName}>{name}</Text>
       </View>
     );
   };
-  
+
+  // Helper para reordenar itens de etapa após drag & drop
+  const handleReorderItems = (stepId, newItems) => {
+    setSteps(prevSteps => {
+      const updatedSteps = prevSteps.map(step =>
+        step.id === stepId ? { ...step, items: newItems } : step
+      );
+      syncItemsOrderWithDb(updatedSteps);
+      return updatedSteps;
+    });
+  };
+
   // Função para renderizar um item de etapa
-  const renderStepItem = ({ item, stepId, index }) => {
-    // Determinar a cor do indicador com base no índice
+  const renderStepItem = ({ item, stepId, index, drag, isActive }) => {
     const indicatorColors = ['#FF9500', '#BB86FC', '#CF6679'];
     const indicatorColor = indicatorColors[index % indicatorColors.length];
     
+    const stepIndex = steps.findIndex(s => s.id === stepId);
+    const step = stepIndex >= 0 ? steps[stepIndex] : null;
+    const canMoveUp = step ? (index > 0 || stepIndex > 0) : false;
+    const canMoveDown = step ? (index < step.items.length - 1 || stepIndex < steps.length - 1) : false;
+
     return (
       <TouchableOpacity 
-        style={styles.stepItemContainer}
+        style={[
+          styles.stepItemContainer,
+          isActive && styles.stepItemContainerDragged
+        ]}
         onPress={() => handleEditStepItem(stepId, item)}
-        activeOpacity={0.7}
+        onLongPress={drag}
+        delayLongPress={150}
+        activeOpacity={0.9}
       >
         <View style={styles.timeColumn}>
           <Text style={[styles.timeText, { color: colors.primary }]}>{item.time || ''}</Text>
         </View>
         <View style={styles.dotColumn}>
-          <View style={styles.dot} />
+          <View style={[styles.dot, { backgroundColor: indicatorColor }]} />
         </View>
         <View style={styles.contentColumn}>
           <View style={styles.stepItemContent}>
             <View style={styles.stepItemHeader}>
-              <Text style={[styles.stepItemTitle, { color: colors.text }]}>{item.title}</Text>
-              {item.subtitle && (
-                <Text style={[styles.stepItemSubtitle, { color: colors.textSecondary }]}>
-                  - {item.subtitle}
+              <View style={styles.stepItemHeaderLeft}>
+                <Text style={[styles.stepItemTitle, { color: colors.text }]}>
+                  {item.title}
                 </Text>
-              )}
-              {item.duration && (
-                <Text style={[styles.stepItemDuration, { color: colors.textSecondary }]}>
-                  {item.duration}
-                </Text>
-              )}
+                {item.subtitle && (
+                  <Text style={[styles.stepItemSubtitle, { color: colors.textSecondary }]}>
+                    - {item.subtitle}
+                  </Text>
+                )}
+                {item.duration && (
+                  <Text style={[styles.stepItemDuration, { color: colors.textSecondary }]}>
+                    {item.duration}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.stepItemRightActions}>
+                <View style={styles.stepItemReorderButtons}>
+                  <TouchableOpacity
+                    style={[styles.reorderItemButton, !canMoveUp && styles.reorderItemButtonDisabled]}
+                    onPress={() => canMoveUp && moveStepItem(stepId, index, 'up')}
+                    disabled={!canMoveUp}
+                  >
+                    <FontAwesome
+                      name="chevron-up"
+                      size={12}
+                      color={canMoveUp ? colors.primary : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.reorderItemButton, !canMoveDown && styles.reorderItemButtonDisabled]}
+                    onPress={() => canMoveDown && moveStepItem(stepId, index, 'down')}
+                    disabled={!canMoveDown}
+                  >
+                    <FontAwesome
+                      name="chevron-down"
+                      size={12}
+                      color={canMoveDown ? colors.primary : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.deleteStepItemButton}
+                  onPress={() => handleDeleteStepItem(stepId, item.id)}
+                >
+                  <FontAwesome name="trash-o" size={16} color={colors.danger} />
+                </TouchableOpacity>
+              </View>
             </View>
             {item.participants && item.participants.length > 0 && (
               <View style={styles.participantsContainer}>
@@ -893,6 +1272,7 @@ const EventCreationScreen = ({ navigation, route }) => {
     const newSteps = [...steps];
     [newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]];
     setSteps(newSteps);
+    syncStepsOrderWithDb(newSteps);
   };
 
   // Função para mover etapa para baixo
@@ -901,6 +1281,7 @@ const EventCreationScreen = ({ navigation, route }) => {
     const newSteps = [...steps];
     [newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]];
     setSteps(newSteps);
+    syncStepsOrderWithDb(newSteps);
   };
 
   // Função para renderizar uma etapa
@@ -942,7 +1323,6 @@ const EventCreationScreen = ({ navigation, route }) => {
             <Text style={[styles.stepTitle, { color: colors.text }]}>{step.title}</Text>
           </TouchableOpacity>
           <View style={styles.stepActions}>
-            <Text style={[styles.stepTime, { color: colors.primary }]}>{step.time}</Text>
             <TouchableOpacity 
               style={styles.deleteStepButton}
               onPress={() => handleDeleteStep(step.id)}
@@ -951,10 +1331,16 @@ const EventCreationScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
         </View>
-        
-        {step.items.map((item, itemIndex) => (
+
+        {step.items.map((item, idx) => (
           <View key={item.id} style={styles.stepItemWrapper}>
-            {renderStepItem({ item, stepId: step.id, index: itemIndex })}
+            {renderStepItem({
+              item,
+              stepId: step.id,
+              index: idx,
+              drag: undefined,
+              isActive: false,
+            })}
           </View>
         ))}
         
@@ -964,7 +1350,7 @@ const EventCreationScreen = ({ navigation, route }) => {
         >
           <FontAwesome name="plus" size={14} color={colors.primary} />
           <Text style={[styles.addItemText, { color: colors.primary }]}>
-            Adicionar item
+            Adicionar etapa
           </Text>
         </TouchableOpacity>
       </View>
@@ -1172,7 +1558,7 @@ const EventCreationScreen = ({ navigation, route }) => {
               >
                 <FontAwesome name="plus-circle" size={20} color={colors.primary} />
                 <Text style={[styles.addStepText, { color: colors.primary }]}>
-                  Adicionar etapa
+                  Adicionar cabeçalho
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1257,16 +1643,11 @@ const EventCreationScreen = ({ navigation, route }) => {
           {activeTab === 'songs' && (
             <View style={[styles.songsContainer, { backgroundColor: colors.background }]}>
               {/* Título da seção */}
-              <Text style={[styles.songsSectionTitle, { color: colors.text }]}>Músicas do Cronograma (4)</Text>
+              <Text style={[styles.songsSectionTitle, { color: colors.text }]}>Músicas do Cronograma ({songs.length})</Text>
               
               {/* Lista de músicas do cronograma */}
               <FlatList
-                data={[
-                  { id: '1', title: 'Se Aperfeiçoa Em Mim', artist: 'Ministério Zoe', time: '19:03', duration: '5min', tags: ['Vocal', 'Violão'] },
-                  { id: '2', title: 'TUDO É PERDA', artist: 'Morada', time: '19:08', duration: '5min', tags: ['Vocal'] },
-                  { id: '3', title: 'LINDO MOMENTO', artist: 'Ministério Zoe', time: '19:13', duration: '5min', tags: ['Vocal'] },
-                  { id: '4', title: 'Vitorioso És / Victory is Yours', artist: 'Elevation Worship', time: '19:18', duration: '7min', tags: ['Vocal', 'Piano'] },
-                ]}
+                data={songs}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <View style={[styles.songProgramItem, { borderBottomColor: colors.border }]}>
@@ -1375,20 +1756,6 @@ const EventCreationScreen = ({ navigation, route }) => {
             <>
               {/* Botão para adicionar cabeçalho */}
               <TouchableOpacity 
-                style={[styles.subButton, { bottom: 190 }]}
-                onPress={() => {
-                  handleAddHeader();
-                  setIsFabOpen(false);
-                }}
-              >
-                <View style={[styles.subButtonContainer, { backgroundColor: '#5fccb3' }]}>
-                  <Text style={styles.subButtonLabel}>Cabeçalho</Text>
-                  <FontAwesome name="star" size={20} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-              
-              {/* Botão para adicionar etapa */}
-              <TouchableOpacity 
                 style={[styles.subButton, { bottom: 135 }]}
                 onPress={() => {
                   handleAddStep();
@@ -1396,7 +1763,7 @@ const EventCreationScreen = ({ navigation, route }) => {
                 }}
               >
                 <View style={[styles.subButtonContainer, { backgroundColor: '#6366F1' }]}>
-                  <Text style={styles.subButtonLabel}>Etapa</Text>
+                  <Text style={styles.subButtonLabel}>Cabeçalho</Text>
                   <FontAwesome name="list" size={20} color="#FFFFFF" />
                 </View>
               </TouchableOpacity>
@@ -1628,15 +1995,6 @@ const EventCreationScreen = ({ navigation, route }) => {
           {activeHeaderTab === 'details' && (
             <ScrollView style={styles.modalScrollView}>
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Horário *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="19:00"
-                  placeholderTextColor="#8E8E93"
-                />
-              </View>
-              
-              <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>Título do Cabeçalho *</Text>
                 <TextInput
                   style={styles.formInput}
@@ -1699,44 +2057,64 @@ const EventCreationScreen = ({ navigation, route }) => {
                 style={[styles.songSearchInput, { color: colors.text }]}
                 placeholder="Pesquisar músicas..."
                 placeholderTextColor={colors.textSecondary}
+                value={songSearch}
+                onChangeText={setSongSearch}
               />
             </View>
           </View>
           
           {/* Lista de músicas disponíveis */}
           <FlatList
-            data={[
-              { id: '1', title: 'Se Aperfeiçoa Em Mim', artist: 'Ministério Zoe', tags: ['Vocal', 'Violão'] },
-              { id: '2', title: 'TUDO É PERDA', artist: 'Morada', tags: ['Vocal'] },
-              { id: '3', title: 'LINDO MOMENTO', artist: 'Ministério Zoe', tags: ['Vocal'] },
-              { id: '4', title: 'Vitorioso És / Victory is Yours', artist: 'Elevation Worship', tags: ['Vocal', 'Piano'] },
-              { id: '5', title: '1000 Graus', artist: 'Renascer Praise', tags: ['Vocal'] },
-              { id: '6', title: '500 GRAUS', artist: 'Cassiane', tags: ['Vocal'] },
-              { id: '7', title: 'A ALEGRIA ESTÁ NO CORAÇÃO', artist: 'Mateus Brito', tags: ['Vocal'] },
-              { id: '8', title: 'ABBA', artist: 'Laura Souguellis', tags: ['Vocal'] },
-            ]}
+            data={filteredSongs}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <View style={[styles.songSearchItem, { borderBottomColor: colors.border }]}>
-                <View style={styles.songSearchIconContainer}>
-                  <FontAwesome name="music" size={24} color="#8A2BE2" />
-                </View>
-                <View style={styles.songSearchInfo}>
-                  <Text style={[styles.songSearchTitle, { color: colors.text }]}>{item.title}</Text>
-                  <Text style={[styles.songSearchArtist, { color: colors.textSecondary }]}>{item.artist}</Text>
-                  <View style={styles.songSearchTags}>
-                    {item.tags.map((tag, index) => (
-                      <View key={index} style={[styles.songSearchTag, { backgroundColor: colors.inputBackground }]}>
-                        <Text style={[styles.songSearchTagText, { color: colors.text }]}>{tag}</Text>
-                      </View>
-                    ))}
+              <TouchableOpacity
+                style={[styles.songModalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                activeOpacity={0.7}
+                onPress={() => handleAddSongFromModal(item)}
+              >
+                <View style={styles.songModalContent}>
+                  <View style={styles.songModalHeader}>
+                    <View style={[styles.songModalIcon, { backgroundColor: colors.primary + '20' }]}>
+                      <FontAwesome name="music" size={18} color={colors.primary} />
+                    </View>
+                    <View style={styles.songModalInfo}>
+                      <Text style={[styles.songModalTitle, { color: colors.text }]} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <Text style={[styles.songModalArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {item.artist}
+                      </Text>
+                    </View>
+                    <TouchableOpacity>
+                      <FontAwesome name="pencil" size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.songModalMeta}>
+                    <View style={styles.songModalMetaItem}>
+                      <FontAwesome name="music" size={12} color={colors.textSecondary} />
+                      <Text style={[styles.songModalMetaText, { color: colors.textSecondary }]}>
+                        Tom: -
+                      </Text>
+                    </View>
+                    <View style={styles.songModalMetaItem}>
+                      <FontAwesome name="tachometer" size={12} color={colors.textSecondary} />
+                      <Text style={[styles.songModalMetaText, { color: colors.textSecondary }]}>
+                        Tempo: -
+                      </Text>
+                    </View>
+                    <View style={styles.songModalMetaItem}>
+                      <FontAwesome name="clock-o" size={12} color={colors.textSecondary} />
+                      <Text style={[styles.songModalMetaText, { color: colors.textSecondary }]}>
+                        Duração: {item.duration || '-'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-                <TouchableOpacity style={styles.songSearchAddButton}>
-                  <FontAwesome name="plus-circle" size={24} color="#00C853" />
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             )}
+            keyboardShouldPersistTaps="handled"
             style={styles.songSearchList}
             contentContainerStyle={styles.songSearchListContent}
           />
@@ -2037,29 +2415,35 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   modal: {
-    margin: 0,
     justifyContent: 'flex-end',
+    margin: 0,
   },
   modalContent: {
-    height: Dimensions.get('window').height * 0.9,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   modalBackButton: {
     fontSize: 16,
     color: '#000000',
   },
   modalScrollView: {
-    flex: 1,
+    maxHeight: '70%',
+    marginTop: 8,
   },
   modalSection: {
     paddingHorizontal: 16,
@@ -2250,6 +2634,23 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 8,
   },
+  stepItemContainerDragged: {
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    opacity: 0.7,
+    borderWidth: 2,
+    borderColor: '#6366F1',
+  },
+  stepItemDropZone: {
+    backgroundColor: 'rgba(99, 102, 241, 0.05)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#6366F1',
+    paddingVertical: 12,
+    marginVertical: 4,
+  },
   timeColumn: {
     width: 60,
     alignItems: 'flex-end',
@@ -2279,9 +2680,38 @@ const styles = StyleSheet.create({
   },
   stepItemHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stepItemHeaderLeft: {
+    flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    marginBottom: 4,
+    flex: 1,
+  },
+  stepItemRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  stepItemReorderButtons: {
+    flexDirection: 'column',
+    marginLeft: 8,
+  },
+  reorderItemButton: {
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reorderItemButtonDisabled: {
+    opacity: 0.4,
+  },
+  deleteStepItemButton: {
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   stepItemTitle: {
     fontSize: 16,
@@ -2324,11 +2754,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   addStepButton: {
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#5E5CEC',
+    marginVertical: 24,
   },
   addStepText: {
     marginLeft: 8,
@@ -2644,6 +3079,84 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#000000',
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
+    zIndex: 998,
+    elevation: 8,
+  },
+  subButton: {
+    position: 'absolute',
+    right: 0,
+  },
+  subButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    marginBottom: 8,
+  },
+  subButtonLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+    marginRight: 8,
+  },
+  songModalCard: {
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  songModalContent: {
+    padding: 12,
+  },
+  songModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  songModalIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  songModalInfo: {
+    flex: 1,
+  },
+  songModalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  songModalArtist: {
+    fontSize: 14,
+  },
+  songModalMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  songModalMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  songModalMetaText: {
+    fontSize: 12,
   },
 });
 
