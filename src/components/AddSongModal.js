@@ -44,6 +44,7 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
   const [lyrics, setLyrics] = useState(editingSong?.lyrics || '');
 
   // Aba Arquivo/Link
+  const [attachmentTab, setAttachmentTab] = useState('upload'); // upload, links
   const [links, setLinks] = useState([]);
   const [newLinkTitle, setNewLinkTitle] = useState('');
   const [newLinkUrl, setNewLinkUrl] = useState('');
@@ -734,98 +735,125 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
 
           {activeTab === 'attachments' && (
             <View style={styles.tabContent}>
-              {/* SEÇÃO PRINCIPAL: ENVIAR ARQUIVOS */}
-              <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-                Enviar Arquivos
-              </Text>
-
-              {!editingSong ? (
-                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginTop: 16 }]}>
-                  Salve a música primeiro para anexar arquivos.
-                </Text>
-              ) : (
-                <View style={styles.uploadBlock}>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, marginBottom: 8 }]}
-                    placeholder="Título do arquivo"
-                    placeholderTextColor={colors.textSecondary}
-                    value={newFileTitle}
-                    onChangeText={setNewFileTitle}
+              {/* Segmented Control */}
+              <View style={styles.segmentedControl}>
+                <TouchableOpacity
+                  style={[
+                    styles.segmentButton,
+                    attachmentTab === 'upload' && styles.segmentButtonActive,
+                    { 
+                      backgroundColor: attachmentTab === 'upload' ? colors.primary : colors.card,
+                      borderColor: colors.border 
+                    }
+                  ]}
+                  onPress={() => setAttachmentTab('upload')}
+                >
+                  <FontAwesome 
+                    name="cloud-upload" 
+                    size={16} 
+                    color={attachmentTab === 'upload' ? '#FFFFFF' : colors.text} 
+                    style={{ marginRight: 6 }}
                   />
-                  <TouchableOpacity
-                    style={[
-                      styles.uploadButton,
-                      { backgroundColor: colors.primary, opacity: uploadingFile ? 0.5 : 1 }
-                    ]}
-                    onPress={uploadingFile ? undefined : handlePickFile}
-                  >
-                    <FontAwesome name="cloud-upload" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    <Text style={styles.uploadButtonText}>
-                      {uploadingFile ? 'Enviando...' : 'Selecionar e Enviar Arquivo'}
+                  <Text style={[
+                    styles.segmentButtonText,
+                    { color: attachmentTab === 'upload' ? '#FFFFFF' : colors.text }
+                  ]}>
+                    Upload
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.segmentButton,
+                    attachmentTab === 'links' && styles.segmentButtonActive,
+                    { 
+                      backgroundColor: attachmentTab === 'links' ? colors.primary : colors.card,
+                      borderColor: colors.border 
+                    }
+                  ]}
+                  onPress={() => setAttachmentTab('links')}
+                >
+                  <FontAwesome 
+                    name="link" 
+                    size={16} 
+                    color={attachmentTab === 'links' ? '#FFFFFF' : colors.text} 
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[
+                    styles.segmentButtonText,
+                    { color: attachmentTab === 'links' ? '#FFFFFF' : colors.text }
+                  ]}>
+                    Links Externos
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Conteúdo: Upload */}
+              {attachmentTab === 'upload' && (
+                <View>
+                  {!editingSong ? (
+                    <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginTop: 16 }]}>
+                      Salve a música primeiro para anexar arquivos.
                     </Text>
-                  </TouchableOpacity>
+                  ) : (
+                    <>
+                      <View style={styles.uploadBlock}>
+                        <TextInput
+                          style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, marginBottom: 8 }]}
+                          placeholder="Título do arquivo"
+                          placeholderTextColor={colors.textSecondary}
+                          value={newFileTitle}
+                          onChangeText={setNewFileTitle}
+                        />
+                        <TouchableOpacity
+                          style={[
+                            styles.uploadButton,
+                            { backgroundColor: colors.primary, opacity: uploadingFile ? 0.5 : 1 }
+                          ]}
+                          onPress={uploadingFile ? undefined : handlePickFile}
+                        >
+                          <FontAwesome name="cloud-upload" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                          <Text style={styles.uploadButtonText}>
+                            {uploadingFile ? 'Enviando...' : 'Selecionar e Enviar Arquivo'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Lista de Arquivos */}
+                      {files.length > 0 && (
+                        <View style={styles.fieldContainer}>
+                          <Text style={[styles.label, { color: colors.text }]}>Arquivos Enviados</Text>
+                          {files.map(file => (
+                            <TouchableOpacity
+                              key={file.id}
+                              style={styles.attachmentRow}
+                              onPress={() => handleOpenFile(file)}
+                            >
+                              <FontAwesome name="file" size={16} color={colors.primary} style={{ marginRight: 8 }} />
+                              <View style={styles.attachmentMain}>
+                                <Text style={[styles.attachmentTitle, { color: colors.text }]} numberOfLines={1}>
+                                  {file.title}
+                                </Text>
+                                <Text style={[styles.attachmentSubtitle, { color: colors.textSecondary }]}>
+                                  {file.file_type.toUpperCase()}
+                                </Text>
+                              </View>
+                              <TouchableOpacity onPress={() => handleRemoveFile(file.id)}>
+                                <FontAwesome name="trash" size={16} color={colors.textSecondary} />
+                              </TouchableOpacity>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </>
+                  )}
                 </View>
               )}
 
-              {/* SEÇÃO: ARQUIVOS E LINKS */}
-              <View style={{ marginTop: 32 }}>
-                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-                  Arquivos e Links
-                </Text>
-
-                {/* Arquivos */}
-                {files.length > 0 && (
+              {/* Conteúdo: Links Externos */}
+              {attachmentTab === 'links' && (
+                <View>
                   <View style={styles.fieldContainer}>
-                    <Text style={[styles.label, { color: colors.text }]}>Arquivos</Text>
-                    {files.map(file => (
-                      <TouchableOpacity
-                        key={file.id}
-                        style={styles.attachmentRow}
-                        onPress={() => handleOpenFile(file)}
-                      >
-                        <FontAwesome name="file" size={16} color={colors.primary} style={{ marginRight: 8 }} />
-                        <View style={styles.attachmentMain}>
-                          <Text style={[styles.attachmentTitle, { color: colors.text }]} numberOfLines={1}>
-                            {file.title}
-                          </Text>
-                          <Text style={[styles.attachmentSubtitle, { color: colors.textSecondary }]}>
-                            {file.file_type.toUpperCase()}
-                          </Text>
-                        </View>
-                        <TouchableOpacity onPress={() => handleRemoveFile(file.id)}>
-                          <FontAwesome name="trash" size={16} color={colors.textSecondary} />
-                        </TouchableOpacity>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-
-                {/* Links */}
-                <View style={styles.fieldContainer}>
-                  <Text style={[styles.label, { color: colors.text }]}>Links</Text>
-
-                  {links.map(link => (
-                    <TouchableOpacity
-                      key={link.id}
-                      style={styles.attachmentRow}
-                      onPress={() => Linking.openURL(link.url)}
-                    >
-                      <FontAwesome name="link" size={16} color={colors.primary} style={{ marginRight: 8 }} />
-                      <View style={styles.attachmentMain}>
-                        <Text style={[styles.attachmentTitle, { color: colors.text }]} numberOfLines={1}>
-                          {link.title}
-                        </Text>
-                        <Text style={[styles.attachmentSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-                          {link.url}
-                        </Text>
-                      </View>
-                      <TouchableOpacity onPress={() => handleRemoveLink(link.id)}>
-                        <FontAwesome name="trash" size={16} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  ))}
-
-                  <View style={styles.newAttachmentBlock}>
                     <TextInput
                       style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, marginBottom: 8 }]}
                       placeholder="Título do link"
@@ -851,8 +879,35 @@ const AddSongModal = ({ visible, onClose, onSave, editingSong = null }) => {
                       <Text style={styles.uploadButtonText}>Adicionar Link</Text>
                     </TouchableOpacity>
                   </View>
+
+                  {/* Lista de Links */}
+                  {links.length > 0 && (
+                    <View style={styles.fieldContainer}>
+                      <Text style={[styles.label, { color: colors.text }]}>Links Salvos</Text>
+                      {links.map(link => (
+                        <TouchableOpacity
+                          key={link.id}
+                          style={styles.attachmentRow}
+                          onPress={() => Linking.openURL(link.url)}
+                        >
+                          <FontAwesome name="link" size={16} color={colors.primary} style={{ marginRight: 8 }} />
+                          <View style={styles.attachmentMain}>
+                            <Text style={[styles.attachmentTitle, { color: colors.text }]} numberOfLines={1}>
+                              {link.title}
+                            </Text>
+                            <Text style={[styles.attachmentSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                              {link.url}
+                            </Text>
+                          </View>
+                          <TouchableOpacity onPress={() => handleRemoveLink(link.id)}>
+                            <FontAwesome name="trash" size={16} color={colors.textSecondary} />
+                          </TouchableOpacity>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              </View>
+              )}
             </View>
           )}
         </ScrollView>
@@ -1071,6 +1126,28 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 16,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  segmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  segmentButtonActive: {
+    borderWidth: 0,
+  },
+  segmentButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
