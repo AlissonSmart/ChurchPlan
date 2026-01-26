@@ -323,19 +323,27 @@ const EventCreationScreen = ({ navigation, route }) => {
 
       const asset = result.assets[0];
       const currentEventId = eventId || eventData?.id;
-      const path = `${currentEventId}/${Date.now()}-${asset.fileName || 'cover.jpg'}`;
 
-      const file = {
-        uri: asset.uri,
-        name: asset.fileName || 'cover.jpg',
-        type: asset.type || 'image/jpeg',
-      };
+      // Determinar extensão e contentType corretos
+      const uri = asset.uri;
+      const uriParts = uri.split('.');
+      const ext = uriParts[uriParts.length - 1].toLowerCase();
+      const fileExt = ['jpg', 'jpeg', 'png'].includes(ext) ? ext : 'jpg';
+      const contentType = fileExt === 'png' ? 'image/png' : 'image/jpeg';
+
+      const fileName = `${Date.now()}-${currentEventId}.${fileExt}`;
+      const path = `${currentEventId}/${fileName}`;
+
+      // Converter URI local em ArrayBuffer (binário)
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: uploadError } = await supabase
         .storage
         .from('event-images')
-        .upload(path, file, {
-          contentType: file.type,
+        .upload(path, arrayBuffer, {
+          contentType,
+          cacheControl: '3600',
           upsert: true,
         });
 

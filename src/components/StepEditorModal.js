@@ -75,7 +75,7 @@ const StepEditorModal = ({ visible, onClose, onSave, step }) => {
       transparent={true}
       animationType="slide"
       onRequestClose={onClose}
-      presentationStyle="pageSheet"
+      presentationStyle="overFullScreen"
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
