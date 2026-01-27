@@ -362,7 +362,7 @@ const EventCreationScreen = ({ navigation, route }) => {
               ? String(item.duration_minutes)
               : '',
             time: item.item_time || '',
-            participants: [],
+            participants: item.participants || [],
             hasExplicitTime: !!item.item_time,
           });
         });
@@ -1129,6 +1129,7 @@ const EventCreationScreen = ({ navigation, route }) => {
               duration_minutes: durationMinutes,
               item_time: itemTime,
               item_order: existingItemIndex,
+              participants: itemData.participants || [],
             })
             .eq('id', dbItemId);
         } else {
@@ -1142,6 +1143,7 @@ const EventCreationScreen = ({ navigation, route }) => {
               duration_minutes: durationMinutes,
               item_time: itemTime,
               item_order: orderIndex,
+              participants: itemData.participants || [],
             }])
             .select()
             .single();
@@ -1286,39 +1288,39 @@ const EventCreationScreen = ({ navigation, route }) => {
         <View style={styles.contentColumn}>
           <View style={styles.stepItemContent}>
             <View style={styles.stepItemHeader}>
-              <View style={styles.stepItemHeaderLeft}>
-                <Text style={[styles.timeText, { color: colors.primary, marginRight: 12 }]}>
-                  {item.time || ''}
-                </Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.stepItemTitle, { color: colors.text }]}>
-                    {item.title}
+              <Text style={[styles.timeText, { color: colors.primary, marginRight: 12 }]}>
+                {item.time || ''}
+              </Text>
+              <Text style={[styles.stepItemTitle, { color: colors.text, flex: 1 }]}>
+                {item.title}
+              </Text>
+              {item.duration && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
+                  <FontAwesome name="clock-o" size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                  <Text style={[styles.stepItemDuration, { color: colors.textSecondary }]}>
+                    {item.duration} min
                   </Text>
-                  {item.subtitle && (
-                    <Text style={[styles.stepItemSubtitle, { color: colors.textSecondary }]}>
-                      - {item.subtitle}
-                    </Text>
-                  )}
-                  {item.duration && (
-                    <Text style={[styles.stepItemDuration, { color: colors.textSecondary }]}>
-                      {item.duration}
-                    </Text>
-                  )}
                 </View>
-              </View>
-
-              <View style={styles.stepItemRightActions}>
-                <TouchableOpacity
-                  style={styles.deleteStepItemButton}
-                  onPress={() => handleDeleteStepItem(stepId, item.id)}
-                >
-                  <FontAwesome name="trash-o" size={16} color={colors.danger} />
-                </TouchableOpacity>
-              </View>
+              )}
+              <TouchableOpacity
+                style={styles.deleteStepItemButton}
+                onPress={() => handleDeleteStepItem(stepId, item.id)}
+              >
+                <FontAwesome name="trash-o" size={16} color={colors.danger} />
+              </TouchableOpacity>
             </View>
+            {item.subtitle && (
+              <Text style={[styles.stepItemSubtitle, { color: colors.textSecondary, marginLeft: 50 }]}>
+                {item.subtitle}
+              </Text>
+            )}
             {item.participants && item.participants.length > 0 && (
-              <View style={styles.participantsContainer}>
-                {item.participants.map(name => renderParticipant(name))}
+              <View style={[styles.participantsContainer, { marginLeft: 50 }]}>
+                {item.participants.map((name, idx) => (
+                  <View key={`${item.id}-participant-${idx}`} style={styles.participantTag}>
+                    <Text style={styles.participantName}>{name}</Text>
+                  </View>
+                ))}
               </View>
             )}
           </View>
@@ -1439,12 +1441,13 @@ const EventCreationScreen = ({ navigation, route }) => {
   };
   
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[
-        styles.header, 
-        { backgroundColor: colors.card, paddingTop: insets.top }
-      ]}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Header */}
+        <View style={[
+          styles.header, 
+          { backgroundColor: colors.card, paddingTop: insets.top }
+        ]}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={handleGoBack}
@@ -2201,7 +2204,8 @@ const EventCreationScreen = ({ navigation, route }) => {
           />
         </View>
       </Modal>
-    </View>
+      </View>
+    </GestureHandlerRootView>
   );
 };
 
@@ -2829,8 +2833,9 @@ const styles = StyleSheet.create({
   addItemButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingLeft: 88,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
   },
   addItemText: {
     marginLeft: 6,
