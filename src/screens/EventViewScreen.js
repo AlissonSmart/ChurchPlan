@@ -11,14 +11,34 @@ import {
   FlatList,
   useColorScheme,
   Animated,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FeatherIcon from 'react-native-vector-icons/Feather';
+import { BlurView } from '@react-native-community/blur';
 import theme from '../styles/theme';
 import supabase from '../services/supabase';
 
+
 const HEADER_MAX_HEIGHT = 200;
 const HEADER_SCROLL_DISTANCE = HEADER_MAX_HEIGHT - 56;
+
+// Helper to generate public URL for event cover image (same logic as EventCreationScreen)
+const getEventCoverUrl = (imagePath, directUrl) => {
+  if (directUrl) {
+    return directUrl;
+  }
+  if (!imagePath) return null;
+  try {
+    const { data } = supabase.storage
+      .from('event-images')
+      .getPublicUrl(imagePath);
+    return data?.publicUrl ?? null;
+  } catch (error) {
+    console.error('Erro ao gerar URL da capa do evento:', error);
+    return null;
+  }
+};
 
 const EventViewScreen = ({ route, navigation }) => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -44,6 +64,7 @@ const EventViewScreen = ({ route, navigation }) => {
   const [schedules, setSchedules] = useState([]);
   const [selectedSong, setSelectedSong] = useState(null);
   const [activeSongTab, setActiveSongTab] = useState('info');
+  const [coverImageUrl, setCoverImageUrl] = useState(bannerImageUrl || null);
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
   const skeletonOpacity = React.useRef(new Animated.Value(0.3)).current;
@@ -94,6 +115,15 @@ const EventViewScreen = ({ route, navigation }) => {
 
       if (eventError) throw eventError;
       setEventDetails(event);
+
+      const coverUrl = getEventCoverUrl(
+        event.cover_image_path,
+        event.cover_image_url ||
+          event.header_image_url ||
+          event.banner_image_url ||
+          event.image_url
+      );
+      setCoverImageUrl(coverUrl);
 
       // Buscar etapas (cabeçalhos)
       const { data: stepsData, error: stepsError } = await supabase
@@ -248,6 +278,7 @@ const EventViewScreen = ({ route, navigation }) => {
   const time = (event.event_time || eventTime || '').substring(0, 5);
   const local = event.location || location || 'Local não informado';
   const banner =
+    coverImageUrl ||
     event.header_image_url ||
     event.banner_image_url ||
     event.cover_image_url ||
@@ -262,8 +293,75 @@ const EventViewScreen = ({ route, navigation }) => {
     extrapolate: 'clamp',
   });
 
+  // Animação do header translúcido (aparece ao rolar)
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, HEADER_MAX_HEIGHT - 100, HEADER_MAX_HEIGHT - 50],
+    outputRange: [0, 0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [0, HEADER_MAX_HEIGHT - 80, HEADER_MAX_HEIGHT - 40],
+    outputRange: [0, 0, 1],
+    extrapolate: 'clamp',
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Fixed Header com Blur - Estilo Apple */}
+      <Animated.View
+        style={[
+          styles.fixedHeader,
+          {
+            opacity: headerOpacity,
+          },
+        ]}
+        pointerEvents="box-none"
+      >
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            style={styles.blurView}
+            blurType={isDarkMode ? 'dark' : 'light'}
+            blurAmount={10}
+            reducedTransparencyFallbackColor={isDarkMode ? '#1a1a1a' : '#ffffff'}
+          />
+        ) : (
+          <View
+            style={[
+              styles.blurView,
+              {
+                backgroundColor: isDarkMode
+                  ? 'rgba(26, 26, 26, 0.9)'
+                  : 'rgba(255, 255, 255, 0.9)',
+              },
+            ]}
+          />
+        )}
+        
+        {/* Título do Header */}
+        <Animated.View
+          style={[
+            styles.headerTitleContainer,
+            { opacity: headerTitleOpacity },
+          ]}
+        >
+          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+            {title}
+          </Text>
+        </Animated.View>
+      </Animated.View>
+
+      {/* Botão Voltar Fixo */}
+      <View style={styles.fixedBackContainer} pointerEvents="box-none">
+        <TouchableOpacity
+          style={styles.fixedBackButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <FeatherIcon name="chevron-left" size={28} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
       <Animated.ScrollView
         style={styles.scrollView}
         scrollEventThrottle={16}
@@ -272,12 +370,6 @@ const EventViewScreen = ({ route, navigation }) => {
           { useNativeDriver: false }
         )}
       >
-        {/* Back Button */}
-        <View style={styles.backContainer}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <FeatherIcon name="chevron-left" size={26} color="#000" />
-          </TouchableOpacity>
-        </View>
 
         {/* Banner */}
         <Animated.View
@@ -1070,27 +1162,52 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  backContainer: {
+  fixedHeader: {
     position: 'absolute',
-    top: 70,
-    left: 16,
-    zIndex: 20,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: Platform.OS === 'ios' ? 100 : 70,
+    zIndex: 100,
+    overflow: 'hidden',
   },
-  backButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  blurView: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  headerTitleContainer: {
+    position: 'absolute',
+    bottom: 12,
+    left: 60,
+    right: 60,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  fixedBackContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 16,
+    zIndex: 101,
+  },
+  fixedBackButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     shadowColor: '#000',
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
-    elevation: 4,
-  },
-  backText: {
-    display: 'none',
+    elevation: 3,
   },
   songsContainer: {
     flex: 1,
