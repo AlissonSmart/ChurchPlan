@@ -4,6 +4,7 @@ import MainTabs from './MainTabsNavigator';
 import ProfileScreen from '../screens/ProfileScreen';
 import SqlFixerScreen from '../screens/SqlFixerScreen';
 import EventCreationScreen from '../screens/EventCreationScreen';
+import EventViewScreen from '../screens/EventViewScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -18,6 +19,11 @@ const AppNavigator = () => {
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="SqlFixer" component={SqlFixerScreen} />
       <Stack.Screen name="EventCreation" component={EventCreationScreen} />
+      <Stack.Screen 
+        name="EventView" 
+        component={EventViewScreen}
+        options={{ title: 'Evento' }}
+      />
     </Stack.Navigator>
   );
 };

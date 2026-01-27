@@ -221,16 +221,29 @@ const HomeScreen = ({ navigation, route }) => {
   // Abrir evento do convite
   const handleOpenInvitation = async (invitation) => {
     try {
+      // Se ainda estiver pendente, não faz nada (apenas segurança extra)
+      if (!invitation || invitation.teamStatus === 'pending') {
+        return;
+      }
+
       // Marcar notificação como lida
       if (!invitation.isRead) {
         await notificationService.markAsRead(invitation.id);
       }
 
-      // Navegar para o evento
-      navigation.navigate('EventCreation', {
+      // Navegar para o evento em modo somente leitura
+      navigation.navigate('EventView', {
         eventId: invitation.eventId || invitation.id,
-        isEditing: isAdmin,
-        readOnly: !isAdmin,
+        eventTitle: invitation.eventName,
+        eventName: invitation.eventName,
+        eventDate: invitation.eventDate,
+        eventTime: invitation.eventTime,
+        location: invitation.location,
+        bannerImageUrl: invitation.bannerImageUrl,
+        // Ao abrir pela agenda, sempre visualização somente leitura
+        isEditing: false,
+        readOnly: true,
+        fromAgenda: true,
       });
     } catch (error) {
       console.error('Erro ao abrir convite:', error);
@@ -279,7 +292,7 @@ const HomeScreen = ({ navigation, route }) => {
             style={[styles.segmentButton, activeSegment === 'agenda' && styles.segmentActive, isDarkMode && styles.segmentButtonDark, activeSegment === 'agenda' && isDarkMode && styles.segmentActiveDark]}
             onPress={() => setActiveSegment('agenda')}
           >
-            <Text style={[styles.segmentText, activeSegment === 'agenda' && styles.segmentTextActive, isDarkMode && styles.segmentTextDark, activeSegment === 'agenda' && isDarkMode && styles.segmentTextActiveDark]}>Agenda</Text>
+            <Text style={[styles.segmentText, activeSegment === 'agenda' && styles.segmentTextActive, isDarkMode && styles.segmentTextDark, activeSegment === 'agenda' && isDarkMode && styles.segmentTextActiveDark]}>Convites</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.segmentButton, activeSegment === 'bloqueios' && styles.segmentActive, isDarkMode && styles.segmentButtonDark, activeSegment === 'bloqueios' && isDarkMode && styles.segmentActiveDark]}
