@@ -8,9 +8,11 @@ import {
   useColorScheme,
   ActivityIndicator,
   Alert,
-  RefreshControl
+  RefreshControl,
+  Image
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import LinearGradient from 'react-native-linear-gradient';
 import { HeaderContext } from '../contexts/HeaderContext';
 import TabScreenWrapper from '../components/TabScreenWrapper';
 import notificationService from '../services/notificationService';
@@ -29,6 +31,7 @@ const HomeScreen = ({ navigation, route }) => {
   const [allAgendaItems, setAllAgendaItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     setShowLargeTitle(true);
@@ -131,6 +134,9 @@ const HomeScreen = ({ navigation, route }) => {
         }
       }
 
+      // Definir se o usuário é administrador
+      setIsAdmin(!!profile?.is_admin);
+
       const profileId = profile.id;
       console.log('[AGENDA] Profile ID final:', profileId);
 
@@ -140,7 +146,7 @@ const HomeScreen = ({ navigation, route }) => {
         .select(`
           id,
           status,
-          event:events(id, title, event_date, event_time, location)
+          event:events(id, title, event_date, event_time, location, banner_image_url)
         `)
         .eq('profile_id', profileId)
         .in('status', ['pending', 'accepted', 'confirmed']);
@@ -160,11 +166,13 @@ const HomeScreen = ({ navigation, route }) => {
         .filter(row => row.event) // Garantir que o evento existe
         .map(row => ({
           id: row.event.id,
+          eventId: row.event.id,
           eventTeamId: row.id,
           eventName: row.event.title,
           eventDate: row.event.event_date,
           eventTime: row.event.event_time,
           location: row.event.location,
+          bannerImageUrl: row.event.banner_image_url,
           teamStatus: row.status,
           isRead: true,
         }));
@@ -220,8 +228,9 @@ const HomeScreen = ({ navigation, route }) => {
 
       // Navegar para o evento
       navigation.navigate('EventCreation', {
-        eventId: invitation.eventId,
-        isEditing: true
+        eventId: invitation.eventId || invitation.id,
+        isEditing: isAdmin,
+        readOnly: !isAdmin,
       });
     } catch (error) {
       console.error('Erro ao abrir convite:', error);
@@ -304,18 +313,47 @@ const HomeScreen = ({ navigation, route }) => {
                 </Text>
               </View>
             ) : (
-              allAgendaItems.map((invitation) => (
-                <TouchableOpacity
-                  key={invitation.id}
-                  style={[
-                    styles.eventCard, 
-                    { backgroundColor: colors.card, borderColor: colors.border },
-                    !invitation.isRead && { backgroundColor: colors.primary + '10' }
-                  ]}
-                  onPress={() => handleOpenInvitation(invitation)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.eventHeader}>
+              allAgendaItems.map((invitation) => {
+                const isAccepted = invitation.teamStatus === 'confirmed' || invitation.teamStatus === 'accepted';
+                const hasImage = isAccepted && invitation.bannerImageUrl;
+                
+                return (
+                  <TouchableOpacity
+                    key={invitation.id}
+                    style={[
+                      styles.eventCard, 
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                      !invitation.isRead && { backgroundColor: colors.primary + '10' }
+                    ]}
+                    onPress={invitation.teamStatus === 'pending' ? undefined : () => handleOpenInvitation(invitation)}
+                    activeOpacity={invitation.teamStatus === 'pending' ? 1 : 0.7}
+                  >
+                    {/* Background com imagem do evento (apenas se aceito) */}
+                    {hasImage && (
+                      <Image
+                        source={{ uri: invitation.bannerImageUrl }}
+                        style={styles.eventCardBackground}
+                        resizeMode="cover"
+                      />
+                    )}
+                    
+                    {/* Gradiente diagonal (superior esquerda → inferior direita) */}
+                    {hasImage && (
+                      <LinearGradient
+                        colors={[
+                          colors.card + 'F0',
+                          'transparent'
+                        ]}
+                        locations={[0, 1]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 0.25, y: -2 }}
+                        style={styles.eventCardGradient}
+                      />
+                    )}
+                    
+                    {/* Conteúdo do card */}
+                    <View style={styles.eventCardContent}>
+                      <View style={styles.eventHeader}>
                     <View style={[styles.eventIconCircle, { backgroundColor: colors.primary + '20' }]}>
                       <Icon name="calendar" size={18} color={colors.primary} />
                     </View>
@@ -403,8 +441,10 @@ const HomeScreen = ({ navigation, route }) => {
                       </TouchableOpacity>
                     </View>
                   )}
-                </TouchableOpacity>
-              ))
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
             )}
           </>
         ) : (
@@ -720,6 +760,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter',
+  },
+  eventCardBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+    opacity: 0.3,
+  },
+  eventCardGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+  },
+  eventCardContent: {
+    position: 'relative',
+    zIndex: 1,
   },
 });
 
