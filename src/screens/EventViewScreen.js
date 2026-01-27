@@ -13,6 +13,7 @@ import {
   Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import FeatherIcon from 'react-native-vector-icons/Feather';
 import theme from '../styles/theme';
 import supabase from '../services/supabase';
 
@@ -45,6 +46,7 @@ const EventViewScreen = ({ route, navigation }) => {
   const [activeSongTab, setActiveSongTab] = useState('info');
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
+  const skeletonOpacity = React.useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
     navigation.setOptions({
@@ -53,6 +55,26 @@ const EventViewScreen = ({ route, navigation }) => {
 
     loadEventData();
   }, [eventId, eventTitle, eventName, navigation]);
+
+  // Animação do skeleton
+  useEffect(() => {
+    if (loading) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(skeletonOpacity, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(skeletonOpacity, {
+            toValue: 0.3,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [loading]);
 
   const loadEventData = async () => {
     try {
@@ -147,13 +169,75 @@ const EventViewScreen = ({ route, navigation }) => {
     }
   };
 
+  // Skeleton Component
+  const SkeletonBox = ({ width, height, style }) => (
+    <Animated.View
+      style={[
+        {
+          width,
+          height,
+          backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+          borderRadius: 8,
+          opacity: skeletonOpacity,
+        },
+        style,
+      ]}
+    />
+  );
+
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-          Carregando evento...
-        </Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView>
+          {/* Banner Skeleton */}
+          <SkeletonBox width="100%" height={HEADER_MAX_HEIGHT} style={{ borderRadius: 0 }} />
+
+          {/* Title Skeleton */}
+          <View style={styles.titleContainer}>
+            <SkeletonBox width="70%" height={28} style={{ marginBottom: 8 }} />
+            <SkeletonBox width="50%" height={16} />
+          </View>
+
+          {/* Tabs Skeleton */}
+          <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
+            <View style={styles.tabButton}>
+              <SkeletonBox width={80} height={20} />
+            </View>
+            <View style={styles.tabButton}>
+              <SkeletonBox width={80} height={20} />
+            </View>
+            <View style={styles.tabButton}>
+              <SkeletonBox width={80} height={20} />
+            </View>
+            <View style={styles.tabButton}>
+              <SkeletonBox width={80} height={20} />
+            </View>
+          </View>
+
+          {/* Content Skeleton */}
+          <View style={styles.tabContent}>
+            {/* Step Cards Skeleton */}
+            {[1, 2, 3].map((i) => (
+              <View
+                key={i}
+                style={[
+                  styles.stepSection,
+                  { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 16 },
+                ]}
+              >
+                <View style={styles.stepHeader}>
+                  <SkeletonBox width={32} height={32} style={{ borderRadius: 16, marginRight: 10 }} />
+                  <SkeletonBox width="60%" height={18} />
+                </View>
+                <View style={{ padding: 12 }}>
+                  <SkeletonBox width="100%" height={16} style={{ marginBottom: 8 }} />
+                  <SkeletonBox width="80%" height={16} style={{ marginBottom: 8 }} />
+                  <SkeletonBox width="90%" height={16} />
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       </View>
     );
   }
@@ -163,7 +247,14 @@ const EventViewScreen = ({ route, navigation }) => {
   const date = event.event_date || eventDate;
   const time = (event.event_time || eventTime || '').substring(0, 5);
   const local = event.location || location || 'Local não informado';
-  const banner = event.banner_image_url || bannerImageUrl;
+  const banner =
+    event.header_image_url ||
+    event.banner_image_url ||
+    event.cover_image_url ||
+    event.image_url ||
+    event.bannerUrl ||
+    event.imageUrl ||
+    bannerImageUrl;
 
   const headerHeight = scrollY.interpolate({
     inputRange: [-HEADER_MAX_HEIGHT, 0],
@@ -184,8 +275,7 @@ const EventViewScreen = ({ route, navigation }) => {
         {/* Back Button */}
         <View style={styles.backContainer}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name="chevron-left" size={18} color={colors.primary} />
-            <Text style={[styles.backText, { color: colors.primary }]}>Voltar para eventos</Text>
+            <FeatherIcon name="chevron-left" size={26} color="#000" />
           </TouchableOpacity>
         </View>
 
@@ -981,17 +1071,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   backContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    position: 'absolute',
+    top: 70,
+    left: 16,
+    zIndex: 20,
   },
   backButton: {
-    flexDirection: 'row',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 4,
   },
   backText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '600',
+    display: 'none',
   },
   songsContainer: {
     flex: 1,
