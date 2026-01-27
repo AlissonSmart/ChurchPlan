@@ -345,7 +345,7 @@ const EventCreationScreen = ({ navigation, route }) => {
 
         const { data: itemsData, error: itemsError } = await supabase
           .from('step_items')
-          .select('id, step_id, title, subtitle, item_time, item_order, duration_minutes')
+          .select('id, step_id, title, subtitle, item_time, item_order, duration_minutes, participants')
           .in('step_id', stepIds)
           .order('item_order', { ascending: true });
 
@@ -1272,6 +1272,16 @@ const EventCreationScreen = ({ navigation, route }) => {
     });
   };
 
+  // Função para formatar horário (remover segundos)
+  const formatTimeDisplay = (timeStr) => {
+    if (!timeStr) return '';
+    if (timeStr.includes(':')) {
+      const parts = timeStr.split(':');
+      return `${parts[0]}:${parts[1]}`;
+    }
+    return timeStr;
+  };
+
   // Função para renderizar um item de etapa (para DraggableFlatList)
   const renderStepItem = ({ item, stepId, drag, isActive }) => {
     return (
@@ -1289,7 +1299,7 @@ const EventCreationScreen = ({ navigation, route }) => {
           <View style={styles.stepItemContent}>
             <View style={styles.stepItemHeader}>
               <Text style={[styles.timeText, { color: colors.primary, marginRight: 12 }]}>
-                {item.time || ''}
+                {formatTimeDisplay(item.time)}
               </Text>
               <Text style={[styles.stepItemTitle, { color: colors.text, flex: 1 }]}>
                 {item.title}
