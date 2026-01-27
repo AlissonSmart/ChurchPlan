@@ -16,6 +16,8 @@ import {
   Animated,
   PanResponder
 } from 'react-native';
+import DraggableFlatList from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const HEADER_MAX_HEIGHT = 240;
 const HEADER_MIN_HEIGHT = 180;
@@ -1268,16 +1270,8 @@ const EventCreationScreen = ({ navigation, route }) => {
     });
   };
 
-  // Função para renderizar um item de etapa
-  const renderStepItem = ({ item, stepId, index, drag, isActive }) => {
-    const indicatorColors = ['#FF9500', '#BB86FC', '#CF6679'];
-    const indicatorColor = indicatorColors[index % indicatorColors.length];
-    
-    const stepIndex = steps.findIndex(s => s.id === stepId);
-    const step = stepIndex >= 0 ? steps[stepIndex] : null;
-    const canMoveUp = step ? (index > 0 || stepIndex > 0) : false;
-    const canMoveDown = step ? (index < step.items.length - 1 || stepIndex < steps.length - 1) : false;
-
+  // Função para renderizar um item de etapa (para DraggableFlatList)
+  const renderStepItem = ({ item, stepId, drag, isActive }) => {
     return (
       <TouchableOpacity 
         style={[
@@ -1286,7 +1280,7 @@ const EventCreationScreen = ({ navigation, route }) => {
         ]}
         onPress={() => handleEditStepItem(stepId, item)}
         onLongPress={drag}
-        delayLongPress={150}
+        delayLongPress={200}
         activeOpacity={0.9}
       >
         <View style={styles.contentColumn}>
@@ -1314,32 +1308,6 @@ const EventCreationScreen = ({ navigation, route }) => {
               </View>
 
               <View style={styles.stepItemRightActions}>
-                <View style={styles.stepItemReorderButtons}>
-                  <TouchableOpacity
-                    style={[styles.reorderItemButton, !canMoveUp && styles.reorderItemButtonDisabled]}
-                    onPress={() => canMoveUp && moveStepItem(stepId, index, 'up')}
-                    disabled={!canMoveUp}
-                  >
-                    <FontAwesome
-                      name="chevron-up"
-                      size={12}
-                      color={canMoveUp ? colors.primary : colors.textSecondary}
-                    />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.reorderItemButton, !canMoveDown && styles.reorderItemButtonDisabled]}
-                    onPress={() => canMoveDown && moveStepItem(stepId, index, 'down')}
-                    disabled={!canMoveDown}
-                  >
-                    <FontAwesome
-                      name="chevron-down"
-                      size={12}
-                      color={canMoveDown ? colors.primary : colors.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
-
                 <TouchableOpacity
                   style={styles.deleteStepItemButton}
                   onPress={() => handleDeleteStepItem(stepId, item.id)}
@@ -1439,17 +1407,22 @@ const EventCreationScreen = ({ navigation, route }) => {
         </View>
 
         <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
-          {step.items.map((item, idx) => (
-            <View key={item.id} style={styles.stepItemWrapper}>
-              {renderStepItem({
-                item,
-                stepId: step.id,
-                index: idx,
-                drag: undefined,
-                isActive: false,
-              })}
-            </View>
-          ))}
+          <DraggableFlatList
+            data={step.items}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item, drag, isActive }) => (
+              <View style={styles.stepItemWrapper}>
+                {renderStepItem({
+                  item,
+                  stepId: step.id,
+                  drag,
+                  isActive,
+                })}
+              </View>
+            )}
+            onDragEnd={({ data }) => handleReorderItems(step.id, data)}
+            scrollEnabled={false}
+          />
           
           <TouchableOpacity 
             style={styles.addItemButton}
@@ -1476,7 +1449,7 @@ const EventCreationScreen = ({ navigation, route }) => {
           style={styles.backButton}
           onPress={handleGoBack}
         >
-          <FontAwesome name="arrow-left" size={20} color={colors.text} />
+          <FontAwesome name="chevron-left" size={18} color={colors.text} />
           <Text style={[styles.backButtonText, { color: colors.text }]}>
             {isEditing ? 'Editar Evento' : 'Voltar para eventos'}
           </Text>
@@ -2242,8 +2215,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E4E6EB',
   },
   backButton: {
     flexDirection: 'row',
@@ -2251,7 +2222,8 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     marginLeft: 8,
-    fontSize: 16,
+    fontSize: 17,
+    fontWeight: '400',
   },
   headerActions: {
     flexDirection: 'row',
