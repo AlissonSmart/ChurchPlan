@@ -28,6 +28,7 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedRoleId, setSelectedRoleId] = useState(null);
 
   // Carregar usuários cadastrados no sistema
   const loadUsers = async () => {
@@ -48,6 +49,49 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
 
       console.log('Usuários carregados:', data);
 
+      if (!data || data.length === 0) {
+        const formattedUsers = [];
+        setUsers(formattedUsers);
+        setFilteredUsers(formattedUsers);
+        return;
+      }
+
+      const profileIds = data.map((u) => u.id);
+
+      // Buscar funções diretamente na tabela team_roles, ligadas ao usuário
+      let rolesByUser = {};
+      try {
+        let query = supabase
+          .from('team_roles')
+          .select('id, name, user_id, team_id')
+          .in('user_id', profileIds);
+
+        // Se o modal recebeu eventData com team_id, filtra pelas funções dessa equipe
+        if (eventData && (eventData.team_id || eventData.teamId)) {
+          const teamId = eventData.team_id || eventData.teamId;
+          query = query.eq('team_id', teamId);
+        }
+
+        const { data: rolesData, error: rolesError } = await query;
+
+        if (rolesError) {
+          console.error('Erro ao buscar team_roles:', rolesError);
+        } else if (rolesData) {
+          rolesData.forEach((role) => {
+            if (!role.user_id) return;
+            if (!rolesByUser[role.user_id]) {
+              rolesByUser[role.user_id] = [];
+            }
+            rolesByUser[role.user_id].push({
+              id: role.id,
+              name: role.name || 'Função',
+            });
+          });
+        }
+      } catch (rolesException) {
+        console.error('Erro inesperado ao carregar funções (team_roles):', rolesException);
+      }
+
       // Formatar dados
       const formattedUsers = (data || []).map(user => ({
         id: user.id,
@@ -56,7 +100,8 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
         email: user.email,
         avatar_url: user.avatar_url,
         role: 'Membro',
-        status: 'pending'
+        status: 'pending',
+        roles: rolesByUser[user.id] || [],
       }));
 
       setUsers(formattedUsers);
@@ -91,7 +136,28 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
   }, [searchQuery, users]);
 
   const handleSelectUser = (user) => {
-    setSelectedUser(user);
+    if (user.roles && user.roles.length > 1) {
+      Alert.alert(
+        'Selecione a função',
+        `Para qual função você quer convidar ${user.name}?`,
+        [
+          ...user.roles.map(role => ({
+            text: role.name,
+            onPress: () => {
+              setSelectedUser({ ...user });
+              setSelectedRoleId(role.id);
+            },
+          })),
+          { text: 'Cancelar', style: 'cancel' },
+        ],
+      );
+    } else if (user.roles && user.roles.length === 1) {
+      setSelectedUser(user);
+      setSelectedRoleId(user.roles[0].id);
+    } else {
+      setSelectedUser(user);
+      setSelectedRoleId(null);
+    }
   };
 
   const handleAddMember = () => {
@@ -100,7 +166,8 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
       return;
     }
 
-    onAddMember(selectedUser);
+    const memberToSend = { ...selectedUser, selectedRoleId };
+    onAddMember(memberToSend);
     handleClose();
   };
 
@@ -108,6 +175,7 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
   const handleClose = () => {
     setSearchQuery('');
     setSelectedUser(null);
+    setSelectedRoleId(null);
     onClose();
   };
 
@@ -140,6 +208,15 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
           <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
             {item.name}
           </Text>
+          {item.roles && item.roles.length > 0 ? (
+            <Text style={[styles.userRole, { color: colors.textSecondary }]} numberOfLines={1}>
+              {item.roles.map(r => r.name).join(', ')}
+            </Text>
+          ) : (
+            <Text style={[styles.userRole, { color: colors.textSecondary }]} numberOfLines={1}>
+              Nenhuma função cadastrada
+            </Text>
+          )}
           {item.email && (
             <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>
               {item.email}

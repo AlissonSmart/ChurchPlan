@@ -545,6 +545,12 @@ const EventCreationScreen = ({ navigation, route }) => {
   // Função para obter URL pública da foto de capa
   const getEventCoverUrl = (path) => {
     if (!path) return null;
+
+    // Se já for uma URL completa, apenas retorna
+    if (typeof path === 'string' && path.startsWith('http')) {
+      return path;
+    }
+
     const { data } = supabase
       .storage
       .from('event-images')

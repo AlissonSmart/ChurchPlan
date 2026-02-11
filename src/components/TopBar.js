@@ -44,7 +44,7 @@ const TopBar = ({ activeTab, onTabChange, navigation }) => {
     { id: 'Agenda', icon: 'calendar', label: 'Agenda' },
     { id: 'Planejar', icon: 'tasks', label: 'Planejar' },
     { id: 'Equipes', icon: 'users', label: 'Equipes' },
-    { id: 'CheckIn', icon: 'map-marker', label: 'Check-in' },
+    { id: 'CheckIn', icon: 'map-marker', label: 'Notificações' },
     { id: 'Mídias', icon: 'play-circle', label: 'Mídias' },
   ];
 

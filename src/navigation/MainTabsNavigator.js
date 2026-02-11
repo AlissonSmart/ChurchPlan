@@ -77,7 +77,7 @@ const MainTabsNavigator = () => {
       <Tab.Screen 
         name="CheckIn" 
         component={NotificationsScreen} 
-        options={{ title: 'Check-in' }}
+        options={{ title: 'Notificações' }}
       />
       <Tab.Screen 
         name="Mídias" 

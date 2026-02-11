@@ -1,16 +1,65 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, useColorScheme, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, useColorScheme, Alert, Animated, Platform } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import BackHeader from '../components/BackHeader';
+import FeatherIcon from 'react-native-vector-icons/Feather';
+import { BlurView } from '@react-native-community/blur';
 import { useAuth } from '../contexts/AuthContext';
+import supabase from '../services/supabase';
 
 const ProfileScreen = ({ navigation }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const { signOut, user } = useAuth();
+  const [profile, setProfile] = useState(null);
+  const scrollY = React.useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    loadProfile();
+  }, [user]);
+
+  const loadProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!error && data) {
+        setProfile(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar perfil:', error);
+    }
+  };
 
   const handleGoBack = () => {
     navigation.goBack();
   };
+
+  // Animação do header translúcido
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 50, 100],
+    outputRange: [0, 0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [0, 80, 120],
+    outputRange: [0, 0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // Obter inicial do nome
+  const getInitial = (name) => {
+    if (!name) return 'U';
+    return name.charAt(0).toUpperCase();
+  };
+
+  const userName = profile?.name || user?.email?.split('@')[0] || 'Usuário';
+  const userEmail = profile?.email || user?.email || '';
+  const userInitial = getInitial(userName);
 
   const renderMenuItem = (icon, title, subtitle, rightText, showChevron = true, onPress = () => {}) => {
     return (
@@ -38,19 +87,79 @@ const ProfileScreen = ({ navigation }) => {
       styles.container, 
       isDarkMode && styles.containerDark
     ]}>
-      <BackHeader title="Configurações" onBack={handleGoBack} />
+      {/* Fixed Header com Blur - Estilo Apple */}
+      <Animated.View
+        style={[
+          styles.fixedHeader,
+          {
+            opacity: headerOpacity,
+          },
+        ]}
+        pointerEvents="box-none"
+      >
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            style={styles.blurView}
+            blurType={isDarkMode ? 'dark' : 'light'}
+            blurAmount={10}
+            reducedTransparencyFallbackColor={isDarkMode ? '#1a1a1a' : '#ffffff'}
+          />
+        ) : (
+          <View
+            style={[
+              styles.blurView,
+              {
+                backgroundColor: isDarkMode
+                  ? 'rgba(26, 26, 26, 0.9)'
+                  : 'rgba(255, 255, 255, 0.9)',
+              },
+            ]}
+          />
+        )}
+        
+        {/* Título do Header */}
+        <Animated.View
+          style={[
+            styles.headerTitleContainer,
+            { opacity: headerTitleOpacity },
+          ]}
+        >
+          <Text style={[styles.headerTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]} numberOfLines={1}>
+            Configurações
+          </Text>
+        </Animated.View>
+      </Animated.View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      {/* Botão Voltar Fixo */}
+      <View style={styles.fixedBackContainer} pointerEvents="box-none">
+        <TouchableOpacity
+          style={styles.fixedBackButton}
+          onPress={handleGoBack}
+          activeOpacity={0.7}
+        >
+          <FeatherIcon name="chevron-left" size={28} color={isDarkMode ? '#FFFFFF' : '#000000'} />
+        </TouchableOpacity>
+      </View>
+
+      <Animated.ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+      >
         {/* Profile Card */}
         <View style={[styles.profileCard, isDarkMode && styles.profileCardDark]}>
           <View style={styles.profileImageContainer}>
             <View style={styles.profileImage}>
-              <Text style={styles.profileInitial}>A</Text>
+              <Text style={styles.profileInitial}>{userInitial}</Text>
             </View>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, isDarkMode && styles.profileNameDark]}>Alisson Martins</Text>
-            <Text style={[styles.profileEmail, isDarkMode && styles.profileEmailDark]}>alisson@churchplan.com</Text>
+            <Text style={[styles.profileName, isDarkMode && styles.profileNameDark]}>{userName}</Text>
+            <Text style={[styles.profileEmail, isDarkMode && styles.profileEmailDark]}>{userEmail}</Text>
           </View>
           <TouchableOpacity style={styles.profileButton}>
             <Text style={styles.profileButtonText}>Editar</Text>
@@ -124,7 +233,7 @@ const ProfileScreen = ({ navigation }) => {
         >
           <Text style={styles.logoutText}>Sair</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 };
@@ -137,10 +246,58 @@ const styles = StyleSheet.create({
   containerDark: {
     backgroundColor: '#000000',
   },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: Platform.OS === 'ios' ? 100 : 70,
+    zIndex: 100,
+    overflow: 'hidden',
+  },
+  blurView: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  headerTitleContainer: {
+    position: 'absolute',
+    bottom: 12,
+    left: 60,
+    right: 60,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  fixedBackContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 16,
+    zIndex: 101,
+  },
+  fixedBackButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
+    paddingTop: Platform.OS === 'ios' ? 100 : 70,
     paddingBottom: 40,
   },
   profileCard: {

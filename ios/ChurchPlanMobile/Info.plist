@@ -35,6 +35,12 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Church Plan usa sua localização para fazer check-in.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>O Church Plan precisa acessar suas fotos para permitir o upload de imagens de capa para eventos e banners personalizados.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>O Church Plan precisa salvar imagens no seu dispositivo quando você exportar ou compartilhar conteúdo do aplicativo.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>O Church Plan precisa acessar a câmera para permitir tirar fotos e enviá-las como capas de eventos.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
