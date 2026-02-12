@@ -140,12 +140,13 @@ const HomeScreen = ({ navigation, route }) => {
       const profileId = profile.id;
       console.log('[AGENDA] Profile ID final:', profileId);
 
-      // Buscar eventos da agenda via event_team.profile_id
+      // Buscar eventos da agenda via event_team.profile_id, incluindo o nome da função em roles
       const { data: eventTeamRows, error: eventTeamError } = await supabase
         .from('event_team')
         .select(`
           id,
           status,
+          role:roles(name),
           event:events(id, title, event_date, event_time, location, banner_image_url)
         `)
         .eq('profile_id', profileId)
@@ -174,6 +175,7 @@ const HomeScreen = ({ navigation, route }) => {
           location: row.event.location,
           bannerImageUrl: row.event.banner_image_url,
           teamStatus: row.status,
+          roleName: row.role?.name || null,
           isRead: true,
         }));
 
@@ -305,7 +307,7 @@ const HomeScreen = ({ navigation, route }) => {
           <>
             {/* Agenda - Convites e Eventos */}
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Agenda</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Seus convites</Text>
             </View>
 
             {loading ? (
@@ -430,7 +432,9 @@ const HomeScreen = ({ navigation, route }) => {
                       style={{ marginRight: 6 }}
                     />
                     <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
-                      {invitation.roleName ? invitation.roleName : 'Você foi convidado para este evento'}
+                      {invitation.roleName
+                        ? `Você foi convidado como ${invitation.roleName} para este evento.`
+                        : 'Você foi convidado para este evento.'}
                     </Text>
                   </View>
 

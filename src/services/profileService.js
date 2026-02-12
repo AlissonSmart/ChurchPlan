@@ -122,7 +122,7 @@ const profileService = {
       if (profileData.teams && profileData.teams.length > 0) {
         console.log('Processando associações de equipes para', userId, ':', profileData.teams);
         
-        // Primeiro, remover todas as associações existentes
+        // Primeiro, remover todas as associações existentes em team_members
         const { error: deleteError } = await supabase
           .from('team_members')
           .delete()
@@ -133,7 +133,18 @@ const profileService = {
           // Continuar mesmo com erro
         }
         
-        // Adicionar novas associações
+        // Remover todas as funções existentes em volunteer_roles
+        const { error: deleteRolesError } = await supabase
+          .from('volunteer_roles')
+          .delete()
+          .eq('profile_id', userId);
+          
+        if (deleteRolesError) {
+          console.error('Erro ao remover funções existentes em volunteer_roles:', deleteRolesError);
+          // Continuar mesmo com erro
+        }
+        
+        // Adicionar novas associações em team_members
         const teamMembers = profileData.teams.map(team => ({
           team_id: team.teamId,
           user_id: userId,
@@ -152,6 +163,43 @@ const profileService = {
             console.log('Associações de equipes atualizadas com sucesso');
           }
         }
+        
+        // Adicionar funções em volunteer_roles (para o AddTeamMemberModal)
+        // Buscar role_id de cada função selecionada
+        for (const team of profileData.teams) {
+          try {
+            // Buscar o role_id da função na tabela team_roles
+            const { data: roleData, error: roleError } = await supabase
+              .from('team_roles')
+              .select('id')
+              .eq('team_id', team.teamId)
+              .eq('name', team.role)
+              .maybeSingle();
+            
+            if (roleError) {
+              console.error('Erro ao buscar role_id:', roleError);
+              continue;
+            }
+            
+            if (roleData) {
+              // Inserir em volunteer_roles
+              const { error: insertRoleError } = await supabase
+                .from('volunteer_roles')
+                .insert({
+                  profile_id: userId,
+                  role_id: roleData.id
+                });
+              
+              if (insertRoleError) {
+                console.error('Erro ao inserir em volunteer_roles:', insertRoleError);
+              } else {
+                console.log('Função adicionada em volunteer_roles:', team.role);
+              }
+            }
+          } catch (error) {
+            console.error('Erro ao processar função:', error);
+          }
+        }
       } else {
         console.log('Nenhuma equipe para associar ao usuário:', userId);
         
@@ -165,6 +213,18 @@ const profileService = {
           console.error('Erro ao remover associações existentes:', deleteError);
         } else {
           console.log('Todas as associações de equipes removidas');
+        }
+        
+        // Remover todas as funções em volunteer_roles
+        const { error: deleteRolesError } = await supabase
+          .from('volunteer_roles')
+          .delete()
+          .eq('profile_id', userId);
+          
+        if (deleteRolesError) {
+          console.error('Erro ao remover funções em volunteer_roles:', deleteRolesError);
+        } else {
+          console.log('Todas as funções removidas de volunteer_roles');
         }
       }
       

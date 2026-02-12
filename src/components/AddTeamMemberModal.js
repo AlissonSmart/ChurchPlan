@@ -29,6 +29,7 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedRoleId, setSelectedRoleId] = useState(null);
+  const [selectedRoleName, setSelectedRoleName] = useState(null);
 
   // Carregar usuários cadastrados no sistema
   const loadUsers = async () => {
@@ -58,42 +59,93 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
 
       const profileIds = data.map((u) => u.id);
 
-      // Buscar funções diretamente na tabela team_roles, ligadas ao usuário
+      // Mapa: profileId -> [roles...]
       let rolesByUser = {};
-      try {
-        let query = supabase
-          .from('team_roles')
-          .select('id, name, user_id, team_id')
-          .in('user_id', profileIds);
 
-        // Se o modal recebeu eventData com team_id, filtra pelas funções dessa equipe
-        if (eventData && (eventData.team_id || eventData.teamId)) {
-          const teamId = eventData.team_id || eventData.teamId;
-          query = query.eq('team_id', teamId);
-        }
-
-        const { data: rolesData, error: rolesError } = await query;
-
-        if (rolesError) {
-          console.error('Erro ao buscar team_roles:', rolesError);
-        } else if (rolesData) {
-          rolesData.forEach((role) => {
-            if (!role.user_id) return;
-            if (!rolesByUser[role.user_id]) {
-              rolesByUser[role.user_id] = [];
-            }
-            rolesByUser[role.user_id].push({
-              id: role.id,
-              name: role.name || 'Função',
-            });
+      const addRoleToUser = (profileId, roleId, roleName) => {
+        if (!profileId || !roleId) return;
+        if (!rolesByUser[profileId]) rolesByUser[profileId] = [];
+        const alreadyExists = rolesByUser[profileId].some((r) => r.id === roleId);
+        if (!alreadyExists) {
+          rolesByUser[profileId].push({
+            id: roleId,
+            name: roleName || 'Função',
           });
         }
+      };
+
+      // As funções por pessoa vêm da tabela team_members (vínculo pessoa -> função)
+      // Nesta tabela, a coluna é `user_id` + `role` (texto). Precisamos mapear para `roles.id`.
+      try {
+        const { data: teamMemberRows, error: tmErr } = await supabase
+          .from('team_members')
+          .select('user_id, role')
+          .in('user_id', profileIds);
+
+        if (tmErr) {
+          console.error('Erro ao buscar team_members (roles):', tmErr);
+        } else {
+          const rawRoleNames = Array.from(
+            new Set((teamMemberRows || []).map((r) => (r?.role || '').trim()).filter(Boolean))
+          );
+
+          // Busca todas as roles para mapear por nome (case-insensitive).
+          // Existem nomes duplicados, então pegamos a primeira ocorrência por created_at.
+          const { data: rolesRowsAll, error: rolesErr } = await supabase
+            .from('roles')
+            .select('id, name, created_at')
+            .order('created_at', { ascending: true });
+
+          if (rolesErr) {
+            console.error('Erro ao buscar roles:', rolesErr);
+          }
+
+          const rolesMapByName = {};
+          (rolesRowsAll || []).forEach((r) => {
+            const key = (r?.name || '').toLowerCase().trim();
+            if (!key) return;
+            if (!rolesMapByName[key]) {
+              rolesMapByName[key] = { id: r.id, name: r.name };
+            }
+          });
+
+          (teamMemberRows || []).forEach((row) => {
+            const profileId = row?.user_id;
+            const roleText = (row?.role || '').trim();
+            if (!profileId || !roleText) return;
+
+            const key = roleText.toLowerCase().trim();
+            const mapped = rolesMapByName[key];
+
+            // Se não achar no catálogo, ainda assim exibe a função no modal.
+            const roleId = mapped?.id || key;
+            const roleName = mapped?.name || roleText;
+
+            addRoleToUser(profileId, roleId, roleName);
+          });
+
+          console.log('Roles encontradas em team_members:', teamMemberRows);
+        }
       } catch (rolesException) {
-        console.error('Erro inesperado ao carregar funções (team_roles):', rolesException);
+        console.error('Erro inesperado ao carregar funções (team_members):', rolesException);
       }
 
-      // Formatar dados
-      const formattedUsers = (data || []).map(user => ({
+      console.log('Roles agrupadas por usuário:', rolesByUser, 'profileIds:', profileIds);
+
+      // Normaliza e remove duplicados por NOME (evita repetir Guitarra/Teclado/Vocal etc.)
+      Object.keys(rolesByUser).forEach((pid) => {
+        const seen = new Set();
+        rolesByUser[pid] = (rolesByUser[pid] || []).filter((r) => {
+          const key = (r.name || '').toLowerCase().trim();
+          if (!key) return false;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      });
+
+      // Formatar dados finais para o modal
+      const formattedUsers = (data || []).map((user) => ({
         id: user.id,
         user_id: user.id,
         name: user.name || user.email?.split('@')[0] || 'Usuário',
@@ -136,28 +188,42 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
   }, [searchQuery, users]);
 
   const handleSelectUser = (user) => {
-    if (user.roles && user.roles.length > 1) {
+    const userRoles = user.roles && user.roles.length > 0 ? user.roles : [];
+
+    if (userRoles.length > 1) {
       Alert.alert(
         'Selecione a função',
         `Para qual função você quer convidar ${user.name}?`,
         [
-          ...user.roles.map(role => ({
+          ...userRoles.map((role) => ({
             text: role.name,
             onPress: () => {
               setSelectedUser({ ...user });
               setSelectedRoleId(role.id);
+              setSelectedRoleName(role.name);
             },
           })),
           { text: 'Cancelar', style: 'cancel' },
         ],
       );
-    } else if (user.roles && user.roles.length === 1) {
+    } else if (userRoles.length === 1) {
       setSelectedUser(user);
-      setSelectedRoleId(user.roles[0].id);
+      setSelectedRoleId(userRoles[0].id);
+      setSelectedRoleName(userRoles[0].name);
     } else {
-      setSelectedUser(user);
+      Alert.alert(
+        'Nenhuma função cadastrada',
+        `Cadastre primeiro uma função para ${user.name} na tela de Equipes antes de adicioná-lo a um evento.`,
+      );
+      setSelectedUser(null);
       setSelectedRoleId(null);
     }
+  };
+
+  const handleSelectRoleForUser = (user, role) => {
+    setSelectedUser(user);
+    setSelectedRoleId(role.id);
+    setSelectedRoleName(role.name);
   };
 
   const handleAddMember = () => {
@@ -166,7 +232,16 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
       return;
     }
 
-    const memberToSend = { ...selectedUser, selectedRoleId };
+    const memberToSend = {
+      ...selectedUser,
+      id: selectedUser?.id,
+      user_id: selectedUser?.id,
+      profile_id: selectedUser?.id,
+      role_id: selectedRoleId,
+      role: selectedRoleName || selectedUser?.role || 'Membro',
+      selectedRoleId,
+      selectedRoleName,
+    };
     onAddMember(memberToSend);
     handleClose();
   };
@@ -176,12 +251,12 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
     setSearchQuery('');
     setSelectedUser(null);
     setSelectedRoleId(null);
+    setSelectedRoleName(null);
     onClose();
   };
 
   const renderUserItem = ({ item }) => {
     const isSelected = selectedUser?.id === item.id;
-    
     return (
       <TouchableOpacity
         style={[
@@ -209,9 +284,32 @@ const AddTeamMemberModal = ({ visible, onClose, onAddMember, eventId, eventData 
             {item.name}
           </Text>
           {item.roles && item.roles.length > 0 ? (
-            <Text style={[styles.userRole, { color: colors.textSecondary }]} numberOfLines={1}>
-              {item.roles.map(r => r.name).join(', ')}
-            </Text>
+            <View style={styles.roleChipsContainer}>
+              {item.roles.map((role) => {
+                const isRoleSelected = selectedUser?.id === item.id && selectedRoleId === role.id;
+                return (
+                  <TouchableOpacity
+                    key={role.id}
+                    style={[
+                      styles.roleChip,
+                      { borderColor: colors.border },
+                      isRoleSelected && { backgroundColor: colors.primary + '20', borderColor: colors.primary },
+                    ]}
+                    onPress={() => handleSelectRoleForUser(item, role)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.roleChipText,
+                        { color: isRoleSelected ? colors.primary : colors.textSecondary },
+                      ]}
+                    >
+                      {role.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           ) : (
             <Text style={[styles.userRole, { color: colors.textSecondary }]} numberOfLines={1}>
               Nenhuma função cadastrada
@@ -352,28 +450,28 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
-  rolesSection: {
-    marginBottom: 20,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
   rolesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  roleChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
+  roleChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+    marginBottom: 4,
   },
-  roleText: {
-    fontSize: 14,
-    fontWeight: '600',
+  roleChip: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  roleChipText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   selfInviteButton: {
     flexDirection: 'row',

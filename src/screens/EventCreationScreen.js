@@ -219,7 +219,7 @@ const EventCreationScreen = ({ navigation, route }) => {
 
     try {
       setLoadingTeam(true);
-      
+
       const { data, error } = await supabase
         .from('event_team')
         .select(`
@@ -228,43 +228,76 @@ const EventCreationScreen = ({ navigation, route }) => {
           invitation_sent_at,
           response_at,
           is_highlighted,
-          profile_id,
+          volunteer_id,
           role_id
         `)
         .eq('event_id', eventId);
 
       if (error) throw error;
 
-      // Buscar profiles e roles separadamente
-      const profileIds = [...new Set(data.map(m => m.profile_id).filter(Boolean))];
-      const roleIds = [...new Set(data.map(m => m.role_id).filter(Boolean))];
+      const volunteerIds = [...new Set((data || []).map(m => m.volunteer_id).filter(Boolean))];
+      const roleIds = [...new Set((data || []).map(m => m.role_id).filter(Boolean))];
 
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name, email, avatar_url')
-        .in('id', profileIds);
+      let volunteers = [];
+      let profiles = [];
+      let roles = [];
 
-      const { data: roles } = await supabase
-        .from('roles')
-        .select('id, name')
-        .in('id', roleIds);
+      if (volunteerIds.length) {
+        const { data: volunteersData } = await supabase
+          .from('volunteers')
+          .select('id, profile_id')
+          .in('id', volunteerIds);
+        volunteers = volunteersData || [];
+      }
 
-      const profileMap = (profiles || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
-      const roleMap = (roles || []).reduce((acc, r) => ({ ...acc, [r.id]: r }), {});
+      const profileIds = [...new Set(volunteers.map(v => v.profile_id).filter(Boolean))];
+
+      if (profileIds.length) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, name, email, avatar_url')
+          .in('id', profileIds);
+        profiles = profilesData || [];
+      }
+
+      if (roleIds.length) {
+        const { data: rolesData } = await supabase
+          .from('roles')
+          .select('id, name')
+          .in('id', roleIds);
+        roles = rolesData || [];
+      }
+
+      const volunteerMap = (volunteers || []).reduce((acc, v) => {
+        acc[v.id] = v;
+        return acc;
+      }, {});
+
+      const profileMap = (profiles || []).reduce((acc, p) => {
+        acc[p.id] = p;
+        return acc;
+      }, {});
+
+      const roleMap = (roles || []).reduce((acc, r) => {
+        acc[r.id] = r;
+        return acc;
+      }, {});
 
       const formattedMembers = (data || []).map(member => {
-        const profile = profileMap[member.profile_id];
-        const role = roleMap[member.role_id];
-        
+        const volunteer = member.volunteer_id ? volunteerMap[member.volunteer_id] : null;
+        const profile = volunteer?.profile_id ? profileMap[volunteer.profile_id] : null;
+        const role = member.role_id ? roleMap[member.role_id] : null;
+
         return {
           id: member.id,
-          profile_id: member.profile_id,
+          volunteer_id: member.volunteer_id,
+          profile_id: volunteer?.profile_id || null,
           name: profile?.name || 'Usuário',
           email: profile?.email || '',
           avatar_url: profile?.avatar_url || null,
           role: role?.name || 'Sem função',
           status: member.status || 'not_sent',
-          highlighted: member.is_highlighted || false
+          highlighted: member.is_highlighted || false,
         };
       });
 
@@ -569,129 +602,91 @@ const EventCreationScreen = ({ navigation, route }) => {
   const handleAddTeamMember = async (member) => {
     try {
       console.log('[ADD_MEMBER] Membro recebido:', member);
-      
-      // Verificar se a pessoa já está na equipe (comparar por profile_id)
-      if (teamMembers.some(m => m.profile_id === member.id)) {
+
+      // Verificar se a pessoa já está na equipe (comparar por profile_id e volunteer_id quando existir)
+      const incomingProfileId = member.profile_id || member.id || null;
+      const incomingVolunteerId = member.volunteer_id || null;
+
+      if (
+        teamMembers.some(m =>
+          (incomingProfileId && m.profile_id === incomingProfileId) ||
+          (incomingVolunteerId && m.volunteer_id === incomingVolunteerId)
+        )
+      ) {
         Alert.alert('Atenção', 'Essa pessoa já está na equipe desse evento.');
         return;
       }
 
       // Se o evento já foi salvo, adicionar ao banco de dados e enviar convite
       if (eventId && eventData && member.id) {
-        // Resolver role automaticamente
-        let roleId = member.role_id || null;
+        const roleId = member.role_id || member.selectedRoleId;
 
         if (!roleId) {
-          const normalizedRole = (member?.role || '').trim();
-
-          const roleMap = {
-            'Membro': 'Vocal',
-            'Member': 'Vocal'
-          };
-
-          const resolvedRoleName = roleMap[normalizedRole] || normalizedRole;
-
-          const { data: rolesData, error: roleError } = await supabase
-            .from('roles')
-            .select('id')
-            .ilike('name', resolvedRoleName)
-            .order('created_at', { ascending: true })
-            .limit(1);
-
-          if (roleError) {
-            console.error('Erro ao buscar role:', roleError);
-            Alert.alert('Erro', 'Não foi possível buscar a função');
-            return;
-          }
-
-          if (!rolesData || rolesData.length === 0) {
-            console.error('Erro ao buscar role: nenhum resultado para', resolvedRoleName);
-
-            const { data: fallbackRoleData, error: fallbackRoleError } = await supabase
-              .from('roles')
-              .select('id')
-              .ilike('name', 'Vocal')
-              .order('created_at', { ascending: true })
-              .limit(1);
-
-            if (fallbackRoleError) {
-              console.error('Erro ao buscar role fallback:', fallbackRoleError);
-              Alert.alert('Erro', 'Não foi possível buscar uma função padrão');
-              return;
-            }
-
-            if (!fallbackRoleData || fallbackRoleData.length === 0) {
-              const { data: anyRoleData, error: anyRoleError } = await supabase
-                .from('roles')
-                .select('id')
-                .order('created_at', { ascending: true })
-                .limit(1);
-
-              if (anyRoleError || !anyRoleData || anyRoleData.length === 0) {
-                console.error('Nenhuma role disponível para fallback:', anyRoleError);
-                Alert.alert('Erro', 'Nenhuma função cadastrada no sistema');
-                return;
-              }
-
-              roleId = anyRoleData[0].id;
-            } else {
-              roleId = fallbackRoleData[0].id;
-            }
-
-            // Role resolvida via fallback
-          } else {
-            const roleData = rolesData[0];
-            roleId = roleData.id;
-          }
+          Alert.alert('Erro', 'Nenhuma função selecionada para este membro.');
+          return;
         }
 
-        const profileId = member.id; // member.id já é o profiles.id do AddTeamMemberModal
-        console.log('[ADD_MEMBER] Profile ID:', profileId);
+        // O banco exige profile_id NOT NULL em event_team
+        const profileId = member.profile_id || member.id || null;
+        const volunteerId = member.volunteer_id || null;
 
-        // Buscar user atual para invitedBy
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        console.log('[ADD_MEMBER] User autenticado (invitedBy):', user?.id);
+        if (!profileId) {
+          Alert.alert('Erro', 'Não foi possível identificar o profile_id deste membro.');
+          return;
+        }
 
-        // Inserir em event_team usando profile_id (OBRIGATÓRIO)
         const { error: insertError } = await supabase
           .from('event_team')
           .insert([{
             event_id: eventId,
             profile_id: profileId,
+            volunteer_id: volunteerId,
             role_id: roleId,
             status: 'pending',
-            user_id: user?.id || null
           }]);
 
         if (insertError) {
+          const msg = insertError?.message || 'Não foi possível adicionar o membro à equipe';
           console.error('[ADD_MEMBER] Erro ao adicionar membro:', insertError);
-          Alert.alert('Erro', 'Não foi possível adicionar o membro à equipe');
+          try {
+            console.error('[ADD_MEMBER] Detalhes do erro:', JSON.stringify(insertError, null, 2));
+          } catch (e) {}
+          Alert.alert('Erro', msg);
           return;
         }
 
         console.log('[ADD_MEMBER] Membro adicionado com sucesso em event_team');
 
-        // Enviar convite (notificação)
-        await sendEventInvitation(member.id, member.name, profileId, roleId);
+        if (member.user_id) {
+          await sendEventInvitation(member.user_id, member.name, volunteerId || profileId, roleId);
+          Alert.alert('Sucesso', `Convite enviado para ${member.name}!`);
+        } else {
+          Alert.alert(
+            'Membro Adicionado',
+            `${member.name} foi adicionado à equipe, mas não possui conta no sistema. O convite não será enviado.`
+          );
+        }
 
         // Recarregar lista de membros
         await loadEventTeam();
-
-        Alert.alert('Sucesso', `Convite enviado para ${member.name}!`);
       } else if (!member.user_id) {
         Alert.alert(
-          'Membro Adicionado', 
+          'Membro Adicionado',
           `${member.name} foi adicionado à equipe, mas não possui conta no sistema. O convite não será enviado.`
         );
       } else {
         Alert.alert(
-          'Atenção', 
+          'Atenção',
           'Salve o evento primeiro para poder convidar membros.'
         );
       }
     } catch (error) {
-      console.error('Erro ao adicionar membro:', error);
-      Alert.alert('Erro', 'Não foi possível adicionar o membro');
+      const msg = error?.message || 'Não foi possível adicionar o membro';
+      console.error('[ADD_MEMBER] Erro ao adicionar membro (catch):', error);
+      try {
+        console.error('[ADD_MEMBER] Detalhes do erro (catch):', JSON.stringify(error, null, 2));
+      } catch (e) {}
+      Alert.alert('Erro', msg);
     }
   };
 
@@ -737,7 +732,7 @@ const EventCreationScreen = ({ navigation, route }) => {
   };
 
   // Função para enviar convite ao adicionar membro à equipe
-  const sendEventInvitation = async (userId, memberName, profileId, roleId) => {
+  const sendEventInvitation = async (userId, memberName, volunteerId, roleId) => {
     try {
       if (!eventId || !eventData) {
         console.log('Evento ainda não foi salvo, convite será enviado após salvar');
@@ -762,7 +757,7 @@ const EventCreationScreen = ({ navigation, route }) => {
       );
 
       // Atualizar status em event_team
-      if (profileId && roleId) {
+      if (volunteerId && roleId) {
         const { error: updateError } = await supabase
           .from('event_team')
           .update({
@@ -770,7 +765,7 @@ const EventCreationScreen = ({ navigation, route }) => {
             invitation_sent_at: new Date().toISOString()
           })
           .eq('event_id', eventId)
-          .eq('user_id', profileId)
+          .eq('volunteer_id', volunteerId)
           .eq('role_id', roleId);
 
         if (updateError) {
@@ -2053,6 +2048,7 @@ const EventCreationScreen = ({ navigation, route }) => {
         onAddMember={handleAddTeamMember}
         eventId={eventId}
         eventData={eventData}
+        existingMembers={teamMembers}
       />
       
       {/* Modal para adicionar cabeçalho */}
