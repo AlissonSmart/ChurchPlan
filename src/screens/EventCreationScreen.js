@@ -229,6 +229,7 @@ const EventCreationScreen = ({ navigation, route }) => {
           response_at,
           is_highlighted,
           volunteer_id,
+          profile_id,
           role_id
         `)
         .eq('event_id', eventId);
@@ -237,6 +238,7 @@ const EventCreationScreen = ({ navigation, route }) => {
 
       const volunteerIds = [...new Set((data || []).map(m => m.volunteer_id).filter(Boolean))];
       const roleIds = [...new Set((data || []).map(m => m.role_id).filter(Boolean))];
+      const directProfileIds = [...new Set((data || []).map(m => m.profile_id).filter(Boolean))];
 
       let volunteers = [];
       let profiles = [];
@@ -250,7 +252,7 @@ const EventCreationScreen = ({ navigation, route }) => {
         volunteers = volunteersData || [];
       }
 
-      const profileIds = [...new Set(volunteers.map(v => v.profile_id).filter(Boolean))];
+      const profileIds = [...new Set([...directProfileIds, ...volunteers.map(v => v.profile_id).filter(Boolean)])];
 
       if (profileIds.length) {
         const { data: profilesData } = await supabase
@@ -285,13 +287,14 @@ const EventCreationScreen = ({ navigation, route }) => {
 
       const formattedMembers = (data || []).map(member => {
         const volunteer = member.volunteer_id ? volunteerMap[member.volunteer_id] : null;
-        const profile = volunteer?.profile_id ? profileMap[volunteer.profile_id] : null;
+        const profileId = member.profile_id || volunteer?.profile_id || null;
+        const profile = profileId ? profileMap[profileId] : null;
         const role = member.role_id ? roleMap[member.role_id] : null;
 
         return {
           id: member.id,
           volunteer_id: member.volunteer_id,
-          profile_id: volunteer?.profile_id || null,
+          profile_id: profileId,
           name: profile?.name || 'Usuário',
           email: profile?.email || '',
           avatar_url: profile?.avatar_url || null,
