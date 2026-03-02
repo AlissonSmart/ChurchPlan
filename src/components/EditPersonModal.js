@@ -111,9 +111,11 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData, onRea
       // Para cada equipe, carregar as funções disponíveis
       const teamsWithRoles = await Promise.all(teamsData.map(async (team) => {
         const roles = await teamService.getTeamRoles(team.id);
+        const subteams = await teamService.listSubteams(team.id);
         return {
           ...team,
-          roles: roles || []
+          roles: roles || [],
+          subteams: subteams || [],
         };
       }));
       
@@ -134,9 +136,24 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData, onRea
       console.log('Equipes da pessoa:', personTeams);
       
       // Formatar as equipes para o formato usado pelo componente
-      const formattedTeams = personTeams.map(team => ({
-        teamId: team.id,
-        role: team.role
+      const groupedTeams = personTeams.reduce((acc, team) => {
+        const key = `${team.id}::${team.role || ''}`;
+        if (!acc[key]) {
+          acc[key] = {
+            teamId: team.id,
+            role: team.role,
+            subteamIds: []
+          };
+        }
+        if (team.subteam_id) {
+          acc[key].subteamIds.push(team.subteam_id);
+        }
+        return acc;
+      }, {});
+
+      const formattedTeams = Object.values(groupedTeams).map(team => ({
+        ...team,
+        subteamIds: Array.from(new Set(team.subteamIds))
       }));
       
       setSelectedTeams(formattedTeams);
@@ -195,19 +212,55 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData, onRea
         } else {
           // Atualizar a função para esta equipe
           const updated = [...current];
-          updated[existingIndex] = { teamId, role: roleName };
+          updated[existingIndex] = { 
+            ...updated[existingIndex],
+            teamId,
+            role: roleName,
+          };
           return updated;
         }
       } else {
         // Adicionar nova seleção de equipe e função
-        return [...current, { teamId, role: roleName }];
+        return [...current, { teamId, role: roleName, subteamIds: [] }];
       }
+    });
+  };
+
+  const setTeamSubteam = (teamId, subteamId) => {
+    setSelectedTeams(current => {
+      const existingIndex = current.findIndex(item => item.teamId === teamId);
+      if (existingIndex < 0) {
+        return [...current, { teamId, role: null, subteamIds: [subteamId] }];
+      }
+
+      const updated = [...current];
+      const currentSubteams = updated[existingIndex].subteamIds || [];
+      const alreadySelected = currentSubteams.includes(subteamId);
+      updated[existingIndex] = {
+        ...updated[existingIndex],
+        subteamIds: alreadySelected
+          ? currentSubteams.filter(id => id !== subteamId)
+          : [...currentSubteams, subteamId]
+      };
+      return updated;
     });
   };
 
   // Verificar se uma equipe e função específica estão selecionadas
   const isTeamRoleSelected = (teamId, roleName) => {
     return selectedTeams.some(item => item.teamId === teamId && item.role === roleName);
+  };
+
+  const isTeamSubteamSelected = (teamId, subteamId) => {
+    return selectedTeams.some(item => item.teamId === teamId && (item.subteamIds || []).includes(subteamId));
+  };
+
+  const getSubteamNames = (teamId, subteamIds = []) => {
+    if (!subteamIds.length) return [];
+    const team = teams.find(t => t.id === teamId);
+    return subteamIds
+      .map(subteamId => team?.subteams?.find(subteam => subteam.id === subteamId)?.name)
+      .filter(Boolean);
   };
 
   // Salvar pessoa
@@ -281,11 +334,14 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData, onRea
   const renderSelectedTeamItem = (teamId, role) => {
     const team = teams.find(t => t.id === teamId);
     if (!team) return null;
+    const selected = selectedTeams.find(item => item.teamId === teamId && item.role === role);
+    const subteamNames = getSubteamNames(teamId, selected?.subteamIds || []);
+    const roleLabel = role || 'Sem função';
     
     return (
       <View key={`selected-${teamId}-${role}`} style={styles.selectedTeamItem}>
         <Text style={[styles.selectedTeamText, { color: colors.text }]}>
-          {team.name} - {role}
+          {team.name} - {roleLabel}{subteamNames.length ? ` (${subteamNames.join(', ')})` : ''}
         </Text>
         <TouchableOpacity 
           onPress={() => toggleTeamRole(teamId, role)}
@@ -482,6 +538,33 @@ const EditPersonModal = ({ visible, onClose, onSave, onDelete, personData, onRea
                             styles.rolesContainer,
                             { backgroundColor: isDarkMode ? '#2C2C2E' : '#F9F9F9' }
                           ]}>
+                            {team.subteams && team.subteams.length > 0 && (
+                              <View style={styles.subteamsContainer}>
+                                <Text style={[styles.subLabel, { color: colors.textSecondary }]}>Subequipes</Text>
+                                <View style={styles.subteamTagsRow}>
+                                  {team.subteams.map(subteam => (
+                                    <TouchableOpacity
+                                      key={`${team.id}-${subteam.id}`}
+                                      style={[
+                                        styles.subteamTag,
+                                        isTeamSubteamSelected(team.id, subteam.id) && styles.subteamTagSelected
+                                      ]}
+                                      onPress={() => setTeamSubteam(team.id, subteam.id)}
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.subteamTagText,
+                                          { color: isTeamSubteamSelected(team.id, subteam.id) ? '#FFFFFF' : colors.text }
+                                        ]}
+                                      >
+                                        {subteam.name}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              </View>
+                            )}
+
                             {team.roles && team.roles.length > 0 ? (
                               team.roles.map(role => (
                                 <TouchableOpacity 
@@ -677,7 +760,34 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   roleItemSelected: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  subteamsContainer: {
+    marginTop: theme.spacing.sm,
+  },
+  subteamTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: theme.spacing.xs,
+  },
+  subteamTag: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.sizes.borderRadius.round,
+    borderWidth: 1,
+    borderColor: '#C7C7CC',
+    backgroundColor: 'transparent',
+    marginRight: theme.spacing.xs,
+    marginBottom: theme.spacing.xs,
+  },
+  subteamTagSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  subteamTagText: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: '500',
   },
   roleName: {
     fontSize: 15,

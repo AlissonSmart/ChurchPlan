@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
 import TopBar from './TopBar';
 import BottomTabs from './BottomTabs';
 
@@ -13,6 +13,26 @@ import BottomTabs from './BottomTabs';
  * @returns {React.ReactNode}
  */
 const TabScreenWrapper = ({ children, activeTab, navigation }) => {
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const translateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    fadeAnim.setValue(0);
+    translateAnim.setValue(6);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateAnim, {
+        toValue: 0,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [activeTab, fadeAnim, translateAnim]);
+
   // Função para mudar de aba
   const handleTabChange = (tabId) => {
     navigation.navigate(tabId);
@@ -25,9 +45,14 @@ const TabScreenWrapper = ({ children, activeTab, navigation }) => {
         onTabChange={handleTabChange} 
         navigation={navigation} 
       />
-      <View style={styles.content}>
+      <Animated.View
+        style={[
+          styles.content,
+          { opacity: fadeAnim, transform: [{ translateY: translateAnim }] }
+        ]}
+      >
         {children}
-      </View>
+      </Animated.View>
       <BottomTabs activeTab={activeTab} onTabChange={handleTabChange} />
     </View>
   );

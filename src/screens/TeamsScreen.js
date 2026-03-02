@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,22 +8,22 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   useColorScheme,
-  Alert
+  Alert,
+  Animated
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import GradientButton from '../components/GradientButton';
-import { OutlineGradientButton } from '../components/GradientButton';
+import StandardButton from '../components/StandardButton';
 import CreateTeamModal from '../components/CreateTeamModal';
 import CreatePersonModal from '../components/CreatePersonModal';
 import EditPersonModal from '../components/EditPersonModal';
 import EditTeamModal from '../components/EditTeamModal';
-import SegmentedControl from '../components/SegmentedControl';
 import TeamItem from '../components/TeamItem';
 import SkeletonLoader from '../components/SkeletonLoader';
 import userService from '../services/userService';
 import teamService from '../services/teamService';
 import profileService from '../services/profileService';
 import authService from '../services/authService';
+import supabase from '../services/supabase';
 import theme from '../styles/theme';
 import TabScreenWrapper from '../components/TabScreenWrapper';
 import { HeaderContext } from '../contexts/HeaderContext';
@@ -31,16 +31,9 @@ import { useAuth } from '../contexts/AuthContext';
 
 
 const TeamsScreen = ({ navigation }) => {
-  // Estados para usuários
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  
-  // Estados para equipes
-  const [teams, setTeams] = useState([]);
-  const [filteredTeams, setFilteredTeams] = useState([]);
-  
-  // Estados compartilhados
-  const [activeSegment, setActiveSegment] = useState('people'); // 'people' ou 'teams'
+  // Estados unificados
+  const [items, setItems] = useState([]); // Lista unificada de equipes e pessoas
+  const [filteredItems, setFilteredItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [isCreateTeamModalVisible, setIsCreateTeamModalVisible] = useState(false);
@@ -53,141 +46,241 @@ const TeamsScreen = ({ navigation }) => {
   // Contextos
   const { setShowLargeTitle } = useContext(HeaderContext);
   const { user } = useAuth(); // Obter o usuário autenticado do contexto
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const translateAnim = useRef(new Animated.Value(0)).current;
   
   // Tema
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
   
-  // Segmentos disponíveis
-  const segments = [
-    { key: 'people', label: 'Pessoas' },
-    { key: 'teams', label: 'Equipes' },
-  ];
-
-  // Função para carregar usuários do Supabase
-  const loadUsers = async () => {
+  // Função para carregar todos os dados (equipes e pessoas)
+  const loadAllData = async () => {
     try {
       setLoading(true);
-      const userData = await userService.getAllUsers();
-      console.log('Usuários carregados:', userData);
-      setUsers(userData);
-      setFilteredUsers(userData);
-    } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
-      Alert.alert('Erro', 'Não foi possível carregar a lista de usuários.');
-      setUsers([]);
-      setFilteredUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Função para carregar equipes do Supabase
-  const loadTeams = async () => {
-    try {
-      setLoading(true);
-      const teamsData = await teamService.getAllTeams();
+      
+      // Carregar equipes e pessoas em paralelo
+      const [teamsData, usersData] = await Promise.all([
+        teamService.getAllTeams(),
+        userService.getAllUsers()
+      ]);
+      
       console.log('Equipes carregadas:', teamsData);
-      setTeams(teamsData);
-      setFilteredTeams(teamsData);
+      console.log('Usuários carregados:', usersData);
+      
+      // Buscar funções e membros para cada equipe
+      const teamsWithDetails = await Promise.all(
+        teamsData.map(async (team) => {
+          try {
+            // Buscar funções da equipe (team_roles.name)
+            let rolesData = [];
+            try {
+              const teamRoles = await teamService.getTeamRoles(team.id);
+              rolesData = (teamRoles || []).map(role => ({
+                id: role.id,
+                name: role.name
+              }));
+            } catch (rolesError) {
+              console.error(`Erro ao buscar funções da equipe ${team.name}:`, rolesError);
+            }
+            
+            // Buscar subequipes
+            let subteamsData = [];
+            try {
+              subteamsData = await teamService.listSubteams(team.id);
+            } catch (subteamError) {
+              console.error(`Erro ao buscar subequipes da equipe ${team.name}:`, subteamError);
+            }
+
+            // Buscar membros da equipe com seus perfis
+            const { data: membersData, error: membersError } = await supabase
+              .from('team_members')
+              .select(`
+                id,
+                role,
+                user_id,
+                profile:profiles!team_members_user_id_fkey(id, name, email, phone, avatar_url, is_active)
+              `)
+              .eq('team_id', team.id);
+            
+            if (membersError) {
+              console.error(`Erro ao buscar membros da equipe ${team.name}:`, membersError);
+            }
+            
+            console.log(`Equipe ${team.name} - Membros raw:`, membersData);
+            
+            const processedMembers = membersData?.map(m => {
+              if (!m.profile) {
+                console.warn(`Membro sem profile na equipe ${team.name}:`, m);
+                return null;
+              }
+              return {
+                ...m.profile,
+                role: m.role,
+                member_id: m.id,
+                user_id: m.user_id
+              };
+            }).filter(Boolean) || [];
+            
+            console.log(`Equipe ${team.name} - Membros processados:`, processedMembers);
+            
+            return {
+              ...team,
+              itemType: 'team',
+              roles: rolesData || [],
+              subteams: subteamsData || [],
+              members: processedMembers
+            };
+          } catch (error) {
+            console.error(`Erro ao carregar detalhes da equipe ${team.name}:`, error);
+            return {
+              ...team,
+              itemType: 'team',
+              roles: [],
+              members: []
+            };
+          }
+        })
+      );
+      
+      // Criar lista unificada com tipo identificador
+      const unifiedItems = [
+        ...teamsWithDetails,
+        ...usersData.map(user => ({ ...user, itemType: 'person' }))
+      ];
+      
+      setItems(unifiedItems);
+      setFilteredItems(unifiedItems);
     } catch (error) {
-      console.error('Erro ao carregar equipes:', error);
-      Alert.alert('Erro', 'Não foi possível carregar a lista de equipes.');
-      setTeams([]);
-      setFilteredTeams([]);
+      console.error('Erro ao carregar dados:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os dados.');
+      setItems([]);
+      setFilteredItems([]);
     } finally {
       setLoading(false);
+      fadeAnim.setValue(0);
+      translateAnim.setValue(8);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateAnim, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   };
 
-  // Carregar dados iniciais com base no segmento ativo
-  useEffect(() => {
-    if (activeSegment === 'people') {
-      loadUsers();
-    } else {
-      loadTeams();
-    }
-  }, [activeSegment]);
-  
   // Carregar dados iniciais ao montar o componente
   useEffect(() => {
-    loadTeams(); // Carregar equipes por padrão
+    loadAllData();
   }, []);
 
-  // Função para buscar por nome (equipes ou pessoas)
-  const handleSearch = async (text) => {
+  // Função para buscar por nome (equipes e pessoas)
+  const handleSearch = (text) => {
     setSearchText(text);
     
+    console.log('handleSearch chamado com:', text);
+    console.log('Total de items:', items.length);
+    
     if (text.trim()) {
-      try {
-        // Busca no Supabase se o texto tiver pelo menos 2 caracteres
-        if (text.trim().length >= 2) {
-          setLoading(true);
-          
-          if (activeSegment === 'people') {
-            // Buscar pessoas
-            const searchResults = await userService.searchUsersByName(text);
-            console.log('Resultados da busca de pessoas:', searchResults);
-            setFilteredUsers(searchResults);
-          } else {
-            // Buscar equipes
-            const searchResults = await teamService.searchTeamsByName(text);
-            console.log('Resultados da busca de equipes:', searchResults);
-            setFilteredTeams(searchResults);
+      const searchLower = text.toLowerCase();
+      
+      // Buscar equipes que correspondem ao termo
+      const matchingTeams = items.filter(item => 
+        item.itemType === 'team' && 
+        item.name.toLowerCase().includes(searchLower)
+      );
+      console.log('Equipes que correspondem:', matchingTeams.length);
+      
+      // Buscar pessoas que correspondem ao termo
+      const matchingPeople = items.filter(item => 
+        item.itemType === 'person' && 
+        item.name.toLowerCase().includes(searchLower)
+      );
+      console.log('Pessoas que correspondem:', matchingPeople.length);
+      
+      // Buscar equipes que contêm as pessoas encontradas
+      const teamsWithMatchingMembers = items
+        .filter(item => item.itemType === 'team')
+        .map(team => {
+          const matchingMembers = (team.members || []).filter(member => 
+            member.name?.toLowerCase().includes(searchLower)
+          );
+
+          if (matchingMembers.length > 0) {
+            console.log(`Equipe ${team.name} tem membro que corresponde à busca`);
+            return {
+              ...team,
+              members: matchingMembers
+            };
           }
-          
-          setLoading(false);
-        } else {
-          // Filtro local para buscas com menos de 2 caracteres
-          if (activeSegment === 'people') {
-            const filtered = users.filter(user => 
-              user.name.toLowerCase().includes(text.toLowerCase())
-            );
-            setFilteredUsers(filtered);
-          } else {
-            const filtered = teams.filter(team => 
-              team.name.toLowerCase().includes(text.toLowerCase())
-            );
-            setFilteredTeams(filtered);
+
+          return null;
+        })
+        .filter(Boolean);
+      console.log('Equipes com membros que correspondem:', teamsWithMatchingMembers.length);
+      
+      // Combinar resultados, removendo duplicatas de equipes
+      const teamMap = new Map();
+      matchingTeams.forEach(team => {
+        teamMap.set(team.id, team);
+      });
+
+      teamsWithMatchingMembers.forEach(team => {
+        if (!teamMap.has(team.id)) {
+          teamMap.set(team.id, team);
+          return;
+        }
+
+        // Se a equipe já veio pelo nome, mantém completa
+        const existing = teamMap.get(team.id);
+        if (existing?.name?.toLowerCase().includes(searchLower)) {
+          return;
+        }
+
+        // Caso contrário, mesclar membros filtrados
+        const memberIds = new Set((existing.members || []).map(member => member.id));
+        const mergedMembers = [...(existing.members || [])];
+        (team.members || []).forEach(member => {
+          if (!memberIds.has(member.id)) {
+            memberIds.add(member.id);
+            mergedMembers.push(member);
           }
-        }
-      } catch (error) {
-        console.error(`Erro ao buscar ${activeSegment === 'people' ? 'usuários' : 'equipes'}:`, error);
-        // Manter os dados atuais em caso de erro
-        if (activeSegment === 'people') {
-          setFilteredUsers(users);
-        } else {
-          setFilteredTeams(teams);
-        }
-        setLoading(false);
-      }
+        });
+        teamMap.set(team.id, {
+          ...existing,
+          members: mergedMembers
+        });
+      });
+
+      const uniqueTeams = Array.from(teamMap.values());
+      
+      // Combinar equipes únicas com pessoas encontradas
+      const filtered = [...uniqueTeams, ...matchingPeople];
+      
+      console.log('Total de resultados filtrados:', filtered.length);
+      setFilteredItems(filtered);
     } else {
       // Limpar busca
-      if (activeSegment === 'people') {
-        setFilteredUsers(users);
-      } else {
-        setFilteredTeams(teams);
-      }
+      console.log('Limpando busca, mostrando todos os items');
+      setFilteredItems(items);
     }
   };
   
-  // Atualizar listas filtradas quando os dados originais mudarem
+  // Atualizar lista filtrada quando os dados originais mudarem
   useEffect(() => {
     if (!searchText) {
-      setFilteredUsers(users);
-      setFilteredTeams(teams);
+      setFilteredItems(items);
     }
-  }, [users, teams, searchText]);
-  
-  // Função para lidar com a mudança de segmento
-  const handleSegmentChange = (segmentKey) => {
-    setActiveSegment(segmentKey);
-    setSearchText(''); // Limpar a busca ao mudar de segmento
-  };
+  }, [items, searchText]);
   
   // Função para lidar com o clique em uma equipe
   const handleTeamPress = (team) => {
-    Alert.alert('Equipe', `Você selecionou a equipe ${team.name}`);
+    handleEditTeam(team);
   };
   
   // Função para abrir o modal de edição de equipe
@@ -254,8 +347,8 @@ const TeamsScreen = ({ navigation }) => {
       // Fechar o modal após salvar com sucesso
       setIsCreateTeamModalVisible(false);
       
-      // Recarregar a lista de equipes
-      loadTeams();
+      // Recarregar todos os dados
+      loadAllData();
     } catch (error) {
       console.error('Erro ao criar equipe:', error);
       
@@ -308,8 +401,8 @@ const TeamsScreen = ({ navigation }) => {
       setIsEditTeamModalVisible(false);
       setSelectedTeam(null);
       
-      // Recarregar a lista de equipes
-      loadTeams();
+      // Recarregar todos os dados
+      loadAllData();
     } catch (error) {
       console.error('Erro ao atualizar equipe:', error);
       Alert.alert('Erro', 'Não foi possível atualizar a equipe. Tente novamente.');
@@ -347,8 +440,8 @@ const TeamsScreen = ({ navigation }) => {
       setIsEditTeamModalVisible(false);
       setSelectedTeam(null);
       
-      // Recarregar a lista de equipes
-      loadTeams();
+      // Recarregar todos os dados
+      loadAllData();
     } catch (error) {
       console.error('Erro ao excluir equipe:', error);
       Alert.alert('Erro', 'Não foi possível excluir a equipe. Tente novamente.');
@@ -400,7 +493,7 @@ const TeamsScreen = ({ navigation }) => {
       );
       
       setIsCreatePersonModalVisible(false);
-      loadUsers();
+      loadAllData();
     } catch (error) {
       console.error('Erro ao adicionar pessoa:', error);
       
@@ -442,8 +535,8 @@ const TeamsScreen = ({ navigation }) => {
       setIsEditPersonModalVisible(false);
       setSelectedPerson(null);
       
-      // Recarregar a lista de usuários
-      loadUsers();
+      // Recarregar todos os dados
+      loadAllData();
     } catch (error) {
       console.error('Erro ao atualizar pessoa:', error);
       Alert.alert('Erro', 'Não foi possível atualizar a pessoa. Tente novamente.');
@@ -492,8 +585,8 @@ const TeamsScreen = ({ navigation }) => {
                 setIsEditPersonModalVisible(false);
                 setSelectedPerson(null);
                 
-                // Recarregar a lista de usuários
-                loadUsers();
+                // Recarregar todos os dados
+                loadAllData();
               } catch (error) {
                 console.error('Erro ao excluir pessoa:', error);
                 Alert.alert('Erro', 'Não foi possível excluir a pessoa. Tente novamente.');
@@ -539,8 +632,8 @@ const TeamsScreen = ({ navigation }) => {
       setIsEditPersonModalVisible(false);
       setSelectedPerson(null);
 
-      // Recarregar a lista de usuários
-      loadUsers();
+      // Recarregar todos os dados
+      loadAllData();
     } catch (error) {
       console.error('Erro ao reativar pessoa:', error);
       Alert.alert('Erro', 'Não foi possível reativar a pessoa. Tente novamente.');
@@ -592,21 +685,28 @@ const TeamsScreen = ({ navigation }) => {
           
           {/* Mostrar as funções do usuário */}
           <View style={styles.roleContainer}>
-            {userTeams.map((team, index) => (
-              <Text 
-                key={`${team.team_id}-${index}`}
-                style={[
-                  styles.roleText, 
-                  { 
-                    backgroundColor: team.role && team.role.toLowerCase().includes('líder') ? 
-                      theme.colors.primary : theme.colors.secondary,
-                    color: '#FFFFFF'
-                  }
-                ]}
-              >
-                {team.role || 'Membro'}
-              </Text>
-            ))}
+            {userTeams.map((team, index) => {
+              const teamItem = items.find(
+                (item) => item.itemType === 'team' && item.id === team.team_id
+              );
+              const teamColor = getTeamColor(teamItem || { name: team.team_id });
+
+              return (
+                <Text 
+                  key={`${team.team_id}-${index}`}
+                  style={[
+                    styles.roleText, 
+                    { 
+                      backgroundColor: team.role && team.role.toLowerCase().includes('líder') ? 
+                        teamColor : teamColor,
+                      color: '#FFFFFF'
+                    }
+                  ]}
+                >
+                  {team.role || 'Membro'}
+                </Text>
+              );
+            })}
             {userTeams.length === 0 && (
               <Text style={[styles.noRoleText, { color: colors.textSecondary }]}>Sem função</Text>
             )}
@@ -623,17 +723,180 @@ const TeamsScreen = ({ navigation }) => {
     );
   };
   
-  // Renderizar item de equipe
+  const teamPalette = [
+    
+    '#5B6CFF', // azul
+    '#2EC4B6', // teal
+
+    '#6C63FF', // violeta
+    '#26A69A', // teal médio
+
+    '#7B61FF', // roxo moderno
+    '#34C38F', // verde esmeralda
+
+  ];
+
+  const getTeamColor = (team) => {
+    if (team?.color) return team.color;
+    const seed = (team?.name || '')
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return teamPalette[seed % teamPalette.length];
+  };
+
+  // Handler para abrir perfil da pessoa
+  const handleMemberPress = (member) => {
+    // Buscar a pessoa completa na lista de items
+    const person = items.find(item => 
+      item.itemType === 'person' && item.id === member.id
+    );
+    
+    if (person) {
+      setSelectedPerson(person);
+      setIsEditPersonModalVisible(true);
+    }
+  };
+
+  // Renderizar item de equipe como card com funções e membros
   const renderTeamItem = ({ item }) => {
     console.log('renderTeamItem chamado com:', item);
+    
+    const teamColor = getTeamColor(item);
+    
     return (
-      <TeamItem 
-        team={item} 
-        onPress={handleTeamPress} 
-        onEdit={handleEditTeam} 
-        colors={colors} 
-      />
+      <View style={[styles.teamCard, { backgroundColor: colors.card }]}>
+        {/* Header da equipe */}
+        <TouchableOpacity 
+          style={styles.teamCardHeader}
+          onPress={() => handleTeamPress(item)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.teamCardTitleRow}>
+            <View style={[styles.teamColorDot, { backgroundColor: teamColor }]} />
+            <Text style={[styles.teamCardTitle, { color: colors.text }]}>
+              {item.name}
+            </Text>
+            <Text style={[styles.teamMemberCount, { color: colors.textSecondary }]}>
+              ({item.members?.length || 0})
+            </Text>
+          </View>
+          <TouchableOpacity onPress={(e) => {
+            e.stopPropagation();
+            handleEditTeam(item);
+          }}>
+            <FontAwesome name="pencil" size={18} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+
+        <View style={styles.teamCardContent}>
+          {/* Funções da equipe */}
+          {item.roles && item.roles.length > 0 && (
+            <View style={styles.teamRolesSection}>
+              <Text style={[styles.teamRolesLabel, { color: colors.textSecondary }]}>Funções:</Text>
+              <View style={styles.teamRolesList}>
+                {item.roles.map((role, index) => (
+                  <View 
+                    key={`${role.id}-${index}`}
+                    style={[styles.teamRoleBadge, { borderColor: teamColor }]}
+                  >
+                    <Text style={[styles.teamRoleBadgeText, { color: teamColor }]}>
+                      {role.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {item.subteams && item.subteams.length > 0 && (
+            <View style={styles.teamSubteamsSection}>
+              <Text style={[styles.teamSubteamsLabel, { color: colors.textSecondary }]}>Subequipes:</Text>
+              <View style={styles.teamSubteamsList}>
+                {item.subteams.map((subteam, index) => (
+                  <View 
+                    key={`${subteam.id}-${index}`} 
+                    style={[styles.teamSubteamBadge, { borderColor: teamColor }]}
+                  >
+                    <Text style={[styles.teamSubteamBadgeText, { color: teamColor }]}>
+                      {subteam.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Membros da equipe */}
+          {item.members && item.members.length > 0 && (
+            <View style={styles.teamMembersSection}>
+              {item.members.map((member, index) => (
+                <TouchableOpacity
+                  key={`${member.id}-${index}`}
+                  style={[
+                    styles.teamMemberItem,
+                    index < item.members.length - 1 && styles.teamMemberItemBorder,
+                    { borderBottomColor: colors.border }
+                  ]}
+                  onPress={() => handleMemberPress(member)}
+                  activeOpacity={0.7}
+                >
+                  {/* Avatar */}
+                  <View style={[styles.memberAvatar, { backgroundColor: teamColor + '20' }]}
+                  >
+                    <Text style={[styles.memberInitial, { color: teamColor }]}>
+                      {member.name?.charAt(0).toUpperCase() || '?'}
+                    </Text>
+                  </View>
+
+                  {/* Info do membro */}
+                  <View style={styles.memberInfo}>
+                    <Text style={[styles.memberName, { color: colors.text }]}>
+                      {member.name}
+                    </Text>
+                    {member.email && (
+                      <Text style={[styles.memberEmail, { color: colors.textSecondary }]}>
+                        {member.email}
+                      </Text>
+                    )}
+                    {member.phone && (
+                      <Text style={[styles.memberPhone, { color: colors.textSecondary }]}>
+                        {member.phone}
+                      </Text>
+                    )}
+                    
+                    {/* Badges de função e status */}
+                    <View style={styles.memberBadges}>
+                      {member.role && (
+                        <View style={[styles.memberRoleBadge, { backgroundColor: teamColor }]}>
+                          <Text style={styles.memberRoleBadgeText}>{member.role}</Text>
+                        </View>
+                      )}
+                      {member.is_active && (
+                        <View style={styles.memberStatusBadge}>
+                          <Text style={styles.memberStatusBadgeText}>Ativo</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Seta para a direita */}
+                  <FontAwesome name="chevron-right" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      </View>
     );
+  };
+
+  // Renderizar item unificado (equipe ou pessoa)
+  const renderUnifiedItem = ({ item }) => {
+    if (item.itemType === 'team') {
+      return renderTeamItem({ item });
+    } else {
+      return renderUserItem({ item });
+    }
   };
 
   // Definir o título grande ao montar o componente
@@ -686,39 +949,36 @@ const TeamsScreen = ({ navigation }) => {
           teamData={selectedTeam}
         />
 
-        {/* Controle de segmentos */}
-        <SegmentedControl
-          segments={segments}
-          selectedKey={activeSegment}
-          onSelect={handleSegmentChange}
-          style={styles.segmentedControl}
-        />
-
-        {/* Botões de ação */}
-        {activeSegment === 'people' ? (
-          <OutlineGradientButton
-            title="Adicionar Pessoa"
-            onPress={handleAddPerson}
-            style={styles.fullWidthButton}
-            colors={[theme.colors.secondary, '#007AFF']} // Azul para pessoas
-            icon="user-plus"
-          />
-        ) : (
-          <OutlineGradientButton
-            title="Criar Equipe"
-            onPress={handleCreateTeam}
-            style={styles.fullWidthButton}
-            colors={[theme.colors.gradient.start, '#1ac8aa']} // Verde água para equipes
-            icon="users"
-          />
-        )}
+        {/* Botões de ação lado a lado - estilo página Planejar */}
+        <View style={styles.buttonsContainer}>
+          <View style={styles.buttonRow}>
+            <View style={[styles.buttonContainer, { paddingRight: 3 }]}>
+              <StandardButton 
+                title="Criar Equipe"
+                icon="users"
+                onPress={handleCreateTeam}
+                style={styles.actionButton}
+              />
+            </View>
+            
+            <View style={[styles.buttonContainer, { paddingLeft: 3 }]}>
+              <StandardButton 
+                title="Add Pessoas"
+                icon="user-plus"
+                onPress={handleAddPerson}
+                style={styles.actionButton}
+                outlined={true}
+              />
+            </View>
+          </View>
+        </View>
         
         {/* Campo de busca */}
         <View style={[styles.searchContainer, { backgroundColor: colors.input }]}>
           <FontAwesome name="search" size={18} color={colors.textSecondary} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder={`Buscar ${activeSegment === 'people' ? 'pessoa' : 'equipe'}...`}
+            placeholder="Buscar equipe ou pessoa..."
             placeholderTextColor={colors.textSecondary}
             value={searchText}
             onChangeText={handleSearch}
@@ -727,68 +987,41 @@ const TeamsScreen = ({ navigation }) => {
 
         {loading ? (
           <SkeletonLoader 
-            type={activeSegment === 'people' ? 'user' : 'team'}
+            type="user"
             count={6}
             style={styles.skeletonContainer}
           />
-        ) : activeSegment === 'people' ? (
-          // Lista de pessoas
-          <FlatList
-            data={filteredUsers}
-            renderItem={renderUserItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ListHeaderComponent={
-              <>
-                <View style={styles.listHeader}>
-                  <Text style={[styles.listHeaderText, { color: colors.textSecondary }]}>
-                    {filteredUsers.length} {filteredUsers.length === 1 ? 'pessoa' : 'pessoas'}
-                  </Text>
-                </View>
-              </>
-            }
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <FontAwesome name="users" size={50} color={colors.textSecondary} style={styles.emptyIcon} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                  Nenhuma pessoa encontrada
-                </Text>
-                <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
-                  Os usuários cadastrados no sistema aparecerão aqui
-                </Text>
-              </View>
-            }
-          />
         ) : (
-          // Lista de equipes
-          <FlatList
-            data={filteredTeams}
-            renderItem={renderTeamItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ListHeaderComponent={
-              <>
+          <Animated.View
+            style={{ opacity: fadeAnim, transform: [{ translateY: translateAnim }] }}
+          >
+            {/* Lista unificada de equipes e pessoas */}
+            <FlatList
+              data={filteredItems}
+              renderItem={renderUnifiedItem}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              ListHeaderComponent={
                 <View style={styles.listHeader}>
                   <Text style={[styles.listHeaderText, { color: colors.textSecondary }]}>
-                    {filteredTeams.length} {filteredTeams.length === 1 ? 'equipe' : 'equipes'}
+                    {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'itens'}
                   </Text>
                 </View>
-              </>
-            }
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <FontAwesome name="users" size={50} color={colors.textSecondary} style={styles.emptyIcon} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                  Nenhuma equipe encontrada
-                </Text>
-                <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
-                  As equipes criadas aparecerão aqui
-                </Text>
-              </View>
-            }
-          />
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <FontAwesome name="users" size={50} color={colors.textSecondary} style={styles.emptyIcon} />
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                    Nenhum resultado encontrado
+                  </Text>
+                  <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                    Equipes e pessoas aparecerão aqui
+                  </Text>
+                </View>
+              }
+            />
+          </Animated.View>
         )}
       </View>
     </TabScreenWrapper>
@@ -813,6 +1046,23 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     marginBottom: theme.spacing.md,
+  },
+  buttonsContainer: {
+    width: '100%',
+    marginBottom: theme.spacing.md,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    marginTop: 8,
+    width: '100%',
+  },
+  buttonContainer: {
+    width: '50%',
+    padding: 0,
+  },
+  actionButton: {
+    width: '100%',
+    maxHeight: 44,
   },
   fullWidthButton: {
     width: '100%',
@@ -842,6 +1092,165 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: theme.spacing.xl,
+  },
+  // Estilos para card de equipe
+  teamCard: {
+    borderRadius: theme.sizes.borderRadius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  teamCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  teamCardContent: {
+    marginHorizontal: 2,
+  },
+  teamCardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  teamColorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: theme.spacing.xs,
+  },
+  teamCardTitle: {
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: '700',
+    marginRight: theme.spacing.xs,
+  },
+  teamMemberCount: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: '400',
+  },
+  teamRolesSection: {
+    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+  },
+  teamRolesLabel: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  teamRolesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  teamSubteamsSection: {
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  teamSubteamsLabel: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  teamSubteamsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  teamSubteamBadge: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  teamSubteamBadgeText: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: '500',
+  },
+  teamRoleBadge: {
+    borderWidth: 1,
+    borderRadius: theme.sizes.borderRadius.round,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  teamRoleBadgeText: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: '500',
+  },
+  teamMembersSection: {
+    marginTop: theme.spacing.xs,
+  },
+  teamMemberItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  teamMemberItemBorder: {
+    borderBottomWidth: 1,
+    paddingBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+  },
+  memberAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing.sm,
+  },
+  memberInitial: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: '600',
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  memberEmail: {
+    fontSize: theme.typography.fontSize.xs,
+    marginBottom: 2,
+  },
+  memberPhone: {
+    fontSize: theme.typography.fontSize.xs,
+    marginBottom: 4,
+  },
+  memberBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
+  },
+  memberRoleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.sizes.borderRadius.round,
+  },
+  memberRoleBadgeText: {
+    color: '#FFFFFF',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: '600',
+  },
+  memberStatusBadge: {
+    backgroundColor: '#2EC4B6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.sizes.borderRadius.round,
+  },
+  memberStatusBadgeText: {
+    color: '#FFFFFF',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: '600',
   },
   userItem: {
     flexDirection: 'row',

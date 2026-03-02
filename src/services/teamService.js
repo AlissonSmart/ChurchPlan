@@ -85,6 +85,243 @@ const teamService = {
       throw error;
     }
   },
+
+  /**
+   * Buscar membros da equipe (com profiles)
+   */
+  getTeamMembers: async (teamId) => {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select(`
+          id,
+          team_id,
+          user_id,
+          role,
+          subteam_id,
+          profile:profiles!team_members_user_id_fkey(id, name, email, phone, avatar_url, is_active)
+        `)
+        .eq('team_id', teamId);
+
+      if (error) {
+        console.error('Erro ao buscar membros da equipe:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erro inesperado ao buscar membros da equipe:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Listar subequipes da equipe
+   */
+  listSubteams: async (teamId) => {
+    try {
+      const { data, error } = await supabase
+        .from('team_subteams')
+        .select('*')
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao buscar subequipes:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erro inesperado ao buscar subequipes:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Criar subequipe
+   */
+  createSubteam: async (teamId, subteamData) => {
+    try {
+      const { data, error } = await supabase
+        .from('team_subteams')
+        .insert([
+          {
+            team_id: teamId,
+            name: subteamData.name,
+            description: subteamData.description || null,
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao criar subequipe:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Erro inesperado ao criar subequipe:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Atualizar subequipe
+   */
+  updateSubteam: async (subteamId, subteamData) => {
+    try {
+      const { data, error } = await supabase
+        .from('team_subteams')
+        .update({
+          name: subteamData.name,
+          description: subteamData.description || null,
+        })
+        .eq('id', subteamId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao atualizar subequipe:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Erro inesperado ao atualizar subequipe:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Excluir subequipe
+   */
+  deleteSubteam: async (subteamId) => {
+    try {
+      const { error } = await supabase
+        .from('team_subteams')
+        .delete()
+        .eq('id', subteamId);
+
+      if (error) {
+        console.error('Erro ao excluir subequipe:', error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro inesperado ao excluir subequipe:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Atualizar funções da subequipe
+   */
+  setSubteamRoles: async (teamId, subteamId, roles) => {
+    try {
+      const { error: deleteError } = await supabase
+        .from('team_roles')
+        .delete()
+        .eq('team_id', teamId)
+        .eq('subteam_id', subteamId);
+
+      if (deleteError) {
+        console.error('Erro ao limpar funções da subequipe:', deleteError);
+      }
+
+      const roleNames = (roles || []).filter(role => role?.trim());
+      if (roleNames.length === 0) return true;
+
+      const { error: insertError } = await supabase
+        .from('team_roles')
+        .insert(roleNames.map(role => ({
+          team_id: teamId,
+          subteam_id: subteamId,
+          name: role.trim(),
+        })));
+
+      if (insertError) {
+        console.error('Erro ao inserir funções da subequipe:', insertError);
+        throw insertError;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro inesperado ao atualizar funções da subequipe:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Definir líder da subequipe
+   */
+  setSubteamLeader: async (teamId, subteamId, leaderProfileId) => {
+    try {
+      // Remover líder anterior
+      const { error: deleteError } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('team_id', teamId)
+        .eq('subteam_id', subteamId)
+        .ilike('role', '%líder%');
+
+      if (deleteError) {
+        console.error('Erro ao remover líder anterior:', deleteError);
+      }
+
+      if (!leaderProfileId) return true;
+
+      // Verificar se já existe membro para este usuário na equipe
+      const { data: existingMember, error: existingError } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('team_id', teamId)
+        .eq('user_id', leaderProfileId)
+        .maybeSingle();
+
+      if (existingError) {
+        console.error('Erro ao verificar membro existente:', existingError);
+      }
+
+      if (existingMember?.id) {
+        const { error: updateError } = await supabase
+          .from('team_members')
+          .update({
+            subteam_id: subteamId,
+            role: 'Líder'
+          })
+          .eq('id', existingMember.id);
+
+        if (updateError) {
+          console.error('Erro ao atualizar líder da subequipe:', updateError);
+          throw updateError;
+        }
+
+        return true;
+      }
+
+      const { error: insertError } = await supabase
+        .from('team_members')
+        .insert([{ 
+          team_id: teamId,
+          user_id: leaderProfileId,
+          subteam_id: subteamId,
+          role: 'Líder'
+        }]);
+
+      if (insertError) {
+        console.error('Erro ao inserir líder da subequipe:', insertError);
+        throw insertError;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro inesperado ao definir líder da subequipe:', error);
+      throw error;
+    }
+  },
   
   /**
    * Busca equipes por nome
@@ -264,31 +501,8 @@ const teamService = {
 
       console.log('EQUIPE CRIADA COM SUCESSO:', team);
 
-      // 2. Adicionar o usuário como líder (apenas se tivermos um ID válido)
-      if (team && team.id && userId) {
-        console.log('Adicionando usuário como líder da equipe');
-        
-        try {
-          const { error: memberError } = await supabase
-            .from('team_members')
-            .insert([{
-              team_id: team.id,
-              user_id: userId,
-              role: 'líder'
-            }]);
-            
-          if (memberError) {
-            console.error('Erro ao adicionar usuário como líder:', memberError);
-          } else {
-            console.log('Usuário adicionado como líder com sucesso');
-          }
-        } catch (memberError) {
-          console.error('Erro ao adicionar usuário como líder:', memberError);
-          // Continuar mesmo se falhar ao adicionar o líder
-        }
-      } else {
-        console.log('Pulando adição de líder - ID de usuário inválido ou equipe não criada');
-      }
+      // 2. Não adicionar líder automaticamente (líder será definido posteriormente)
+      console.log('Pulando adição automática de líder');
 
       // 3. Adicionar funções à equipe
       if (teamData.roles && teamData.roles.length > 0) {
@@ -313,7 +527,7 @@ const teamService = {
       // Retornar a equipe criada com contagens
       return {
         ...team,
-        members_count: 1, // Acabamos de adicionar o líder
+        members_count: 0,
         roles_count: teamData.roles ? teamData.roles.length : 0
       };
     } catch (error) {
@@ -327,12 +541,20 @@ const teamService = {
    * @param {string} teamId - ID da equipe
    * @returns {Promise<Array>} Lista de funções da equipe
    */
-  getTeamRoles: async (teamId) => {
+  getTeamRoles: async (teamId, subteamId = null) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('team_roles')
         .select('*')
         .eq('team_id', teamId);
+
+      if (subteamId === null) {
+        query = query.is('subteam_id', null);
+      } else if (subteamId) {
+        query = query.eq('subteam_id', subteamId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Erro ao buscar funções da equipe:', error);

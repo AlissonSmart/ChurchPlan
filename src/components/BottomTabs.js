@@ -34,7 +34,7 @@ const BottomTabs = ({ activeTab, onTabChange }) => {
             )}
             <Icon
               name={tab.icon}
-              size={24}
+              size={22}
               color={activeTab === tab.id ? '#1877F2' : isDarkMode ? '#A0A0A5' : '#65676B'}
               style={[
                 styles.icon,
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: '#E4E6EB',
-    paddingTop: 8,
+    paddingTop: 4,
     // A altura base é 56, mas o paddingBottom vai ser adicionado pelo insets.bottom
     ...Platform.select({
       web: {
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   iconContainer: {
     position: 'relative',
@@ -119,8 +119,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   tabLabel: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 3,
     color: '#65676B',
   },
   tabLabelDark: {

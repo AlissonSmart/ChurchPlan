@@ -38,6 +38,9 @@ const EditTeamModal = ({ visible, onClose, onSave, onDelete, teamData }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [removingIndex, setRemovingIndex] = useState(null);
   const [teamId, setTeamId] = useState(null);
+  const [subteams, setSubteams] = useState([]);
+  const [newSubteamName, setNewSubteamName] = useState('');
+  const [activeSegment, setActiveSegment] = useState('team');
   
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
@@ -53,9 +56,11 @@ const EditTeamModal = ({ visible, onClose, onSave, onDelete, teamData }) => {
       console.log('Carregando dados da equipe:', teamData.name, teamData.id);
       setTeamName(teamData.name || '');
       setTeamId(teamData.id || null);
+      setActiveSegment('team');
       
       // Carregar funções da equipe
       loadTeamRoles();
+      loadSubteams();
     }
   }, [visible, teamData]);
   
@@ -77,6 +82,31 @@ const EditTeamModal = ({ visible, onClose, onSave, onDelete, teamData }) => {
     } catch (error) {
       console.error('Erro ao carregar funções da equipe:', error);
       setRoles(['']);
+    }
+  };
+
+  const loadSubteams = async () => {
+    if (!teamData || !teamData.id) return;
+
+    try {
+      const teamService = require('../services/teamService').default;
+      const subteamsData = await teamService.listSubteams(teamData.id);
+
+      const enrichedSubteams = await Promise.all(
+        (subteamsData || []).map(async (subteam) => {
+          const rolesData = await teamService.getTeamRoles(teamData.id, subteam.id);
+
+          return {
+            ...subteam,
+            roles: (rolesData || []).map(role => role.name),
+          };
+        })
+      );
+
+      setSubteams(enrichedSubteams);
+    } catch (error) {
+      console.error('Erro ao carregar subequipes:', error);
+      setSubteams([]);
     }
   };
   
@@ -151,6 +181,76 @@ const EditTeamModal = ({ visible, onClose, onSave, onDelete, teamData }) => {
     setRoles(newRoles);
   };
 
+  const updateSubteamField = (subteamId, field, value) => {
+    setSubteams(current => current.map(subteam => 
+      subteam.id === subteamId ? { ...subteam, [field]: value } : subteam
+    ));
+  };
+
+  const addSubteamRoleField = (subteamId) => {
+    setSubteams(current => current.map(subteam => {
+      if (subteam.id !== subteamId) return subteam;
+      return { ...subteam, roles: [...(subteam.roles || []), ''] };
+    }));
+  };
+
+  const updateSubteamRole = (subteamId, roleIndex, value) => {
+    setSubteams(current => current.map(subteam => {
+      if (subteam.id !== subteamId) return subteam;
+      const nextRoles = [...(subteam.roles || [])];
+      nextRoles[roleIndex] = value;
+      return { ...subteam, roles: nextRoles };
+    }));
+  };
+
+  const removeSubteamRole = (subteamId, roleIndex) => {
+    setSubteams(current => current.map(subteam => {
+      if (subteam.id !== subteamId) return subteam;
+      const nextRoles = [...(subteam.roles || [])];
+      nextRoles.splice(roleIndex, 1);
+      return { ...subteam, roles: nextRoles.length ? nextRoles : [''] };
+    }));
+  };
+
+  const handleAddSubteam = async () => {
+    if (!teamId) return;
+
+    if (!newSubteamName.trim()) {
+      Alert.alert('Atenção', 'Informe o título da subequipe antes de criar.');
+      return;
+    }
+
+    try {
+      const teamService = require('../services/teamService').default;
+      const created = await teamService.createSubteam(teamId, {
+        name: newSubteamName.trim(),
+      });
+
+      setSubteams(current => ([
+        ...current,
+        {
+          ...created,
+          roles: [''],
+        }
+      ]));
+      setNewSubteamName('');
+    } catch (error) {
+      console.error('Erro ao criar subequipe:', error);
+      Alert.alert('Erro', 'Não foi possível criar a subequipe.');
+    }
+  };
+
+  const handleDeleteSubteam = async (subteamId) => {
+    try {
+      const teamService = require('../services/teamService').default;
+      await teamService.deleteSubteam(subteamId);
+      setSubteams(current => current.filter(subteam => subteam.id !== subteamId));
+    } catch (error) {
+      console.error('Erro ao excluir subequipe:', error);
+      Alert.alert('Erro', 'Não foi possível excluir a subequipe.');
+    }
+  };
+
   // Remover um campo de função
   const removeRole = (index) => {
     // Evitar cliques múltiplos
@@ -202,6 +302,23 @@ const EditTeamModal = ({ visible, onClose, onSave, onDelete, teamData }) => {
       
       // Chamar a função onSave passada como prop
       await onSave(updatedTeam);
+
+      if (teamId) {
+        const teamService = require('../services/teamService').default;
+        await Promise.all(
+          subteams.map(async (subteam) => {
+            if (!subteam?.id) return;
+            if (!subteam.name?.trim()) return;
+
+            await teamService.updateSubteam(subteam.id, {
+              name: subteam.name.trim(),
+              description: null,
+            });
+
+            await teamService.setSubteamRoles(teamId, subteam.id, subteam.roles || []);
+          })
+        );
+      }
       
       // Fechar o modal com animação
       animatedClose();
@@ -335,74 +452,204 @@ const EditTeamModal = ({ visible, onClose, onSave, onDelete, teamData }) => {
         
         <ScrollView style={styles.formContainer}>
           <View style={styles.formContentContainer}>
-            {/* Campo de nome da equipe */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Nome da Equipe</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.input, color: colors.text }]}
-                placeholder="Digite o nome da equipe"
-                placeholderTextColor={colors.textSecondary}
-                value={teamName}
-                onChangeText={setTeamName}
-                autoCapitalize="words"
-                keyboardType="default"
-                returnKeyType="done"
-                blurOnSubmit={true}
-                enablesReturnKeyAutomatically={true}
-              />
+            <View style={styles.segmentedControl}>
+              <TouchableOpacity
+                style={[
+                  styles.segmentButton,
+                  activeSegment === 'team' && styles.segmentButtonActive
+                ]}
+                onPress={() => setActiveSegment('team')}
+              >
+                <Text
+                  style={[
+                    styles.segmentButtonText,
+                    activeSegment === 'team' && styles.segmentButtonTextActive
+                  ]}
+                >
+                  Equipe
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.segmentButton,
+                  activeSegment === 'subteams' && styles.segmentButtonActive
+                ]}
+                onPress={() => setActiveSegment('subteams')}
+              >
+                <Text
+                  style={[
+                    styles.segmentButtonText,
+                    activeSegment === 'subteams' && styles.segmentButtonTextActive
+                  ]}
+                >
+                  Subequipes
+                </Text>
+              </TouchableOpacity>
             </View>
-            
-            {/* Campos de funções */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Funções</Text>
-              <Text style={[styles.subLabel, { color: colors.textSecondary }]}>
-                Adicione as funções disponíveis nesta equipe
-              </Text>
-              
-              {roles.map((role, index) => (
-                <View key={index} style={styles.roleContainer}>
+
+            {activeSegment === 'team' && (
+              <>
+                {/* Campo de Nome da Equipe */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: colors.text }]}>Nome da Equipe</Text>
                   <TextInput
-                    style={[styles.roleInput, { backgroundColor: colors.input, color: colors.text }]}
-                    placeholder={`Função ${index + 1}`}
+                    style={[styles.input, { backgroundColor: colors.input, color: colors.text }]}
+                    placeholder="Digite o nome da equipe"
                     placeholderTextColor={colors.textSecondary}
-                    value={role}
-                    onChangeText={(text) => updateRole(text, index)}
+                    value={teamName}
+                    onChangeText={setTeamName}
                     autoCapitalize="words"
                     keyboardType="default"
                     returnKeyType="done"
                     blurOnSubmit={true}
                     enablesReturnKeyAutomatically={true}
                   />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: colors.text }]}>Funções</Text>
+                  <Text style={[styles.subLabel, { color: colors.textSecondary }]}>
+                    Adicione as funções disponíveis nesta equipe
+                  </Text>
+              
+                  {roles.map((role, index) => (
+                    <View key={index} style={styles.roleContainer}>
+                      <TextInput
+                        style={[styles.roleInput, { backgroundColor: colors.input, color: colors.text }]}
+                        placeholder={`Função ${index + 1}`}
+                        placeholderTextColor={colors.textSecondary}
+                        value={role}
+                        onChangeText={(text) => updateRole(text, index)}
+                        autoCapitalize="words"
+                        keyboardType="default"
+                        returnKeyType="done"
+                        blurOnSubmit={true}
+                        enablesReturnKeyAutomatically={true}
+                      />
+                      <TouchableOpacity 
+                        style={styles.removeButton}
+                        onPress={() => removeRole(index)}
+                        activeOpacity={0.7} // Reduz a opacidade ao tocar, dando feedback visual
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Aumenta a área de toque
+                        disabled={removingIndex !== null} // Desabilitar todos os botões enquanto um estiver sendo removido
+                      >
+                        <FontAwesome 
+                          name="minus-circle" 
+                          size={22} 
+                          color={removingIndex === index ? '#999999' : '#FF3B30'} 
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+
+                  {/* Botão para adicionar mais funções */}
                   <TouchableOpacity 
-                    style={styles.removeButton}
-                    onPress={() => removeRole(index)}
+                    style={[styles.addButton, { borderColor: theme.colors.primary }, isAddingRole && styles.disabledButton]}
+                    onPress={addRoleField}
                     activeOpacity={0.7} // Reduz a opacidade ao tocar, dando feedback visual
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Aumenta a área de toque
-                    disabled={removingIndex !== null} // Desabilitar todos os botões enquanto um estiver sendo removido
+                    disabled={isAddingRole} // Desabilitar o botão enquanto estiver adicionando
                   >
-                    <FontAwesome 
-                      name="minus-circle" 
-                      size={22} 
-                      color={removingIndex === index ? '#999999' : '#FF3B30'} 
-                    />
+                    <FontAwesome name="plus" size={16} color={isAddingRole ? '#999999' : theme.colors.primary} />
+                    <Text 
+                      style={[
+                        styles.addButtonText, 
+                        { 
+                          color: isAddingRole ? '#999999' : theme.colors.primary
+                        }
+                      ]}
+                    >
+                      {isAddingRole ? 'Adicionando...' : 'Adicionar Função'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
-              ))}
+              </>
+            )}
 
-              {/* Botão para adicionar mais funções */}
-              <TouchableOpacity 
-                style={[styles.addButton, { borderColor: theme.colors.primary }, isAddingRole && styles.disabledButton]}
-                onPress={addRoleField}
-                activeOpacity={0.7} // Reduz a opacidade ao tocar, dando feedback visual
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Aumenta a área de toque
-                disabled={isAddingRole} // Desabilitar o botão enquanto estiver adicionando
-              >
-                <FontAwesome name="plus" size={16} color={isAddingRole ? '#999999' : theme.colors.primary} />
-                <Text style={[styles.addButtonText, { color: isAddingRole ? '#999999' : theme.colors.primary }]}>
-                  {isAddingRole ? 'Adicionando...' : 'Adicionar Função'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {activeSegment === 'subteams' && (
+              <View style={styles.inputGroup}>
+                <View style={styles.subteamHeaderRow}>
+                  <Text style={[styles.label, { color: colors.text }]}>Subequipes</Text>
+                  <TouchableOpacity
+                    style={styles.subteamAddButton}
+                    onPress={handleAddSubteam}
+                    activeOpacity={0.7}
+                  >
+                    <FontAwesome name="plus" size={14} color={theme.colors.primary} />
+                    <Text style={[styles.subteamAddButtonText, { color: theme.colors.primary }]}>Criar subequipe</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {subteams.length === 0 && (
+                  <Text style={[styles.subLabel, { color: colors.textSecondary }]}>
+                    Nenhuma subequipe criada ainda.
+                  </Text>
+                )}
+
+                <View style={styles.subteamCreateRow}>
+                  <TextInput
+                    style={[styles.subteamCreateInput, { backgroundColor: colors.card, color: colors.text }]}
+                    value={newSubteamName}
+                    onChangeText={setNewSubteamName}
+                    placeholder="Título da subequipe"
+                    placeholderTextColor={colors.textSecondary}
+                    returnKeyType="done"
+                  />
+                </View>
+
+                {subteams.map((subteam) => (
+                  <View key={subteam.id} style={[styles.subteamCard, { backgroundColor: colors.input }]}> 
+                    <View style={styles.subteamCardHeader}>
+                      <TextInput
+                        style={[styles.subteamNameInput, { color: colors.text }]}
+                        value={subteam.name}
+                        onChangeText={(text) => updateSubteamField(subteam.id, 'name', text)}
+                        placeholder="Nome da subequipe"
+                        placeholderTextColor={colors.textSecondary}
+                      />
+                      <TouchableOpacity
+                        onPress={() => handleDeleteSubteam(subteam.id)}
+                        activeOpacity={0.7}
+                      >
+                        <FontAwesome name="trash" size={18} color="#FF3B30" />
+                      </TouchableOpacity>
+                    </View>
+
+                    <Text style={[styles.subteamLabel, { color: colors.textSecondary }]}>Funções da subequipe</Text>
+                    {(subteam.roles || ['']).map((role, roleIndex) => (
+                      <View key={`${subteam.id}-${roleIndex}`} style={styles.roleContainer}>
+                        <TextInput
+                          style={[styles.roleInput, { backgroundColor: colors.card, color: colors.text }]}
+                          placeholder={`Função ${roleIndex + 1}`}
+                          placeholderTextColor={colors.textSecondary}
+                          value={role}
+                          onChangeText={(text) => updateSubteamRole(subteam.id, roleIndex, text)}
+                          autoCapitalize="words"
+                          keyboardType="default"
+                          returnKeyType="done"
+                        />
+                        <TouchableOpacity
+                          style={styles.removeButton}
+                          onPress={() => removeSubteamRole(subteam.id, roleIndex)}
+                          activeOpacity={0.7}
+                        >
+                          <FontAwesome name="minus-circle" size={22} color="#FF3B30" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+
+                    <TouchableOpacity
+                      style={[styles.addButton, { borderColor: theme.colors.primary }]}
+                      onPress={() => addSubteamRoleField(subteam.id)}
+                      activeOpacity={0.7}
+                    >
+                      <FontAwesome name="plus" size={16} color={theme.colors.primary} />
+                      <Text style={[styles.addButtonText, { color: theme.colors.primary }]}>Adicionar Função</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
             
             {/* Botão de Excluir */}
             <TouchableOpacity
@@ -487,6 +734,35 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: theme.spacing.lg,
   },
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: '#ECEFF3',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: theme.spacing.md,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  segmentButtonActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  segmentButtonText: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: '600',
+    color: '#6C7380',
+  },
+  segmentButtonTextActive: {
+    color: '#111827',
+  },
   label: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
@@ -509,6 +785,58 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
+  },
+  subteamHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.md,
+  },
+  subteamAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.sizes.borderRadius.round,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    gap: 6,
+  },
+  subteamAddButtonText: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: '500',
+  },
+  subteamCard: {
+    borderRadius: theme.sizes.borderRadius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  subteamCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.sm,
+  },
+  subteamNameInput: {
+    flex: 1,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: '600',
+    paddingVertical: 4,
+    marginRight: theme.spacing.sm,
+  },
+  subteamCreateRow: {
+    marginBottom: theme.spacing.md,
+  },
+  subteamCreateInput: {
+    borderRadius: theme.sizes.borderRadius.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    fontSize: theme.typography.fontSize.md,
+  },
+  subteamLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: '500',
+    marginBottom: theme.spacing.xs,
   },
   roleInput: {
     flex: 1,

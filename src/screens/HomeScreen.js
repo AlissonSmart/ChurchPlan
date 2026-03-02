@@ -4,9 +4,9 @@ import {
   Text, 
   ScrollView, 
   StyleSheet, 
-  TouchableOpacity, 
+  TouchableOpacity,
+  Animated,
   useColorScheme,
-  ActivityIndicator,
   Alert,
   RefreshControl,
   Image
@@ -15,6 +15,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import LinearGradient from 'react-native-linear-gradient';
 import { HeaderContext } from '../contexts/HeaderContext';
 import TabScreenWrapper from '../components/TabScreenWrapper';
+import SkeletonLoader from '../components/SkeletonLoader';
 import notificationService from '../services/notificationService';
 import eventService from '../services/eventService';
 import supabase from '../services/supabase';
@@ -32,6 +33,8 @@ const HomeScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const hasLoadedAgenda = useRef(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     setShowLargeTitle(true);
@@ -182,6 +185,7 @@ const HomeScreen = ({ navigation, route }) => {
       console.log('[AGENDA] Items formatados:', formattedItems);
 
       setAllAgendaItems(formattedItems);
+      hasLoadedAgenda.current = true;
     } catch (error) {
       console.error('[AGENDA] Erro ao carregar agenda:', error);
       setAllAgendaItems([]);
@@ -258,13 +262,26 @@ const HomeScreen = ({ navigation, route }) => {
     loadAgenda();
   }, []);
 
-  // Recarregar quando a tela receber foco
+  // Não recarregar ao trocar de aba (apenas no pull-to-refresh)
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadAgenda();
+      if (!hasLoadedAgenda.current) {
+        loadAgenda();
+      }
     });
     return unsubscribe;
   }, [navigation]);
+
+  useEffect(() => {
+    if (!loading) {
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [loading, fadeAnim]);
 
   const handleScroll = useCallback((event) => {
     const offsetY = event.nativeEvent.contentOffset.y;
@@ -279,7 +296,7 @@ const HomeScreen = ({ navigation, route }) => {
   return (
     <TabScreenWrapper activeTab="Agenda" navigation={navigation}>
       <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={[styles.container, { backgroundColor: isDarkMode ? colors.background : '#f0f0f5' }]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         contentInsetAdjustmentBehavior="automatic"
@@ -311,12 +328,11 @@ const HomeScreen = ({ navigation, route }) => {
             </View>
 
             {loading ? (
-              <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-                  Carregando agenda...
-                </Text>
-              </View>
+              <SkeletonLoader
+                type="team"
+                count={4}
+                style={styles.skeletonContainer}
+              />
             ) : allAgendaItems.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Icon name="calendar-o" size={48} color={colors.textSecondary} style={styles.emptyIcon} />
@@ -328,21 +344,23 @@ const HomeScreen = ({ navigation, route }) => {
                 </Text>
               </View>
             ) : (
-              allAgendaItems.map((invitation) => {
-                const isAccepted = invitation.teamStatus === 'confirmed' || invitation.teamStatus === 'accepted';
-                const hasImage = isAccepted && invitation.bannerImageUrl;
-                
-                return (
-                  <TouchableOpacity
-                    key={invitation.id}
-                    style={[
-                      styles.eventCard, 
-                      { backgroundColor: colors.card, borderColor: colors.border },
-                      !invitation.isRead && { backgroundColor: colors.primary + '10' }
-                    ]}
-                    onPress={invitation.teamStatus === 'pending' ? undefined : () => handleOpenInvitation(invitation)}
-                    activeOpacity={invitation.teamStatus === 'pending' ? 1 : 0.7}
-                  >
+              <Animated.View style={{ opacity: fadeAnim }}>
+                {allAgendaItems.map((invitation) => {
+                  const isAccepted = invitation.teamStatus === 'confirmed' || invitation.teamStatus === 'accepted';
+                  const hasImage = isAccepted && invitation.bannerImageUrl;
+                  const cardBackground = isDarkMode ? colors.card : '#FFFFFF';
+                  
+                  return (
+                    <TouchableOpacity
+                      key={invitation.id}
+                      style={[
+                        styles.eventCard, 
+                        { backgroundColor: cardBackground, borderColor: colors.border },
+                        !invitation.isRead && { backgroundColor: colors.primary + '10' }
+                      ]}
+                      onPress={invitation.teamStatus === 'pending' ? undefined : () => handleOpenInvitation(invitation)}
+                      activeOpacity={invitation.teamStatus === 'pending' ? 1 : 0.7}
+                    >
                     {/* Background com imagem do evento (apenas se aceito) */}
                     {hasImage && (
                       <Image
@@ -433,7 +451,7 @@ const HomeScreen = ({ navigation, route }) => {
                     />
                     <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
                       {invitation.roleName
-                        ? `Você foi convidado como ${invitation.roleName} para este evento.`
+                        ? `Você foi convidado na função: ${invitation.roleName}`
                         : 'Você foi convidado para este evento.'}
                     </Text>
                   </View>
@@ -459,9 +477,10 @@ const HomeScreen = ({ navigation, route }) => {
                     </View>
                   )}
                     </View>
-                  </TouchableOpacity>
-                );
-              })
+                    </TouchableOpacity>
+                  );
+                })}
+              </Animated.View>
             )}
           </>
         ) : (
@@ -514,7 +533,7 @@ const HomeScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#f0f0f5',
   },
   containerDark: {
     backgroundColor: '#1C1C1E',
@@ -523,16 +542,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#E4E6EB',
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 12,
     padding: 2,
+    height: 32,
   },
   segmentContainerDark: {
     backgroundColor: '#38383A',
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: 10,
+    height: 28,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 6,
   },
   segmentButtonDark: {
@@ -545,16 +566,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#2C2C2E',
   },
   segmentText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '400',
     color: '#65676B',
+    fontFamily: 'Inter',
   },
   segmentTextDark: {
     color: '#A0A0A5',
   },
   segmentTextActive: {
     color: '#1877F2',
-    fontWeight: '700',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   segmentTextActiveDark: {
     color: '#1877F2',
@@ -672,15 +695,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E4E6EB',
   },
   eventDate: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#65676B',
     marginBottom: 4,
     fontFamily: 'Inter',
   },
   eventName: {
-    fontSize: 16,
+    fontSize: 17,
     color: '#050505',
-    fontWeight: '500',
+    fontWeight: '700',
     fontFamily: 'Inter',
   },
 
@@ -702,8 +725,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   eventCardDark: {
     backgroundColor: '#2C2C2E',
@@ -711,23 +737,13 @@ const styles = StyleSheet.create({
   eventHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  eventIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E8F5EF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
+    marginBottom: 12,
   },
   eventTitle: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1C1E21',
-    fontFamily: 'Inter',
   },
   eventTitleDark: {
     color: '#FFFFFF',
@@ -736,20 +752,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    height: 26,
-    borderRadius: 13,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  eventIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 166, 166, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   statusSuccess: { backgroundColor: '#22A06B' },
   statusWarning: { backgroundColor: '#F59E0B' },
   statusDanger: { backgroundColor: '#E24C4C' },
-  statusText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', fontFamily: 'Inter' },
+  statusText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700', fontFamily: 'Inter' },
   eventMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
   },
   eventMetaText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#1877F2',
     fontFamily: 'Inter',
   },

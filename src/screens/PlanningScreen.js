@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   useColorScheme,
-  ScrollView,
-  Alert,
-  ActivityIndicator
+  Alert
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
@@ -16,6 +14,7 @@ import TabScreenWrapper from '../components/TabScreenWrapper';
 import AddEventModal from '../components/AddEventModal';
 import EventFormModal from '../components/EventFormModal';
 import EventCard from '../components/EventCard';
+import SkeletonLoader from '../components/SkeletonLoader';
 import { HeaderContext } from '../contexts/HeaderContext';
 import eventService from '../services/eventService';
 
@@ -28,6 +27,7 @@ const PlanningScreen = ({ navigation }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
   const { setShowLargeTitle } = useContext(HeaderContext);
+  const hasLoadedRef = useRef(false);
   
   // Definir o título grande ao montar o componente
   useEffect(() => {
@@ -54,6 +54,7 @@ const PlanningScreen = ({ navigation }) => {
         eventService.formatEventForDisplay(event)
       );
       setEvents(formattedEvents);
+      hasLoadedRef.current = true;
     } catch (error) {
       console.error('Erro ao carregar eventos:', error);
       Alert.alert(
@@ -81,7 +82,9 @@ const PlanningScreen = ({ navigation }) => {
   // Recarregar eventos quando a tela receber foco
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadEvents();
+      if (!hasLoadedRef.current) {
+        loadEvents();
+      }
     });
 
     return unsubscribe;
@@ -258,26 +261,11 @@ const PlanningScreen = ({ navigation }) => {
     </>
   );
 
-  // Renderizar loading ou lista vazia
-  const renderListContent = () => {
-    if (loading) {
-      return (
-        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Carregando eventos...
-          </Text>
-        </View>
-      );
-    }
-    return null;
-  };
-
   return (
     <TabScreenWrapper activeTab="Planejar" navigation={navigation}>
       <FlatList
         style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={[styles.content]}
+        contentContainerStyle={[styles.content, styles.listContent]}
         data={loading ? [] : events}
         renderItem={renderEventItem}
         keyExtractor={item => item.id}
@@ -287,7 +275,9 @@ const PlanningScreen = ({ navigation }) => {
         onRefresh={handleRefresh}
         ListHeaderComponent={renderListHeader}
         ListEmptyComponent={
-          !loading ? (
+          loading ? (
+            <SkeletonLoader type="team" count={4} style={styles.skeletonContainer} />
+          ) : (
             <View style={styles.emptyContainer}>
               <FontAwesome name="calendar-o" size={64} color={colors.textSecondary} style={styles.emptyIcon} />
               <Text style={[styles.emptyText, { color: colors.text }]}>
@@ -297,11 +287,10 @@ const PlanningScreen = ({ navigation }) => {
                 Toque em "Adicionar Evento" para criar seu primeiro evento
               </Text>
             </View>
-          ) : null
+          )
         }
         scrollEnabled={!loading}
       />
-      {renderListContent()}
     </TabScreenWrapper>
   );
 };
@@ -319,7 +308,7 @@ const styles = StyleSheet.create({
   },
   buttonsContainer: {
     width: '100%',
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -337,26 +326,20 @@ const styles = StyleSheet.create({
     maxHeight: 44, // Garantir altura máxima igual para todos os botões
   },
   sectionTitleContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 80,
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+  skeletonContainer: {
+    paddingTop: 6,
   },
   emptyContainer: {
     flex: 1,
@@ -369,12 +352,12 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
     marginBottom: 8,
   },
   emptySubText: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     textAlign: 'center',
     paddingHorizontal: 32,
   },

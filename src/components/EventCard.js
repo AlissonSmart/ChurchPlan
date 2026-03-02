@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, useColorScheme, Animated } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import theme from '../styles/theme';
 
@@ -15,12 +15,39 @@ import theme from '../styles/theme';
 const EventCard = ({ event, onEdit, onDuplicate, onDelete }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
+  const cardBackground = isDarkMode ? colors.card : '#F3F6FB';
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateAnim = useRef(new Animated.Value(8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, translateAnim]);
   
   return (
-    <View style={[styles.eventCard, { backgroundColor: colors.card }]}>
-      <View style={styles.eventHeader}>
+    <Animated.View
+      style={[
+        styles.eventCard,
+        { backgroundColor: cardBackground, opacity: fadeAnim, transform: [{ translateY: translateAnim }] }
+      ]}
+    >
+      <TouchableOpacity
+        style={styles.eventHeader}
+        onPress={() => onEdit(event.id)}
+        activeOpacity={0.7}
+      >
         <View style={styles.eventIconContainer}>
-          <FontAwesome name="church" size={24} color="#00C6AE" />
+          <FontAwesome name="calendar" size={22} color="#00A6A6" />
         </View>
         <View style={styles.eventInfo}>
           <Text style={[styles.eventName, { color: colors.text }]}>{event.name}</Text>
@@ -36,7 +63,7 @@ const EventCard = ({ event, onEdit, onDuplicate, onDelete }) => {
             <Text style={styles.statusText}>{event.status}</Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
       
       <View style={styles.eventActions}>
         <TouchableOpacity 
@@ -63,23 +90,23 @@ const EventCard = ({ event, onEdit, onDuplicate, onDelete }) => {
           <Text style={[styles.actionText, { color: "#FF3B30" }]}>Deletar</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   eventCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 16,
     padding: 16,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 6,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
   },
   eventHeader: {
     flexDirection: 'row',
@@ -87,10 +114,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   eventIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 198, 174, 0.1)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 166, 166, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -99,8 +126,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eventName: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: '700',
     marginBottom: 4,
   },
   eventDateRow: {
@@ -108,30 +135,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   eventDate: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
   },
   eventTime: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSizesm,
   },
   smallIcon: {
-    marginRight: 4,
+    marginRight: 6,
   },
   clockIcon: {
-    marginLeft: 12,
+    marginLeft: 16,
   },
   eventStatus: {
     marginLeft: 8,
   },
   statusBadge: {
     backgroundColor: '#FFB800',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     borderRadius: 12,
   },
   statusText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: '700',
   },
   eventStats: {
     flexDirection: 'row',
@@ -144,7 +171,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   statItem: {
-    flex: 1,
+    flex:1,
     alignItems: 'center',
   },
   statValue: {
@@ -170,7 +197,8 @@ const styles = StyleSheet.create({
   },
   actionText: {
     marginLeft: 4,
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: '400',
   },
 });
 

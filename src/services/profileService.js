@@ -145,11 +145,24 @@ const profileService = {
         }
         
         // Adicionar novas associações em team_members
-        const teamMembers = profileData.teams.map(team => ({
-          team_id: team.teamId,
-          user_id: userId,
-          role: team.role
-        }));
+        const teamMembers = profileData.teams.flatMap(team => {
+          const subteamIds = Array.isArray(team.subteamIds) ? team.subteamIds : [];
+          if (subteamIds.length > 0) {
+            return subteamIds.map(subteamId => ({
+              team_id: team.teamId,
+              user_id: userId,
+              role: team.role,
+              subteam_id: subteamId,
+            }));
+          }
+
+          return [{
+            team_id: team.teamId,
+            user_id: userId,
+            role: team.role,
+            subteam_id: null,
+          }];
+        });
         
         if (teamMembers.length > 0) {
           const { error: teamError } = await supabase
@@ -165,36 +178,39 @@ const profileService = {
         }
         
         // Adicionar funções em volunteer_roles (para o AddTeamMemberModal)
-        // Buscar role_id de cada função selecionada
+        // Buscar role_id válido na tabela roles pelo nome
         for (const team of profileData.teams) {
           try {
-            // Buscar o role_id da função na tabela team_roles
+            const roleName = team.role?.trim();
+            if (!roleName) continue;
+
             const { data: roleData, error: roleError } = await supabase
-              .from('team_roles')
+              .from('roles')
               .select('id')
-              .eq('team_id', team.teamId)
-              .eq('name', team.role)
+              .ilike('name', roleName)
               .maybeSingle();
             
             if (roleError) {
-              console.error('Erro ao buscar role_id:', roleError);
+              console.error('Erro ao buscar role_id em roles:', roleError);
               continue;
             }
             
-            if (roleData) {
-              // Inserir em volunteer_roles
-              const { error: insertRoleError } = await supabase
-                .from('volunteer_roles')
-                .insert({
-                  profile_id: userId,
-                  role_id: roleData.id
-                });
-              
-              if (insertRoleError) {
-                console.error('Erro ao inserir em volunteer_roles:', insertRoleError);
-              } else {
-                console.log('Função adicionada em volunteer_roles:', team.role);
-              }
+            if (!roleData?.id) {
+              console.warn('Role não encontrada em roles, ignorando volunteer_roles:', roleName);
+              continue;
+            }
+
+            const { error: insertRoleError } = await supabase
+              .from('volunteer_roles')
+              .insert({
+                profile_id: userId,
+                role_id: roleData.id
+              });
+            
+            if (insertRoleError) {
+              console.error('Erro ao inserir em volunteer_roles:', insertRoleError);
+            } else {
+              console.log('Função adicionada em volunteer_roles:', roleName);
             }
           } catch (error) {
             console.error('Erro ao processar função:', error);
@@ -494,6 +510,7 @@ const profileService = {
         .select(`
           team_id,
           role,
+          subteam_id,
           teams:team_id(id, name)
         `)
         .eq('user_id', userId);
@@ -507,6 +524,7 @@ const profileService = {
       const formattedTeams = data.map(item => ({
         id: item.team_id,
         role: item.role,
+        subteam_id: item.subteam_id,
         name: item.teams?.name || 'Equipe sem nome'
       }));
       
