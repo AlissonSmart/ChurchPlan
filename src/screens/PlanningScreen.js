@@ -264,7 +264,7 @@ const PlanningScreen = ({ navigation }) => {
   return (
     <TabScreenWrapper activeTab="Planejar" navigation={navigation}>
       <FlatList
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={[styles.container, { backgroundColor: isDarkMode ? colors.background : '#f0f0f5' }]}
         contentContainerStyle={[styles.content, styles.listContent]}
         data={loading ? [] : events}
         renderItem={renderEventItem}

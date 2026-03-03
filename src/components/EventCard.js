@@ -15,7 +15,7 @@ import theme from '../styles/theme';
 const EventCard = ({ event, onEdit, onDuplicate, onDelete }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
-  const cardBackground = isDarkMode ? colors.card : '#F3F6FB';
+  const cardBackground = isDarkMode ? colors.card : '#FFFFFF';
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateAnim = useRef(new Animated.Value(8)).current;
 
@@ -67,26 +67,35 @@ const EventCard = ({ event, onEdit, onDuplicate, onDelete }) => {
       
       <View style={styles.eventActions}>
         <TouchableOpacity 
-          style={styles.actionButton} 
+          style={[
+            styles.actionButton,
+            { backgroundColor: 'rgba(101, 103, 107, 0.12)' }
+          ]}
           onPress={() => onDuplicate(event.id)}
         >
-          <FontAwesome name="copy" size={16} color={colors.textSecondary} />
+          <FontAwesome name="copy" size={15} color={colors.textSecondary} />
           <Text style={[styles.actionText, { color: colors.textSecondary }]}>Duplicar</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.actionButton} 
+          style={[
+            styles.actionButton,
+            { backgroundColor: 'rgba(24, 119, 242, 0.12)' }
+          ]}
           onPress={() => onEdit(event.id)}
         >
-          <FontAwesome name="pencil" size={16} color="#1877F2" />
+          <FontAwesome name="pencil" size={15} color="#1877F2" />
           <Text style={[styles.actionText, { color: "#1877F2" }]}>Editar</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.actionButton} 
+          style={[
+            styles.actionButton,
+            { backgroundColor: 'rgba(255, 59, 48, 0.12)' }
+          ]}
           onPress={() => onDelete(event.id)}
         >
-          <FontAwesome name="trash" size={16} color="#FF3B30" />
+          <FontAwesome name="trash" size={15} color="#FF3B30" />
           <Text style={[styles.actionText, { color: "#FF3B30" }]}>Deletar</Text>
         </TouchableOpacity>
       </View>
@@ -126,7 +135,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eventName: {
-    fontSize: theme.typography.fontSize.lg,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '700',
     marginBottom: 4,
   },
@@ -138,7 +147,7 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
   },
   eventTime: {
-    fontSize: theme.typography.fontSizesm,
+    fontSize: theme.typography.fontSize.sm,
   },
   smallIcon: {
     marginRight: 6,
@@ -188,16 +197,25 @@ const styles = StyleSheet.create({
   },
   eventActions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    borderWidth: 0,
   },
   actionText: {
     marginLeft: 4,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '400',
   },
 });

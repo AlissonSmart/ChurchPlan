@@ -541,20 +541,21 @@ const styles = StyleSheet.create({
   segmentContainer: {
     flexDirection: 'row',
     backgroundColor: '#E4E6EB',
-    borderRadius: 8,
+    borderRadius: 16,
     marginBottom: 12,
     padding: 2,
-    height: 32,
+    height: 42,
+    overflow: 'hidden',
   },
   segmentContainerDark: {
     backgroundColor: '#38383A',
   },
   segmentButton: {
     flex: 1,
-    height: 28,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 6,
+    borderRadius: 14,
   },
   segmentButtonDark: {
     backgroundColor: 'transparent',

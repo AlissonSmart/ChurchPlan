@@ -18,7 +18,10 @@ const BottomTabs = ({ activeTab, onTabChange }) => {
     <View style={[
       styles.container, 
       isDarkMode && styles.containerDark,
-      { paddingBottom: insets.bottom }
+      {
+        height: Platform.OS === 'ios' ? 49 + insets.bottom : 56,
+        paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0,
+      }
     ]}>
       {tabs.map((tab) => (
         <TouchableOpacity
