@@ -567,8 +567,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#2C2C2E',
   },
   segmentText: {
-    fontSize: 13,
-    fontWeight: '400',
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: '500',
     color: '#65676B',
     fontFamily: 'Inter',
   },
@@ -604,12 +604,12 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
     marginBottom: 8,
   },
   emptySubText: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     textAlign: 'center',
     paddingHorizontal: 32,
   },
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
   },
   newBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: theme.typography.fontSize.xs,
     fontWeight: '700',
   },
   content: {
@@ -680,13 +680,13 @@ const styles = StyleSheet.create({
     color: '#A0A0A5',
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: 'bold',
     color: '#050505',
     fontFamily: 'Inter',
   },
   cardText: {
-    fontSize: 15,
+    fontSize: theme.typography.fontSize.sm,
     color: '#65676B',
     fontFamily: 'Inter',
   },
@@ -696,8 +696,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E4E6EB',
   },
   eventDate: {
-    fontSize: 15,
-    color: '#65676B',
+    fontSize: theme.typography.fontSize.xl,
+    color: '#e90808',
     marginBottom: 4,
     fontFamily: 'Inter',
   },
